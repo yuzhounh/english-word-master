@@ -7,9 +7,9 @@
 [![Gemini API](https://img.shields.io/badge/Google%20Gemini-API-8E75B2.svg)](https://ai.google.dev/)
 [![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%26%20Auth-FFCA28.svg)](https://firebase.google.com/)
 
-🌐 **在线体验：[https://english-word-master.vercel.app/](https://english-word-master.vercel.app/)**
-
 **English Word Master** 是一款基于 AI 驱动的高效英文单词学习与综合词库管理平台。集成了文本智能分析、词干还原（Lemmatization）、四选一互动测验、错题本复习系统以及 Firebase 云端同步功能，帮助用户从阅读中积累词汇，高效巩固与高效复习。
+
+🌐 **在线体验：[https://english-word-master.vercel.app/](https://english-word-master.vercel.app/)**
 
 ---
 
