@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <!-- 现代化高质感高级渐变：靛蓝 -> 宝蓝 -> 电光青 (Indigo -> Royal Blue -> Cyber Cyan) -->
+    <linearGradient id="modernGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="50%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+
+    <!-- 顶部 iOS 柔和球形环境光 -->
+    <radialGradient id="glassGlow" cx="30%" cy="20%" r="70%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- 纯白文字微柔投影 -->
+    <filter id="iconShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2.5" stdDeviation="2" flood-color="#0F172A" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- 圆角矩形主体背景 (圆角外完全透明) -->
+  <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#modernGradient)" />
+
+  <!-- 顶部玻璃环境光遮罩 -->
+  <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#glassGlow)" />
+
+  <!-- 1px 内发光精致描边 -->
+  <rect x="5" y="5" width="90" height="90" rx="22" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-opacity="0.35" />
+
+  <!-- 主体“词”字：高品质纯白重磅字体 (y="47.5" 上移对齐) -->
+  <text 
+    x="50" 
+    y="47.5" 
+    text-anchor="middle" 
+    dominant-baseline="central" 
+    font-size="56" 
+    font-weight="900" 
+    font-family="'Microsoft YaHei', 'PingFang SC', 'Source Han Sans SC', 'Noto Sans CJK SC', 'Helvetica Neue', sans-serif" 
+    fill="#FFFFFF"
+    filter="url(#iconShadow)"
+  >词</text>
+
+  <!-- 右上角精致 AI 智能灵感星点 -->
+  <path d="M73 20c.5 3.2 2 4.7 5.2 5.2-3.2.5-4.7 2-5.2 5.2-.5-3.2-2-4.7-5.2-5.2 3.2-.5 4.7-2 5.2-5.2z" fill="#FFFFFF" opacity="0.9" />
+</svg>

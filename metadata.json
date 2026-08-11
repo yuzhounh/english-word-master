@@ -1,0 +1,6 @@
+{
+  "name": "English Word Master",
+  "description": "An English vocabulary learning application with text analysis, lemmatization, 4-choice quizzes, wrong words tracking, and Google Sign-In.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

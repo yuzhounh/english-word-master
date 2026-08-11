@@ -1,0 +1,26 @@
+{
+  "entities": {
+    "users": {
+      "description": "User profiles",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "number" }
+      }
+    },
+    "wrongWords": {
+      "description": "User's wrong words notebook (subcollection under users/{userId}/wrongWords/{wordId})",
+      "properties": {
+        "word": { "type": "string", "description": "Lemmatized base form word" },
+        "phonetic": { "type": "string", "description": "Phonetic pronunciation" },
+        "chinese": { "type": "string", "description": "Chinese translation / definition" },
+        "exampleSentence": { "type": "string", "description": "Example sentence containing the word" },
+        "exampleSentenceCn": { "type": "string", "description": "Chinese translation of example sentence" },
+        "errorCount": { "type": "number", "description": "Total number of wrong choices" },
+        "lastErrorAt": { "type": "number", "description": "Timestamp of last mistake" },
+        "createdAt": { "type": "number", "description": "Timestamp when added" }
+      }
+    }
+  }
+}
