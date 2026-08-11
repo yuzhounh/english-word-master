@@ -1,4 +1,4 @@
-import { createApp } from "./src/server/app";
+import { createApp } from "./api/index";
 
 const PORT = 3000;
 
