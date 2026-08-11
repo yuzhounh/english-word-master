@@ -17,7 +17,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative border border-slate-100 space-y-6"
+        className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative border border-slate-100 space-y-6"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -32,7 +32,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <LogIn className="w-6 h-6" />
           </div>
           <h2 className="text-xl font-bold text-slate-800">登录账号 (Google 账号)</h2>
-          <p className="text-xs text-slate-500 max-w-xs mx-auto">
+          <p className="text-xs text-slate-500 max-w-lg mx-auto">
             使用 Google 账号登录以解锁多端同步与永久存储生词本功能
           </p>
         </div>
