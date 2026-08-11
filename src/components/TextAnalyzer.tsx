@@ -54,7 +54,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
   const [directText, setDirectText] = useState<string>('');
   const [fileName, setFileName] = useState<string | null>(null);
   const [listName, setListName] = useState<string>('默认单词列表');
-  const [maxWords, setMaxWords] = useState<number>(50);
+  const [maxWords, setMaxWords] = useState<number>(30);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [progressStatus, setProgressStatus] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -423,9 +423,9 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                   <span className="text-xs font-medium text-slate-500">目标提取词量：</span>
                   <div className="inline-flex rounded-lg bg-slate-100 p-1 gap-1">
                     {[
-                      { count: 30, label: '30 核心词' },
-                      { count: 50, label: '50 标准词' },
-                      { count: 80, label: '80+ 深度全量' }
+                      { count: 20, label: '20 核心词' },
+                      { count: 30, label: '30 标准词' },
+                      { count: 50, label: '50 深度全量' }
                     ].map((opt) => (
                       <button
                         key={opt.count}

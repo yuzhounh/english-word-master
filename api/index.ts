@@ -31,7 +31,7 @@ interface DeepSeekMessage {
 async function deepseekChatJson(
   messages: DeepSeekMessage[],
   temperature = 0.7,
-  timeoutMs = 60000
+  timeoutMs = 55000
 ): Promise<string> {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
@@ -82,12 +82,13 @@ function parseDeepSeekJson(text: string): any {
 async function deepseekChatJsonWithRetry(
   messages: DeepSeekMessage[],
   temperature = 0.7,
-  attempts = 2
+  attempts = 2,
+  timeoutMs = 55000
 ): Promise<string> {
   let lastErr: any = null;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
-      return await deepseekChatJson(messages, temperature);
+      return await deepseekChatJson(messages, temperature, timeoutMs);
     } catch (err: any) {
       console.warn(`DeepSeek call failed (attempt ${attempt}):`, err.message);
       lastErr = err;
@@ -106,12 +107,12 @@ export function createApp(options: { production?: boolean } = {}) {
   // API: Analyze English text, perform lemmatization (restore base form), extract vocabulary, generate Chinese definition, example sentence, and 4 multiple-choice options.
   app.post("/api/analyze-text", async (req, res) => {
     try {
-      const { text, maxWords = 50 } = req.body;
+      const { text, maxWords = 30 } = req.body;
       if (!text || typeof text !== "string" || text.trim().length === 0) {
         return res.status(400).json({ success: false, error: "Please provide valid text content." });
       }
 
-      const limitNum = typeof maxWords === "number" ? Math.min(Math.max(maxWords, 10), 100) : 50;
+      const limitNum = typeof maxWords === "number" ? Math.min(Math.max(maxWords, 5), 50) : 30;
 
       const prompt = `You are an expert English linguist and language learning assistant.
 Analyze the following English text.
@@ -129,7 +130,7 @@ Analyze the following English text.
    - "word": base form in lowercase (e.g. "abandon", "resilient")
    - "phonetic": accurate IPA phonetic transcription (e.g. "/rɪˈzɪliənt/")
    - "chinese": concise, accurate Chinese definition (e.g. "adj. 适应力强的，有韧性的")
-   - "exampleSentence": an elegant, clear English sentence using this base word
+   - "exampleSentence": a SHORT, concise English sentence (no longer than 12 words) using this base word
    - "exampleSentenceCn": natural Chinese translation of the example sentence
    - "options": an array of exactly 4 Chinese translation options for a quiz test. 1 option MUST be the exact correct Chinese definition of this word, and 3 options MUST be plausible but incorrect Chinese definitions (distractors of similar word type or theme). Shuffle the 4 options so the correct answer is not always in the same position!
 
@@ -154,14 +155,31 @@ Here is the input text:
 ${text.slice(0, 30000)}
 """`;
 
-      const responseText = await deepseekChatJsonWithRetry([
-        {
-          role: "system",
-          content:
-            "You are an expert English linguist and language learning assistant. Always output strictly valid JSON matching the requested schema. Do not include any text outside the JSON object."
-        },
-        { role: "user", content: prompt }
-      ]);
+      let responseText: string;
+      try {
+        responseText = await deepseekChatJsonWithRetry(
+          [
+            {
+              role: "system",
+              content:
+                "You are an expert English linguist and language learning assistant. Always output strictly valid JSON matching the requested schema. Do not include any text outside the JSON object."
+            },
+            { role: "user", content: prompt }
+          ],
+          0.7,
+          1,
+          50000
+        );
+      } catch (err: any) {
+        const isTimeout = /timed out|timeout|AbortError/i.test(err?.message || "");
+        console.error("Error analyzing text:", err);
+        return res.status(500).json({
+          success: false,
+          error: isTimeout
+            ? "分析超时：生成内容较多，请选择更少的目标词量（如 20 或 30 核心词）后重试。"
+            : (err?.message || "Failed to analyze text with AI.")
+        });
+      }
 
       const resultJson = parseDeepSeekJson(responseText);
 
@@ -216,8 +234,8 @@ ${text.slice(0, 30000)}
         return res.status(400).json({ success: false, error: "Please provide a valid list of words to enrich." });
       }
 
-      // Chunk words into batches of 40 to avoid token limits or slow responses
-      const CHUNK_SIZE = 40;
+      // Chunk words into batches of 20 to avoid token limits or slow responses
+      const CHUNK_SIZE = 20;
       const wordChunks: any[][] = [];
       for (let i = 0; i < words.length; i += CHUNK_SIZE) {
         wordChunks.push(words.slice(i, i + CHUNK_SIZE));
@@ -233,7 +251,7 @@ For EACH word in the list, generate complete vocabulary details:
 1. "word": the English word in lowercase
 2. "phonetic": accurate IPA phonetic transcription (e.g. "/ɪksˈtʃeɪndʒ/")
 3. "chinese": accurate, concise Chinese definition including part-of-speech tags (e.g., "n. 交换；交流 vt. 交换；交流；兑换"). If an existing Chinese definition was provided in input, preserve and refine it to ensure proper part-of-speech tags.
-4. "exampleSentence": an elegant, clear, natural English sentence demonstrating the word in context.
+4. "exampleSentence": a SHORT, concise, natural English sentence (no longer than 12 words) demonstrating the word in context.
 5. "exampleSentenceCn": natural Chinese translation of the example sentence.
 6. "options": an array of exactly 4 Chinese translation options for quiz testing. 1 option MUST be the exact correct Chinese definition of this word, and 3 options MUST be plausible but incorrect Chinese definitions (distractors).
 
@@ -256,14 +274,19 @@ ${JSON.stringify(chunk, null, 2)}`;
 
         let responseText = "";
         try {
-          responseText = await deepseekChatJsonWithRetry([
-            {
-              role: "system",
-              content:
-                "You are an expert English language learning assistant and dictionary compiler. Always output strictly valid JSON matching the requested schema. Do not include any text outside the JSON object."
-            },
-            { role: "user", content: prompt }
-          ]);
+          responseText = await deepseekChatJsonWithRetry(
+            [
+              {
+                role: "system",
+                content:
+                  "You are an expert English language learning assistant and dictionary compiler. Always output strictly valid JSON matching the requested schema. Do not include any text outside the JSON object."
+              },
+              { role: "user", content: prompt }
+            ],
+            0.7,
+            1,
+            50000
+          );
         } catch (err: any) {
           console.warn("Enrich DeepSeek chunk failed:", err.message);
         }
