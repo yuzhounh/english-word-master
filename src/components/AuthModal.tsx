@@ -17,7 +17,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="bg-white rounded-3xl max-w-[462px] w-full p-6 sm:p-8 shadow-2xl relative border border-slate-100 space-y-6"
+        className="bg-white rounded-3xl max-w-[492px] w-full p-6 sm:p-8 shadow-2xl relative border border-slate-100 space-y-6"
         onClick={(e) => e.stopPropagation()}
       >
         <button
