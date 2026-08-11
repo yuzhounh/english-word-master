@@ -183,7 +183,8 @@ export function parseWordListText(rawText: string): ParsedWord[] {
 
 /**
  * Call server AI to enrich parsed words with phonetics, part-of-speech Chinese definitions, example sentences & quiz options
- * Supports chunking into batches and reporting progress callback (processed, total)
+ * The server returns partial results within its time budget; the client keeps calling until done.
+ * Reports progress via the (processed, total) callback.
  */
 export async function enrichWordsWithAI(
   words: ParsedWord[],
@@ -191,39 +192,42 @@ export async function enrichWordsWithAI(
 ): Promise<WordItem[]> {
   if (!words || words.length === 0) return [];
 
-  const BATCH_SIZE = 30; // Batch by 30 words per call for smooth progress & fast API response
   const results: WordItem[] = [];
+  const total = words.length;
+  let pending: ParsedWord[] = words.slice();
+  let processedCount = 0;
+  let guard = 0;
 
-  for (let i = 0; i < words.length; i += BATCH_SIZE) {
-    const chunk = words.slice(i, i + BATCH_SIZE);
+  while (pending.length > 0 && guard < 500) {
+    guard++;
+    let data: any = null;
     try {
       const response = await fetch('/api/enrich-words', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ words: chunk })
+        body: JSON.stringify({ words: pending })
       });
-
-      const data = await response.json();
-      if (data.success && Array.isArray(data.words)) {
-        results.push(...data.words);
-      } else {
-        // Fallback for this chunk
-        chunk.forEach(w => {
-          const base = w.word.toLowerCase().trim();
-          results.push({
-            id: base,
-            word: w.word,
-            phonetic: w.phonetic || '',
-            chinese: w.chinese || w.word,
-            exampleSentence: w.exampleSentence || '',
-            exampleSentenceCn: w.exampleSentenceCn || ''
-          });
-        });
-      }
+      data = await response.json();
     } catch (err) {
       console.error('Enrich words batch failed:', err);
-      // Fallback for failed batch
-      chunk.forEach(w => {
+      break;
+    }
+
+    if (data && data.success && Array.isArray(data.words)) {
+      results.push(...data.words);
+      processedCount += data.words.length;
+      if (onProgress) {
+        onProgress(Math.min(processedCount, total), total);
+      }
+      if (data.done) break;
+      if (Array.isArray(data.pending) && data.pending.length > 0) {
+        pending = data.pending;
+      } else {
+        break;
+      }
+    } else {
+      // Fallback for the remaining pending words (server error)
+      pending.forEach(w => {
         const base = w.word.toLowerCase().trim();
         results.push({
           id: base,
@@ -234,10 +238,10 @@ export async function enrichWordsWithAI(
           exampleSentenceCn: w.exampleSentenceCn || ''
         });
       });
-    }
-
-    if (onProgress) {
-      onProgress(Math.min(i + chunk.length, words.length), words.length);
+      if (onProgress) {
+        onProgress(total, total);
+      }
+      break;
     }
   }
 

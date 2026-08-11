@@ -215,27 +215,52 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
 
     const targetListName = listName.trim() || '默认单词列表';
 
+    const allWords: WordItem[] = [];
+    let resume: string | null = null;
+    let isFirstCall = true;
+    let finished = false;
+    let hasError = false;
+    let loopCount = 0;
+
     try {
-      const response = await fetch('/api/analyze-text', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: inputText, maxWords })
-      });
+      while (!finished && loopCount < 100) {
+        loopCount++;
+        const body = isFirstCall ? { text: inputText, maxWords } : { resume };
+        const response = await fetch('/api/analyze-text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (data.success && Array.isArray(data.words)) {
-        onWordsExtracted(data.words, targetListName);
-        setSuccessMessage(`文章提取完成，成功提取 ${data.words.length} 个核心词汇并保存至生词本（单词列表：「${targetListName}」）！`);
-      } else {
-        setErrorMessage(data.error || '分析提取失败，请重试。');
+        if (data.success && Array.isArray(data.words)) {
+          allWords.push(...data.words);
+          isFirstCall = false;
+          finished = !!data.done;
+          resume = data.resume || null;
+          if (!finished && !resume) finished = true;
+        } else {
+          setErrorMessage(data.error || '分析提取失败，请重试。');
+          hasError = true;
+          break;
+        }
       }
     } catch (err: any) {
       console.error('Analysis API error:', err);
       setErrorMessage('无法连接到分析服务，请检查网络或稍后重试。');
-    } finally {
-      setIsLoading(false);
+      hasError = true;
     }
+
+    if (!hasError && allWords.length > 0) {
+      const deduped = Array.from(new Map(allWords.map(w => [w.id, w])).values());
+      onWordsExtracted(deduped, targetListName);
+      setSuccessMessage(`文章提取完成，成功提取 ${deduped.length} 个核心词汇并保存至生词本（单词列表：「${targetListName}」）！`);
+    } else if (!hasError && allWords.length === 0) {
+      setErrorMessage('未能从文本中提取出有效词汇，请尝试更换文章或增加目标词量。');
+    }
+
+    setIsLoading(false);
   };
 
   // Direct Word List Import (Skipping AI Analysis, with smart parsing & optional AI enrichment)

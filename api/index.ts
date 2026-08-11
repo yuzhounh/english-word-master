@@ -78,43 +78,53 @@ function parseDeepSeekJson(text: string): any {
   return JSON.parse(cleaned);
 }
 
-// Calls DeepSeek with a retry on transient failures.
-async function deepseekChatJsonWithRetry(
-  messages: DeepSeekMessage[],
-  temperature = 0.7,
-  attempts = 2,
-  timeoutMs = 55000
-): Promise<string> {
-  let lastErr: any = null;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      return await deepseekChatJson(messages, temperature, timeoutMs);
-    } catch (err: any) {
-      console.warn(`DeepSeek call failed (attempt ${attempt}):`, err.message);
-      lastErr = err;
-      if (attempt < attempts) {
-        await new Promise((r) => setTimeout(r, 800));
-      }
-    }
-  }
-  throw lastErr || new Error("DeepSeek API is currently unavailable. Please try again in a moment.");
+// ---- Resumable processing helpers ----
+// Vercel serverless functions cap execution time (Hobby: 60s). To process
+// arbitrarily large tasks we stop starting new AI calls once ~40s have elapsed,
+// return partial results + a resume token, and let the client continue with
+// the next function invocation until everything is done.
+const FUNCTION_HARD_LIMIT_MS = 55000;
+const NEW_CALL_CUTOFF_MS = 40000;
+
+function timeBudgetRemaining(elapsedMs: number): number {
+  // Leave enough headroom to write the response before the hard limit.
+  return Math.max(12000, FUNCTION_HARD_LIMIT_MS - elapsedMs - 5000);
 }
 
-export function createApp(options: { production?: boolean } = {}) {
-  const app = express();
-  app.use(express.json({ limit: "10mb" }));
+function encodeResume(data: any): string {
+  return Buffer.from(JSON.stringify(data)).toString("base64");
+}
 
-  // API: Analyze English text, perform lemmatization (restore base form), extract vocabulary, generate Chinese definition, example sentence, and 4 multiple-choice options.
-  app.post("/api/analyze-text", async (req, res) => {
-    try {
-      const { text, maxWords = 30 } = req.body;
-      if (!text || typeof text !== "string" || text.trim().length === 0) {
-        return res.status(400).json({ success: false, error: "Please provide valid text content." });
-      }
+function decodeResume<T>(token: any): T | null {
+  if (typeof token !== "string" || !token) return null;
+  try {
+    return JSON.parse(Buffer.from(token, "base64").toString("utf8")) as T;
+  } catch {
+    return null;
+  }
+}
 
-      const limitNum = typeof maxWords === "number" ? Math.min(Math.max(maxWords, 5), 50) : 30;
+// Splits a long text into reasonably sized segments at sentence boundaries.
+function splitTextSegments(text: string, maxChars = 1500): string[] {
+  const trimmed = text.trim();
+  if (trimmed.length <= maxChars) return [trimmed];
+  const sentences = trimmed.match(/[^.!?。！？]+[.!?。！？]*\s*/g) || [trimmed];
+  const segments: string[] = [];
+  let current = "";
+  for (const sentence of sentences) {
+    if (current.length > 0 && (current + sentence).length > maxChars) {
+      segments.push(current.trim());
+      current = sentence;
+    } else {
+      current += sentence;
+    }
+  }
+  if (current.trim()) segments.push(current.trim());
+  return segments.length > 0 ? segments : [trimmed];
+}
 
-      const prompt = `You are an expert English linguist and language learning assistant.
+function buildAnalyzePrompt(text: string, limitNum: number): string {
+  return `You are an expert English linguist and language learning assistant.
 Analyze the following English text.
 1. Extract distinct, meaningful English vocabulary words from the text (skip basic common stop words like a, an, the, is, are, was, were, to, of, in, and, I, you, he, she, it, this, that, etc.).
 2. VERY IMPORTANT: Convert every extracted word into its lemmatized base dictionary form (原型/词干). For example:
@@ -154,97 +164,10 @@ Here is the input text:
 """
 ${text.slice(0, 30000)}
 """`;
+}
 
-      let responseText: string;
-      try {
-        responseText = await deepseekChatJsonWithRetry(
-          [
-            {
-              role: "system",
-              content:
-                "You are an expert English linguist and language learning assistant. Always output strictly valid JSON matching the requested schema. Do not include any text outside the JSON object."
-            },
-            { role: "user", content: prompt }
-          ],
-          0.7,
-          1,
-          50000
-        );
-      } catch (err: any) {
-        const isTimeout = /timed out|timeout|AbortError/i.test(err?.message || "");
-        console.error("Error analyzing text:", err);
-        return res.status(500).json({
-          success: false,
-          error: isTimeout
-            ? "分析超时：生成内容较多，请选择更少的目标词量（如 20 或 30 核心词）后重试。"
-            : (err?.message || "Failed to analyze text with AI.")
-        });
-      }
-
-      const resultJson = parseDeepSeekJson(responseText);
-
-      // Clean up data and assign unique IDs
-      const cleanedWords = (resultJson.words || []).map((item: any) => {
-        const baseWord = item.word ? item.word.toLowerCase().trim() : "";
-        // Ensure options array has 4 items
-        let options = Array.isArray(item.options) ? item.options : [];
-        if (!options.includes(item.chinese)) {
-          options.unshift(item.chinese);
-        }
-        // Ensure unique options up to 4
-        options = Array.from(new Set(options));
-        while (options.length < 4) {
-          options.push(`其他释义 ${options.length + 1}`);
-        }
-        // Shuffle options
-        options = options.sort(() => Math.random() - 0.5);
-
-        return {
-          id: baseWord,
-          word: baseWord,
-          phonetic: item.phonetic || "",
-          chinese: item.chinese || "",
-          exampleSentence: item.exampleSentence || "",
-          exampleSentenceCn: item.exampleSentenceCn || "",
-          options: options.slice(0, 4)
-        };
-      }).filter((w: any) => w.word.length > 0);
-
-      return res.json({
-        success: true,
-        totalWordsCount: resultJson.totalWordsCount || text.trim().split(/\s+/).length,
-        extractedWordsCount: cleanedWords.length,
-        words: cleanedWords
-      });
-
-    } catch (error: any) {
-      console.error("Error analyzing text:", error);
-      return res.status(500).json({
-        success: false,
-        error: error.message || "Failed to analyze text with AI."
-      });
-    }
-  });
-
-  // API: Batch enrich words with phonetics, part-of-speech Chinese definitions, example sentences & quiz options
-  app.post("/api/enrich-words", async (req, res) => {
-    try {
-      const { words } = req.body;
-      if (!Array.isArray(words) || words.length === 0) {
-        return res.status(400).json({ success: false, error: "Please provide a valid list of words to enrich." });
-      }
-
-      // Chunk words into batches of 20 to avoid token limits or slow responses
-      const CHUNK_SIZE = 20;
-      const wordChunks: any[][] = [];
-      for (let i = 0; i < words.length; i += CHUNK_SIZE) {
-        wordChunks.push(words.slice(i, i + CHUNK_SIZE));
-      }
-
-      const enrichedResults: any[] = [];
-
-      for (const chunk of wordChunks) {
-        const prompt = `You are an expert English language learning assistant and dictionary compiler.
+function buildEnrichPrompt(chunk: any[]): string {
+  return `You are an expert English language learning assistant and dictionary compiler.
 You are provided with a list of English words. Some words may already have an existing Chinese translation provided.
 For EACH word in the list, generate complete vocabulary details:
 
@@ -271,10 +194,163 @@ You MUST respond with a single JSON object matching exactly this shape (and noth
 
 Input words:
 ${JSON.stringify(chunk, null, 2)}`;
+}
+
+function normalizeWordItem(item: any): any {
+  const baseWord = item.word ? item.word.toLowerCase().trim() : "";
+  let options = Array.isArray(item.options) ? item.options : [];
+  if (!options.includes(item.chinese)) options.unshift(item.chinese);
+  options = Array.from(new Set(options));
+  while (options.length < 4) options.push(`其他释义 ${options.length + 1}`);
+  options = options.sort(() => Math.random() - 0.5);
+
+  return {
+    id: baseWord,
+    word: baseWord,
+    phonetic: item.phonetic || "",
+    chinese: item.chinese || "",
+    exampleSentence: item.exampleSentence || "",
+    exampleSentenceCn: item.exampleSentenceCn || "",
+    options: options.slice(0, 4)
+  };
+}
+
+export function createApp(options: { production?: boolean } = {}) {
+  const app = express();
+  app.use(express.json({ limit: "10mb" }));
+
+  // API: Analyze English text, perform lemmatization (restore base form), extract vocabulary, generate Chinese definition, example sentence, and 4 multiple-choice options.
+  // Supports resumable processing: long texts are split into segments that are processed across
+  // multiple function invocations before the Vercel timeout, each returning partial results.
+  app.post("/api/analyze-text", async (req, res) => {
+    try {
+      if (!process.env.DEEPSEEK_API_KEY) {
+        return res.status(500).json({ success: false, error: "DEEPSEEK_API_KEY is not configured in environment." });
+      }
+      const { text, maxWords = 30, resume } = req.body;
+
+      let segments: string[];
+      let limitPerSegment: number;
+
+      if (resume) {
+        const state = decodeResume<{ segments: string[]; limitPerSegment: number }>(resume);
+        if (!state || !Array.isArray(state.segments) || state.segments.length === 0) {
+          return res.status(400).json({ success: false, error: "Invalid resume token." });
+        }
+        segments = state.segments;
+        limitPerSegment = state.limitPerSegment;
+      } else {
+        if (!text || typeof text !== "string" || text.trim().length === 0) {
+          return res.status(400).json({ success: false, error: "Please provide valid text content." });
+        }
+        const limitNum = typeof maxWords === "number" ? Math.min(Math.max(maxWords, 5), 50) : 30;
+        segments = splitTextSegments(text);
+        limitPerSegment = Math.max(5, Math.ceil(limitNum / Math.max(segments.length, 1)));
+      }
+
+      const startTime = Date.now();
+      const cleanedWords: any[] = [];
+      const seen = new Set<string>();
+      let totalWordsCount = 0;
+      let index = 0;
+
+      while (index < segments.length) {
+        const elapsed = Date.now() - startTime;
+        if (index > 0 && elapsed >= NEW_CALL_CUTOFF_MS) break;
+        const budget = timeBudgetRemaining(elapsed);
+        if (budget < 12000) break;
+
+        const prompt = buildAnalyzePrompt(segments[index], limitPerSegment);
 
         let responseText = "";
         try {
-          responseText = await deepseekChatJsonWithRetry(
+          responseText = await deepseekChatJson(
+            [
+              {
+                role: "system",
+                content:
+                  "You are an expert English linguist and language learning assistant. Always output strictly valid JSON matching the requested schema. Do not include any text outside the JSON object."
+              },
+              { role: "user", content: prompt }
+            ],
+            0.7,
+            budget
+          );
+        } catch (err: any) {
+          console.warn(`Analyze segment ${index} failed:`, err.message);
+        }
+
+        if (responseText) {
+          try {
+            const resultJson = parseDeepSeekJson(responseText);
+            if (typeof resultJson.totalWordsCount === "number") {
+              totalWordsCount += resultJson.totalWordsCount;
+            }
+            (resultJson.words || []).forEach((item: any) => {
+              const baseWord = item.word ? item.word.toLowerCase().trim() : "";
+              if (!baseWord || seen.has(baseWord)) return;
+              seen.add(baseWord);
+              cleanedWords.push(normalizeWordItem(item));
+            });
+          } catch (e) {
+            console.error("JSON parse error for analyze segment:", e);
+          }
+        }
+
+        index++;
+      }
+
+      const pendingSegments = segments.slice(index);
+      const done = pendingSegments.length === 0;
+
+      return res.json({
+        success: true,
+        done,
+        resume: done ? null : encodeResume({ segments: pendingSegments, limitPerSegment }),
+        totalWordsCount: totalWordsCount || (text ? text.trim().split(/\s+/).length : 0),
+        extractedWordsCount: cleanedWords.length,
+        words: cleanedWords
+      });
+
+    } catch (error: any) {
+      console.error("Error analyzing text:", error);
+      return res.status(500).json({
+        success: false,
+        error: error.message || "Failed to analyze text with AI."
+      });
+    }
+  });
+
+  // API: Batch enrich words with phonetics, part-of-speech Chinese definitions, example sentences & quiz options.
+  // Supports resumable processing: only processes as many words as fit within the function time budget,
+  // then returns partial results + the remaining words so the client can continue in the next invocation.
+  app.post("/api/enrich-words", async (req, res) => {
+    try {
+      if (!process.env.DEEPSEEK_API_KEY) {
+        return res.status(500).json({ success: false, error: "DEEPSEEK_API_KEY is not configured in environment." });
+      }
+      const { words } = req.body;
+      if (!Array.isArray(words) || words.length === 0) {
+        return res.status(400).json({ success: false, error: "Please provide a valid list of words to enrich." });
+      }
+
+      const CHUNK_SIZE = 10;
+      const startTime = Date.now();
+      const enrichedResults: any[] = [];
+      let index = 0;
+
+      while (index < words.length) {
+        const elapsed = Date.now() - startTime;
+        if (index > 0 && elapsed >= NEW_CALL_CUTOFF_MS) break;
+        const budget = timeBudgetRemaining(elapsed);
+        if (budget < 12000) break;
+
+        const chunk = words.slice(index, index + CHUNK_SIZE);
+        const prompt = buildEnrichPrompt(chunk);
+
+        let responseText = "";
+        try {
+          responseText = await deepseekChatJson(
             [
               {
                 role: "system",
@@ -284,11 +360,10 @@ ${JSON.stringify(chunk, null, 2)}`;
               { role: "user", content: prompt }
             ],
             0.7,
-            1,
-            50000
+            budget
           );
         } catch (err: any) {
-          console.warn("Enrich DeepSeek chunk failed:", err.message);
+          console.warn(`Enrich chunk at ${index} failed:`, err.message);
         }
 
         if (responseText) {
@@ -297,31 +372,24 @@ ${JSON.stringify(chunk, null, 2)}`;
             if (Array.isArray(parsed.words)) {
               parsed.words.forEach((item: any) => {
                 const baseWord = item.word ? item.word.toLowerCase().trim() : "";
-                let options = Array.isArray(item.options) ? item.options : [];
-                if (!options.includes(item.chinese)) options.unshift(item.chinese);
-                options = Array.from(new Set(options));
-                while (options.length < 4) options.push(`其他释义 ${options.length + 1}`);
-
-                enrichedResults.push({
-                  id: baseWord,
-                  word: baseWord,
-                  phonetic: item.phonetic || "",
-                  chinese: item.chinese || "",
-                  exampleSentence: item.exampleSentence || "",
-                  exampleSentenceCn: item.exampleSentenceCn || "",
-                  options: options.slice(0, 4)
-                });
+                if (baseWord) enrichedResults.push(normalizeWordItem(item));
               });
             }
           } catch (e) {
             console.error("JSON parse error for enriched chunk:", e);
           }
         }
+
+        index += CHUNK_SIZE;
       }
 
-      // Merge with any words that failed enrichment
+      // Merge the processed prefix with any words that failed enrichment.
+      const processedWords = words.slice(0, index);
+      const pendingWords = words.slice(index);
+      const done = pendingWords.length === 0;
+
       const enrichedMap = new Map(enrichedResults.map((item) => [item.word.toLowerCase(), item]));
-      const finalWords = words.map((w: any) => {
+      const finalWords = processedWords.map((w: any) => {
         const wName = (w.word || w.id || "").toLowerCase().trim();
         if (enrichedMap.has(wName)) {
           return enrichedMap.get(wName);
@@ -338,7 +406,9 @@ ${JSON.stringify(chunk, null, 2)}`;
 
       return res.json({
         success: true,
-        words: finalWords
+        done,
+        words: finalWords,
+        pending: done ? [] : pendingWords
       });
 
     } catch (error: any) {
