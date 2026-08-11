@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import { existsSync } from "fs";
-import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 import * as XLSX from "xlsx";
 
@@ -20,13 +19,84 @@ function githubHeaders(): Record<string, string> {
   return headers;
 }
 
-// Helper to get Gemini Client lazily
-function getGeminiClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
+// ---- DeepSeek API client (OpenAI-compatible chat completions) ----
+const DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions";
+
+interface DeepSeekMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+// Calls DeepSeek chat completions in JSON mode and returns the raw JSON text.
+async function deepseekChatJson(
+  messages: DeepSeekMessage[],
+  temperature = 0.7,
+  timeoutMs = 60000
+): Promise<string> {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not configured in environment.");
+    throw new Error("DEEPSEEK_API_KEY is not configured in environment.");
   }
-  return new GoogleGenAI({ apiKey });
+  const model = process.env.DEEPSEEK_MODEL || "deepseek-v4-flash";
+
+  const response = await fetch(DEEPSEEK_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      response_format: { type: "json_object" },
+      stream: false
+    }),
+    signal: AbortSignal.timeout(timeoutMs)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`DeepSeek API error (${response.status}): ${errorText.slice(0, 500)}`);
+  }
+
+  const data: any = await response.json();
+  const content: string = data?.choices?.[0]?.message?.content ?? "";
+  if (!content) {
+    throw new Error("DeepSeek API returned an empty response.");
+  }
+  return content;
+}
+
+// Parses a DeepSeek JSON response, tolerating markdown code fences.
+function parseDeepSeekJson(text: string): any {
+  let cleaned = text.trim();
+  const fenceMatch = cleaned.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fenceMatch) {
+    cleaned = fenceMatch[1].trim();
+  }
+  return JSON.parse(cleaned);
+}
+
+// Calls DeepSeek with a retry on transient failures.
+async function deepseekChatJsonWithRetry(
+  messages: DeepSeekMessage[],
+  temperature = 0.7,
+  attempts = 2
+): Promise<string> {
+  let lastErr: any = null;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await deepseekChatJson(messages, temperature);
+    } catch (err: any) {
+      console.warn(`DeepSeek call failed (attempt ${attempt}):`, err.message);
+      lastErr = err;
+      if (attempt < attempts) {
+        await new Promise((r) => setTimeout(r, 800));
+      }
+    }
+  }
+  throw lastErr || new Error("DeepSeek API is currently unavailable. Please try again in a moment.");
 }
 
 export function createApp(options: { production?: boolean } = {}) {
@@ -40,8 +110,6 @@ export function createApp(options: { production?: boolean } = {}) {
       if (!text || typeof text !== "string" || text.trim().length === 0) {
         return res.status(400).json({ success: false, error: "Please provide valid text content." });
       }
-
-      const ai = getGeminiClient();
 
       const limitNum = typeof maxWords === "number" ? Math.min(Math.max(maxWords, 10), 100) : 50;
 
@@ -63,68 +131,39 @@ Analyze the following English text.
    - "chinese": concise, accurate Chinese definition (e.g. "adj. 适应力强的，有韧性的")
    - "exampleSentence": an elegant, clear English sentence using this base word
    - "exampleSentenceCn": natural Chinese translation of the example sentence
-   - "options": an array of 4 Chinese translation options for a quiz test. 1 option MUST be the exact correct Chinese definition of this word, and 3 options MUST be plausible but incorrect Chinese definitions (distractors of similar word type or theme). Shuffle the 4 options so the correct answer is not always in the same position!
+   - "options": an array of exactly 4 Chinese translation options for a quiz test. 1 option MUST be the exact correct Chinese definition of this word, and 3 options MUST be plausible but incorrect Chinese definitions (distractors of similar word type or theme). Shuffle the 4 options so the correct answer is not always in the same position!
+
+You MUST respond with a single JSON object matching exactly this shape (and nothing else):
+{
+  "totalWordsCount": <number, estimated total words in input text>,
+  "extractedWordsCount": <number, number of unique base words extracted>,
+  "words": [
+    {
+      "word": "...",
+      "phonetic": "...",
+      "chinese": "...",
+      "exampleSentence": "...",
+      "exampleSentenceCn": "...",
+      "options": ["...", "...", "...", "..."]
+    }
+  ]
+}
 
 Here is the input text:
 """
 ${text.slice(0, 30000)}
 """`;
 
-      // Attempt generation with retry / fallback models in case of high demand 503
-      let responseText = "";
-      const modelsToTry = ["gemini-3.6-flash", "gemini-2.5-flash"];
-      let lastErr: any = null;
+      const responseText = await deepseekChatJsonWithRetry([
+        {
+          role: "system",
+          content:
+            "You are an expert English linguist and language learning assistant. Always output strictly valid JSON matching the requested schema. Do not include any text outside the JSON object."
+        },
+        { role: "user", content: prompt }
+      ]);
 
-      for (const modelName of modelsToTry) {
-        try {
-          const response = await ai.models.generateContent({
-            model: modelName,
-            contents: prompt,
-            config: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                  totalWordsCount: { type: Type.INTEGER, description: "Estimated total words in input text" },
-                  extractedWordsCount: { type: Type.INTEGER, description: "Number of unique base words extracted" },
-                  words: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        word: { type: Type.STRING },
-                        phonetic: { type: Type.STRING },
-                        chinese: { type: Type.STRING },
-                        exampleSentence: { type: Type.STRING },
-                        exampleSentenceCn: { type: Type.STRING },
-                        options: {
-                          type: Type.ARRAY,
-                          items: { type: Type.STRING }
-                        }
-                      },
-                      required: ["word", "phonetic", "chinese", "exampleSentence", "exampleSentenceCn", "options"]
-                    }
-                  }
-                },
-                required: ["extractedWordsCount", "words"]
-              }
-            }
-          });
-          responseText = response.text || "{}";
-          break; // Success!
-        } catch (err: any) {
-          console.warn(`Model ${modelName} failed or busy:`, err.message);
-          lastErr = err;
-          // Wait 500ms before trying fallback model
-          await new Promise((r) => setTimeout(r, 500));
-        }
-      }
-
-      if (!responseText) {
-        throw lastErr || new Error("All AI models are currently busy. Please try again in a moment.");
-      }
-
-      const resultJson = JSON.parse(responseText);
+      const resultJson = parseDeepSeekJson(responseText);
 
       // Clean up data and assign unique IDs
       const cleanedWords = (resultJson.words || []).map((item: any) => {
@@ -177,8 +216,6 @@ ${text.slice(0, 30000)}
         return res.status(400).json({ success: false, error: "Please provide a valid list of words to enrich." });
       }
 
-      const ai = getGeminiClient();
-
       // Chunk words into batches of 40 to avoid token limits or slow responses
       const CHUNK_SIZE = 40;
       const wordChunks: any[][] = [];
@@ -198,58 +235,42 @@ For EACH word in the list, generate complete vocabulary details:
 3. "chinese": accurate, concise Chinese definition including part-of-speech tags (e.g., "n. 交换；交流 vt. 交换；交流；兑换"). If an existing Chinese definition was provided in input, preserve and refine it to ensure proper part-of-speech tags.
 4. "exampleSentence": an elegant, clear, natural English sentence demonstrating the word in context.
 5. "exampleSentenceCn": natural Chinese translation of the example sentence.
-6. "options": an array of 4 Chinese translation options for quiz testing. 1 option MUST be the exact correct Chinese definition of this word, and 3 options MUST be plausible but incorrect Chinese definitions (distractors).
+6. "options": an array of exactly 4 Chinese translation options for quiz testing. 1 option MUST be the exact correct Chinese definition of this word, and 3 options MUST be plausible but incorrect Chinese definitions (distractors).
+
+You MUST respond with a single JSON object matching exactly this shape (and nothing else):
+{
+  "words": [
+    {
+      "word": "...",
+      "phonetic": "...",
+      "chinese": "...",
+      "exampleSentence": "...",
+      "exampleSentenceCn": "...",
+      "options": ["...", "...", "...", "..."]
+    }
+  ]
+}
 
 Input words:
 ${JSON.stringify(chunk, null, 2)}`;
 
         let responseText = "";
-        const modelsToTry = ["gemini-3.6-flash", "gemini-2.5-flash"];
-
-        for (const modelName of modelsToTry) {
-          try {
-            const response = await ai.models.generateContent({
-              model: modelName,
-              contents: prompt,
-              config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: Type.OBJECT,
-                  properties: {
-                    words: {
-                      type: Type.ARRAY,
-                      items: {
-                        type: Type.OBJECT,
-                        properties: {
-                          word: { type: Type.STRING },
-                          phonetic: { type: Type.STRING },
-                          chinese: { type: Type.STRING },
-                          exampleSentence: { type: Type.STRING },
-                          exampleSentenceCn: { type: Type.STRING },
-                          options: {
-                            type: Type.ARRAY,
-                            items: { type: Type.STRING }
-                          }
-                        },
-                        required: ["word", "phonetic", "chinese", "exampleSentence", "exampleSentenceCn", "options"]
-                      }
-                    }
-                  },
-                  required: ["words"]
-                }
-              }
-            });
-            responseText = response.text || "{}";
-            break;
-          } catch (err: any) {
-            console.warn(`Enrich model ${modelName} error:`, err.message);
-            await new Promise((r) => setTimeout(r, 400));
-          }
+        try {
+          responseText = await deepseekChatJsonWithRetry([
+            {
+              role: "system",
+              content:
+                "You are an expert English language learning assistant and dictionary compiler. Always output strictly valid JSON matching the requested schema. Do not include any text outside the JSON object."
+            },
+            { role: "user", content: prompt }
+          ]);
+        } catch (err: any) {
+          console.warn("Enrich DeepSeek chunk failed:", err.message);
         }
 
         if (responseText) {
           try {
-            const parsed = JSON.parse(responseText);
+            const parsed = parseDeepSeekJson(responseText);
             if (Array.isArray(parsed.words)) {
               parsed.words.forEach((item: any) => {
                 const baseWord = item.word ? item.word.toLowerCase().trim() : "";

@@ -694,7 +694,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               onClick={handleBulkEnrichWords}
               disabled={isBulkEnriching}
               className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer disabled:opacity-50"
-              title="自动调用 Gemini AI 补全缺乏例句与音标的生词"
+              title="自动调用 DeepSeek AI 补全缺乏例句与音标的生词"
             >
               {isBulkEnriching ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />

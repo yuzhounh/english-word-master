@@ -505,7 +505,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
               onClick={handleBulkEnrichWords}
               disabled={isBulkEnriching}
               className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer disabled:opacity-50"
-              title="自动调用 Gemini AI 补全缺乏例句与音标的熟词"
+              title="自动调用 DeepSeek AI 补全缺乏例句与音标的熟词"
             >
               {isBulkEnriching ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />

@@ -464,7 +464,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                 onClick={() => enrichCurrentBookWithAI(true)}
                 disabled={loadingBook || isEnrichingBook || bookWords.length === 0}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white rounded-xl text-xs font-bold hover:shadow-md hover:scale-[1.02] active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                title="自动调用 Gemini AI 为词书中的所有单词补充地道中英例句与音标"
+                title="自动调用 DeepSeek AI 为词书中的所有单词补充地道中英例句与音标"
               >
                 {isEnrichingBook ? (
                   <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -482,7 +482,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
               <Loader2 className="w-5 h-5 text-purple-600 animate-spin shrink-0" />
               <div>
                 <div className="font-bold text-purple-900 text-sm">{enrichProgress || 'AI 正在处理中...'}</div>
-                <div className="text-xs text-purple-700 mt-0.5">Gemini AI 正在智能生成中英双语表达例句、标准音标及词性说明，生成完毕后将自动保存并导入至生词本！</div>
+                <div className="text-xs text-purple-700 mt-0.5">DeepSeek AI 正在智能生成中英双语表达例句、标准音标及词性说明，生成完毕后将自动保存并导入至生词本！</div>
               </div>
             </div>
           )}

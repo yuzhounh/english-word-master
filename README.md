@@ -4,7 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.2-646CFF.svg)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.1-38B2AC.svg)](https://tailwindcss.com/)
-[![Gemini API](https://img.shields.io/badge/Google%20Gemini-API-8E75B2.svg)](https://ai.google.dev/)
+[![DeepSeek API](https://img.shields.io/badge/DeepSeek-API-4D6BFE.svg)](https://platform.deepseek.com/)
 [![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%26%20Auth-FFCA28.svg)](https://firebase.google.com/)
 
 **English Word Master** 是一款基于 AI 驱动的高效英文单词学习与综合词库管理平台。集成了文本智能分析、词干还原（Lemmatization）、四选一互动测验、错题本复习系统以及 Firebase 云端同步功能，帮助用户从阅读中积累词汇，高效巩固与高效复习。
@@ -46,7 +46,7 @@
 
 ### 后端与 API (Backend & Services)
 - **Server**: Node.js + Express
-- **AI Engine**: Google Gemini API (`@google/genai`)
+- **AI Engine**: DeepSeek V4 Flash（OpenAI 兼容 API）
 - **Database & Auth**: Firebase Firestore & Firebase Authentication
 - **Build Tool**: Esbuild + Tsx
 
@@ -72,8 +72,8 @@ npm install
 根目录下复制或创建 `.env` 文件（可参考 `.env.example`）：
 
 ```env
-# Google Gemini API Key
-GEMINI_API_KEY=your_gemini_api_key_here
+# DeepSeek API Key
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
 ```
 
 ### 4. 启动开发服务器 (Development Server)
