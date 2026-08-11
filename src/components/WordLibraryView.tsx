@@ -622,7 +622,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                         </div>
 
                         {/* Chinese definition */}
-                        <div className="text-lg font-extrabold text-sky-950 bg-sky-50/80 p-3.5 rounded-xl border border-sky-100/90 leading-relaxed whitespace-pre-line">
+                        <div className="text-base font-bold text-sky-950 bg-sky-50/80 p-3.5 rounded-xl border border-sky-100/90 leading-relaxed whitespace-pre-line">
                           {item.chinese}
                         </div>
 
