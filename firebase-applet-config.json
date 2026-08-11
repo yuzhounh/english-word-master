@@ -1,12 +1,9 @@
 {
-  "projectId": "english-word-master",
-  "appId": "1:308599104679:web:ce5afdc923046a17f1a782",
-  "apiKey": "AIzaSyDsnAl4QYBI4kWwSm-1GawLxeGhS4Eo4bA",
-  "authDomain": "english-word-master.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-englishwordmaste-a71040c1-7042-4ce8-aedf-ec7737490448",
-  "storageBucket": "english-word-master.firebasestorage.app",
-  "messagingSenderId": "308599104679",
-  "measurementId": "",
-  "oAuthClientId": "308599104679-ef3f5iigpvkcvlg1m8o0ntf692dvsgir.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "projectId": "english-word-master-app",
+  "appId": "1:948375764269:web:68dc3df4db64e265eea7a4",
+  "apiKey": "AIzaSyAUdUOYV4CUvgmv2fS6sXGouOqUOOt_2sY",
+  "authDomain": "english-word-master-app.firebaseapp.com",
+  "storageBucket": "english-word-master-app.firebasestorage.app",
+  "messagingSenderId": "948375764269",
+  "measurementId": "G-E19PJV8B0N"
 }
