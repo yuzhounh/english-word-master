@@ -517,7 +517,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
           {/* Book Content Loading / Error / Table */}
           {loadingBook ? (
             <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4 shadow-xs">
-              <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
+              <RefreshCw className="w-8 h-8 text-cyan-600 animate-spin mx-auto" />
               <p className="text-sm text-slate-600 font-medium">正在解析词书内容 ({selectedBook.name})...</p>
             </div>
           ) : bookError ? (
@@ -545,7 +545,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       setCurrentPage(1);
                     }}
                     placeholder="在当前词书中搜索单词或释义..."
-                    className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-400"
+                    className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-cyan-400"
                   />
                 </div>
 
@@ -560,7 +560,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       onClick={() => setViewMode('cards')}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         viewMode === 'cards' 
-                          ? 'bg-white text-indigo-700 shadow-xs' 
+                          ? 'bg-white text-cyan-700 shadow-xs' 
                           : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
@@ -571,7 +571,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       onClick={() => setViewMode('table')}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         viewMode === 'table' 
-                          ? 'bg-white text-indigo-700 shadow-xs' 
+                          ? 'bg-white text-cyan-700 shadow-xs' 
                           : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
@@ -589,20 +589,20 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                     <div 
                       key={`${item.word}-${idx}`}
                       onClick={() => speakWord(item.word, item.exampleSentence)}
-                      className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-md hover:border-indigo-200/80 transition-all space-y-3 flex flex-col justify-between cursor-pointer group"
+                      className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-md hover:border-cyan-300 transition-all space-y-3 flex flex-col justify-between cursor-pointer group"
                     >
                       <div className="space-y-3">
                         {/* Header: Word & Index */}
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-2xl font-extrabold text-slate-900 tracking-tight group-hover:text-indigo-600 transition-colors">{item.word}</span>
+                              <span className="text-2xl font-extrabold text-slate-900 tracking-tight transition-colors">{item.word}</span>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   speakWord(item.word, item.exampleSentence);
                                 }}
-                                className="p-1.5 text-slate-400 group-hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                                className="p-1.5 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors cursor-pointer"
                                 title="播放发音"
                               >
                                 <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-5 h-5" />
@@ -657,13 +657,13 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                           <tr 
                             key={`${item.word}-${idx}`} 
                             onClick={() => speakWord(item.word, item.exampleSentence)}
-                            className="hover:bg-indigo-50/40 transition-colors cursor-pointer group"
+                            className="hover:bg-cyan-50/40 transition-colors cursor-pointer group"
                           >
                             <td className="py-4 px-5 text-center text-slate-400 font-mono text-sm">{pageStartIndex + idx + 1}</td>
                             <td className="py-4 px-5 font-extrabold text-slate-900 text-base">
                               <div className="flex items-center gap-2.5">
-                                <span className="group-hover:text-indigo-600 transition-colors">{item.word}</span>
-                                <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-4.5 h-4.5 text-slate-400 group-hover:text-indigo-600 transition-colors shrink-0" />
+                                <span className="transition-colors">{item.word}</span>
+                                <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-4.5 h-4.5 text-slate-400 hover:text-cyan-600 transition-colors shrink-0" />
                               </div>
                             </td>
                             <td className="py-4 px-5 text-slate-500 font-mono text-xs space-y-0.5">

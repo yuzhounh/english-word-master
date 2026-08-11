@@ -610,7 +610,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                         </div>
                       </div>
 
-                      <h3 className="font-bold text-slate-800 text-base group-hover:text-amber-600 transition-colors line-clamp-1">
+                      <h3 className="font-bold text-slate-800 text-base group-hover:text-indigo-600 transition-colors line-clamp-1">
                         {list.name}
                       </h3>
                       <p className="text-xs text-slate-400 mt-1 line-clamp-2">
@@ -799,7 +799,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                           e.stopPropagation();
                           speakWord(item.word, item.exampleSentence);
                         }}
-                        className="p-1 text-slate-400 hover:text-amber-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer translate-y-[3.5px]"
+                        className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer translate-y-[3.5px]"
                         title="发音（单词+例句）"
                       >
                         <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-5 h-5" />

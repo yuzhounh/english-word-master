@@ -333,20 +333,20 @@ export const QuizView: React.FC<QuizViewProps> = ({
             </div>
             <div>
               <div className="text-xs text-slate-400 font-medium">进入生词本</div>
-              <div className="text-xl font-bold text-indigo-600">{wrongInRound.length}</div>
+              <div className="text-xl font-bold text-amber-600">{wrongInRound.length}</div>
             </div>
           </div>
 
           {/* Wrong words review in this round */}
           {wrongInRound.length > 0 && (
             <div className="text-left space-y-3 pt-2">
-              <h3 className="text-xs font-semibold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
+              <h3 className="text-xs font-semibold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
                 <Bookmark className="w-3.5 h-3.5" />
                 <span>本轮未掌握生词 ({wrongInRound.length})</span>
               </h3>
-              <div className="bg-indigo-50/50 border border-indigo-200/60 rounded-xl p-3 space-y-2 max-h-48 overflow-y-auto">
+              <div className="bg-amber-50/50 border border-amber-200/60 rounded-xl p-3 space-y-2 max-h-48 overflow-y-auto">
                 {wrongInRound.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-indigo-100/80 last:border-0">
+                  <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-amber-100/80 last:border-0">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-800">{item.word}</span>
                       <span className="text-slate-400">{item.phonetic}</span>
@@ -370,7 +370,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
             <button
               onClick={onGoToWrongWords}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all shadow-md shadow-indigo-100 cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl transition-all shadow-md shadow-amber-100 cursor-pointer"
             >
               <Bookmark className="w-4 h-4" />
               <span>查看生词本 ({wrongWordsCount})</span>
