@@ -116,4 +116,21 @@
   .text-muted {
     @apply text-slate-500 dark:text-slate-400;
   }
+
+  .surface-icon {
+    @apply bg-brand-50 dark:bg-brand-900/40 text-brand-600 dark:text-brand-300;
+  }
+
+  .surface-stat {
+    @apply bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800;
+  }
+
+  .btn-danger-soft {
+    @apply bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-800;
+  }
+
+  .surface-tab-active {
+    background-color: var(--color-surface-raised);
+    @apply shadow-xs border border-slate-200/80 dark:border-slate-600/80;
+  }
 }

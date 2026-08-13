@@ -353,12 +353,12 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       )}
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100/80 dark:bg-slate-800/60 p-1.5 rounded-2xl">
-        <div className="flex items-center gap-1 bg-slate-200/60 p-1 rounded-xl">
+        <div className="flex items-center gap-1 bg-slate-200/60 dark:bg-slate-700/60 p-1 rounded-xl">
           <button
             onClick={() => { setViewMode('lists'); setSelectedListFilter('all'); }}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'lists'
-                ? 'surface-card text-emerald-800 dark:text-emerald-300 shadow-xs'
+                ? 'surface-tab-active text-emerald-800 dark:text-emerald-300'
                 : 'text-secondary hover:text-primary'
             }`}
           >
@@ -369,7 +369,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             onClick={() => setViewMode('details')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'details'
-                ? 'surface-card text-emerald-800 dark:text-emerald-300 shadow-xs'
+                ? 'surface-tab-active text-emerald-800 dark:text-emerald-300'
                 : 'text-secondary hover:text-primary'
             }`}
           >
@@ -379,7 +379,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
         </div>
 
         {selectedListFilter !== 'all' && (
-          <div className="text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200 flex items-center justify-between gap-2">
+          <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-2">
             <span>正在筛选：近期攻克熟词列表 ({activeWordSet.length}词)</span>
             <button onClick={() => setSelectedListFilter('all')} className="underline hover:text-emerald-900 font-bold cursor-pointer">清除筛选</button>
           </div>
@@ -401,10 +401,10 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
               className="surface-card rounded-2xl p-5 shadow-xs hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
             >
               <div className="flex items-center justify-between">
-                <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                   <Award className="w-5 h-5" />
                 </div>
-                <span className="px-2 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-800 rounded-full">
+                <span className="px-2 py-0.5 text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 rounded-full">
                   {masteredWords.length} 词
                 </span>
               </div>
@@ -428,10 +428,10 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
               className="surface-card rounded-2xl p-5 shadow-xs hover:border-teal-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
             >
               <div className="flex items-center justify-between">
-                <div className="p-3 rounded-xl bg-teal-50 text-teal-600 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                <div className="p-3 rounded-xl bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300 group-hover:bg-teal-500 group-hover:text-white transition-colors">
                   <Sparkles className="w-5 h-5" />
                 </div>
-                <span className="px-2 py-0.5 text-xs font-bold bg-teal-100 text-teal-800 rounded-full">
+                <span className="px-2 py-0.5 text-xs font-bold bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300 rounded-full">
                   {recentMasteredWords.length} 词
                 </span>
               </div>
@@ -537,7 +537,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                 <button
                   onClick={handleExportJSON}
                   disabled={masteredWords.length === 0}
-                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <FileJson className="w-3.5 h-3.5 text-emerald-600" />
                   <span>导出 JSON 文件</span>
@@ -545,7 +545,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                 <button
                   onClick={handleExportCSV}
                   disabled={masteredWords.length === 0}
-                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
+                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100 dark:border-slate-700"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 text-teal-600" />
                   <span>导出 CSV 表格</span>
@@ -558,7 +558,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
           {masteredWords.length > 0 && (
             <button
               onClick={() => setIsClearModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold text-xs rounded-xl border border-rose-200/80 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 btn-danger-soft font-semibold text-xs rounded-xl transition-all cursor-pointer"
               title="清空整个熟词本"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -713,7 +713,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setIsClearModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-secondary surface-muted hover:opacity-90 rounded-xl transition-colors cursor-pointer"
               >
                 取消
               </button>
@@ -747,7 +747,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                   setIsImportModalOpen(false);
                   setImportStatus(null);
                 }}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                className="p-1 text-muted hover:text-primary rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -761,7 +761,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                 <label className="block text-xs font-bold text-slate-700">方法 1：上传 JSON / CSV / TXT 文件</label>
                 <div 
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50 p-4 rounded-xl text-center cursor-pointer transition-all space-y-1"
+                  className="border-2 border-dashed border-emerald-300 dark:border-emerald-700 hover:border-emerald-500 bg-emerald-50/40 dark:bg-emerald-900/20 hover:bg-emerald-50 dark:hover:bg-emerald-900/40 p-4 rounded-xl text-center cursor-pointer transition-all space-y-1"
                 >
                   <Upload className="w-6 h-6 text-emerald-600 mx-auto" />
                   <p className="text-xs font-semibold text-slate-700">点击上传文件 (.json, .csv, .txt)</p>
@@ -801,12 +801,12 @@ registration
 3. 各种分隔符:
 abandon : 放弃；抛弃
 apple - 苹果`}
-                  className="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white text-slate-800 transition-all placeholder:text-slate-400"
+                  className="w-full p-3 text-xs font-mono surface-input rounded-xl focus:outline-none focus:border-emerald-500 transition-all"
                 />
               </div>
 
               {/* AI Enrich Toggle */}
-              <div className="flex items-center justify-between bg-emerald-50/60 p-3 rounded-xl border border-emerald-200/60">
+              <div className="flex items-center justify-between bg-emerald-50/60 dark:bg-emerald-900/30 p-3 rounded-xl border border-emerald-200/60 dark:border-emerald-800/60">
                 <label className="flex items-center gap-2.5 text-xs font-semibold text-emerald-900 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -850,7 +850,7 @@ apple - 苹果`}
                   setIsImportModalOpen(false);
                   setImportStatus(null);
                 }}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 text-xs font-semibold text-secondary surface-muted hover:opacity-90 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
               >
                 取消
               </button>

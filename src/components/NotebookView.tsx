@@ -56,7 +56,7 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
         onClick={() => onSubTabChange('wrong')}
         className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
           subTab === 'wrong'
-            ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-sm'
+            ? 'surface-tab-active text-brand-600 dark:text-brand-300'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
         }`}
       >
@@ -73,7 +73,7 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
         onClick={() => onSubTabChange('mastered')}
         className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
           subTab === 'mastered'
-            ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+            ? 'surface-tab-active text-emerald-600 dark:text-emerald-400'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
         }`}
       >

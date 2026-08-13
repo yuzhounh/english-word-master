@@ -243,10 +243,10 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
         title="官方权威词库 (Word Library)"
         description="内置全国各大教材同步词汇、高考、四六级、考研英语、雅思托福及专业词汇词书。支持分类多级检索、词书在线预览、一键专项背诵与自定义导入。"
         stats={
-          <div className="bg-brand-50 border border-brand-100 rounded-xl p-4 text-center shrink-0 min-w-[140px]">
-            <FileSpreadsheet className="w-6 h-6 text-brand-600 mx-auto mb-1" />
-            <div className="text-xl font-bold text-slate-900">{allBooks.length}</div>
-            <div className="text-xs text-slate-500">内置分级词书</div>
+          <div className="surface-stat rounded-xl p-4 text-center shrink-0 min-w-[140px]">
+            <FileSpreadsheet className="w-6 h-6 text-brand-600 dark:text-brand-400 mx-auto mb-1" />
+            <div className="text-xl font-bold text-primary">{allBooks.length}</div>
+            <div className="text-xs text-muted">内置分级词书</div>
           </div>
         }
         action={
@@ -344,7 +344,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       onClick={() => handleSelectBook(book)}
                       className="surface-card rounded-2xl p-4 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-start gap-3"
                     >
-                      <div className="p-2.5 rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
+                      <div className="p-2.5 rounded-xl surface-icon group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
                         <BookOpen className="w-5 h-5" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -374,7 +374,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-3 rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
+                        <div className="p-3 rounded-xl surface-icon group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
                           <Folder className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
@@ -397,7 +397,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-3 rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
+                        <div className="p-3 rounded-xl surface-icon group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
                           <BookOpen className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
@@ -467,7 +467,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
           {/* AI Enriching Loading Banner */}
           {isEnrichingBook && (
-            <div className="bg-brand-50 border border-brand-200 rounded-xl p-4 flex items-center gap-3 shadow-card animate-pulse">
+            <div className="bg-brand-50 dark:bg-brand-900/30 border border-brand-200 dark:border-brand-800 rounded-xl p-4 flex items-center gap-3 shadow-card animate-pulse">
               <Loader2 className="w-5 h-5 text-brand-600 animate-spin shrink-0" />
               <div>
                 <div className="font-bold text-brand-900 text-sm">{enrichProgress || 'AI 正在处理中...'}</div>
@@ -541,13 +541,13 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                   </div>
 
                   {/* Toggle Cards / Table */}
-                  <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200">
+                  <div className="surface-muted p-1 rounded-xl flex items-center gap-1 border border-slate-200 dark:border-slate-600">
                     <button
                       onClick={() => setViewMode('cards')}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         viewMode === 'cards' 
-                          ? 'surface-card text-brand-700 dark:text-brand-300 shadow-xs' 
-                          : 'text-slate-500 hover:text-slate-800'
+                          ? 'surface-tab-active text-brand-700 dark:text-brand-300' 
+                          : 'text-muted hover:text-primary'
                       }`}
                     >
                       <LayoutGrid className="w-3.5 h-3.5" />
@@ -557,8 +557,8 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       onClick={() => setViewMode('table')}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         viewMode === 'table' 
-                          ? 'surface-card text-brand-700 dark:text-brand-300 shadow-xs' 
-                          : 'text-slate-500 hover:text-slate-800'
+                          ? 'surface-tab-active text-brand-700 dark:text-brand-300' 
+                          : 'text-muted hover:text-primary'
                       }`}
                     >
                       <List className="w-3.5 h-3.5" />
@@ -588,7 +588,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                                   e.stopPropagation();
                                   speakWord(item.word, item.exampleSentence);
                                 }}
-                                className="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors cursor-pointer"
+                                className="p-1.5 text-muted hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/40 rounded-lg transition-colors cursor-pointer"
                                 title="播放发音"
                               >
                                 <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-5 h-5" />
@@ -602,22 +602,22 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                               </div>
                             )}
                           </div>
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs font-mono font-bold rounded-lg shrink-0">
+                          <span className="px-2 py-0.5 surface-muted text-muted text-xs font-mono font-bold rounded-lg shrink-0">
                             #{pageStartIndex + idx + 1}
                           </span>
                         </div>
 
                         {/* Chinese definition */}
-                        <div className="text-base font-bold text-sky-950 bg-sky-50/80 p-3.5 rounded-xl border border-sky-100/90 leading-relaxed whitespace-pre-line">
+                        <div className="text-base font-bold text-sky-950 dark:text-sky-200 bg-sky-50/80 dark:bg-sky-900/30 p-3.5 rounded-xl border border-sky-100/90 dark:border-sky-800/50 leading-relaxed whitespace-pre-line">
                           {item.chinese}
                         </div>
 
                         {/* Example sentence */}
                         {item.exampleSentence && (
-                          <div className="text-sm text-slate-700 bg-slate-50/80 p-3.5 rounded-xl border border-slate-100 space-y-1.5">
-                            <p className="font-medium text-slate-800 italic leading-relaxed">“{item.exampleSentence}”</p>
+                          <div className="text-sm text-secondary bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-xl border border-slate-100 dark:border-slate-700 space-y-1.5">
+                            <p className="font-medium text-primary italic leading-relaxed">“{item.exampleSentence}”</p>
                             {item.exampleSentenceCn && (
-                              <p className="text-slate-500 text-xs leading-normal">{item.exampleSentenceCn}</p>
+                              <p className="text-muted text-xs leading-normal">{item.exampleSentenceCn}</p>
                             )}
                           </div>
                         )}
@@ -631,7 +631,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-slate-50/80 border-y border-slate-200/80 text-sm font-bold text-slate-600 uppercase tracking-wider">
+                        <tr className="surface-muted border-y border-slate-200/80 dark:border-slate-700/80 text-sm font-bold text-secondary uppercase tracking-wider">
                           <th className="py-3.5 px-5 w-14 text-center">#</th>
                           <th className="py-3.5 px-5 min-w-[200px]">单词</th>
                           <th className="py-3.5 px-5 min-w-[160px]">音标 (英/美)</th>
@@ -643,7 +643,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                           <tr 
                             key={`${item.word}-${idx}`} 
                             onClick={() => speakWord(item.word, item.exampleSentence)}
-                            className="hover:bg-brand-50/40 transition-colors cursor-pointer group"
+                            className="hover:bg-brand-50/40 dark:hover:bg-brand-900/20 transition-colors cursor-pointer group"
                           >
                             <td className="py-4 px-5 text-center text-slate-400 font-mono text-sm">{pageStartIndex + idx + 1}</td>
                             <td className="py-4 px-5 font-extrabold text-slate-900 text-base">
