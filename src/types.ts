@@ -43,7 +43,7 @@ export interface MasteredWordItem {
 
 export interface WordListGroup {
   id: string; // e.g. "list-1", "extracted-20260809"
-  name: string; // e.g. "单词列表 1", "考研冲刺词汇"
+  name: string; // e.g. "词本 1", "考研冲刺词汇"
   description?: string;
   category?: string; // e.g. "文本提取", "生词本", "熟词本", "自定义导入"
   words: WordItem[];

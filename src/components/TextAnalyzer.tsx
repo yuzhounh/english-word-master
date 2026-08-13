@@ -58,21 +58,24 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
   const [inputText, setInputText] = useState<string>('');
   const [directText, setDirectText] = useState<string>('');
   const [fileName, setFileName] = useState<string | null>(null);
-  const [listName, setListName] = useState<string>('默认单词列表');
+  const [listName, setListName] = useState<string>('默认词本');
   const [isNewListName, setIsNewListName] = useState<boolean>(false);
   const [newListName, setNewListName] = useState<string>('');
 
   const existingListNames = useMemo(() => {
-    const names = new Set<string>(['默认单词列表']);
-    customWordLists.forEach((list) => names.add(list.name));
+    const names = new Set<string>(['默认词本']);
+    customWordLists.forEach((list) => {
+      names.add(list.name === '默认单词列表' ? '默认词本' : list.name);
+    });
     return Array.from(names);
   }, [customWordLists]);
 
   const resolveTargetListName = () => {
     if (isNewListName) {
-      return newListName.trim() || '默认单词列表';
+      return newListName.trim() || '默认词本';
     }
-    return listName.trim() || '默认单词列表';
+    const resolved = listName.trim() || '默认词本';
+    return resolved === '默认单词列表' ? '默认词本' : resolved;
   };
   const [maxWords, setMaxWords] = useState<number>(30);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -132,7 +135,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
           }
 
           // Automatically enrich words with AI if example sentences or definitions are missing
-          const targetListName = resolveTargetListName() || fileName || '默认单词列表';
+          const targetListName = resolveTargetListName() || fileName || '默认词本';
           const needsEnrichment = parsedWords.some((w) => !w.exampleSentence || !w.chinese);
           if (needsEnrichment && autoEnrich) {
             setProgressStatus(`AI 正在智能补全中英双语例句与音标 (0/${parsedWords.length})...`);
@@ -279,7 +282,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
     if (!hasError && allWords.length > 0) {
       const deduped = Array.from(new Map(allWords.map(w => [w.id, w])).values());
       onWordsExtracted(deduped, targetListName);
-      setSuccessMessage(`文章提取完成，成功提取 ${deduped.length} 个核心词汇并保存至生词本（单词列表：「${targetListName}」）！`);
+      setSuccessMessage(`文章提取完成，成功提取 ${deduped.length} 个核心词汇并保存至生词本（词本：「${targetListName}」）！`);
     } else if (!hasError && allWords.length === 0) {
       setErrorMessage('未能从文本中提取出有效词汇，请尝试更换文章或增加目标词量。');
     }
@@ -290,7 +293,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
   // Direct Word List Import (Skipping AI Analysis, with smart parsing & optional AI enrichment)
   const handleDirectImport = async () => {
     if (!directText.trim()) {
-      setErrorMessage('请输入或粘贴单词列表');
+      setErrorMessage('请输入或粘贴词本');
       return;
     }
 
@@ -314,7 +317,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
           setProgressStatus(`AI 正在智能生成例句与音标... 已完成 ${processed} / ${total} 词 (${percent}%)`);
         });
         onWordsExtracted(enrichedWords, targetListName);
-        setSuccessMessage(`解析成功！AI 已自动补充词性与例句，并将 ${enrichedWords.length} 个单词保存至生词本（单词列表：「${targetListName}」）！`);
+        setSuccessMessage(`解析成功！AI 已自动补充词性与例句，并将 ${enrichedWords.length} 个单词保存至生词本（词本：「${targetListName}」）！`);
       } catch (err: any) {
         console.error('Enrichment error:', err);
         const fallbackWords: WordItem[] = parsed.map((p) => ({
@@ -326,7 +329,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
           exampleSentenceCn: p.exampleSentenceCn || ''
         }));
         onWordsExtracted(fallbackWords, targetListName);
-        setSuccessMessage(`成功将 ${fallbackWords.length} 个单词保存至生词本（单词列表：「${targetListName}」）！`);
+        setSuccessMessage(`成功将 ${fallbackWords.length} 个单词保存至生词本（词本：「${targetListName}」）！`);
       } finally {
         setIsLoading(false);
       }
@@ -340,7 +343,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
         exampleSentenceCn: p.exampleSentenceCn || ''
       }));
       onWordsExtracted(basicWords, targetListName);
-      setSuccessMessage(`已将 ${basicWords.length} 个单词保存至生词本（单词列表：「${targetListName}」）！`);
+      setSuccessMessage(`已将 ${basicWords.length} 个单词保存至生词本（词本：「${targetListName}」）！`);
     }
   };
 
@@ -350,8 +353,8 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
       <PageHeader
         badge="智能文本分析 & 快捷生词导入"
         badgeIcon={Sparkles}
-        title="导入文本提取核心词，或直接导入单词列表"
-        description="既可分析短文还原词干，也可直接粘贴单词列表批量加入生词本！"
+        title="导入文本提取核心词，或直接导入词本"
+        description="既可分析短文还原词干，也可直接粘贴词本批量加入生词本！"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
@@ -384,7 +387,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                 }`}
               >
                 <Zap className="w-4 h-4" />
-                <span>导入单词列表</span>
+                <span>导入词本</span>
               </button>
             </div>
 
@@ -488,7 +491,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                     <div className="flex items-center gap-2 flex-wrap">
                       <label className="font-semibold text-primary text-sm flex items-center gap-2 shrink-0">
                         <ListPlus className="w-4 h-4 text-brand-600" />
-                        <span>粘贴单词列表（自动兼容各种格式）</span>
+                        <span>粘贴词本（自动兼容各种格式）</span>
                       </label>
                       <span className="text-xs text-slate-400 font-normal">
                         支持教材词表 / 纯单词 / 编号释义列表
@@ -516,7 +519,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                     }}
                     placeholder={`支持以下多种导入格式（自动兼容过滤）：
 
-格式 1 & 2 (纯单词列表/含单元标题):
+格式 1 & 2 (纯词本/含单元标题):
 ### Welcome Unit
 exchange
 lecture
@@ -535,14 +538,14 @@ registration
               </>
             )}
 
-            {/* Target Custom List Name Input & Action Button in one row */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                <label className="text-xs font-semibold text-secondary flex items-center gap-1.5 shrink-0">
+            {/* Target wordbook selector & action */}
+            <div className="flex flex-col gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-secondary flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-brand-600" />
-                  <span>保存至单词列表：</span>
+                  <span>保存至词本：</span>
                 </label>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <select
                     value={isNewListName ? '__new__' : listName}
                     onChange={(e) => {
@@ -553,26 +556,26 @@ registration
                         setListName(e.target.value);
                       }
                     }}
-                    className="w-full sm:w-56 px-3 py-1.5 text-xs rounded-lg surface-input focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/40 outline-none font-medium transition-all cursor-pointer"
+                    className="w-full sm:w-56 px-3 py-1.5 text-xs rounded-lg surface-input focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/40 outline-none font-medium transition-all cursor-pointer shrink-0"
                   >
+                    <option value="__new__">＋ 新建词本...</option>
                     {existingListNames.map((name) => (
                       <option key={name} value={name}>{name}</option>
                     ))}
-                    <option value="__new__">＋ 新建列表...</option>
                   </select>
                   {isNewListName && (
                     <input
                       type="text"
                       value={newListName}
                       onChange={(e) => setNewListName(e.target.value)}
-                      placeholder="输入新列表名称"
-                      className="w-full sm:w-48 px-3 py-1.5 text-xs rounded-lg surface-input focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/40 outline-none font-medium transition-all"
+                      placeholder="输入新词本名称"
+                      className="w-full sm:flex-1 sm:min-w-0 px-3 py-1.5 text-xs rounded-lg surface-input focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/40 outline-none font-medium transition-all"
                     />
                   )}
                 </div>
               </div>
 
-              <div>
+              <div className="flex justify-end">
                 {inputMode === 'analyze' ? (
                   <button
                     type="button"
@@ -607,7 +610,7 @@ registration
                     ) : (
                       <>
                         <ListPlus className="w-4 h-4" />
-                        <span>导入单词列表</span>
+                        <span>导入词本</span>
                       </>
                     )}
                   </button>
@@ -677,7 +680,7 @@ registration
             <div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-brand-500" />
-                <h2 className="text-lg font-bold text-primary">已提取/导入单词列表</h2>
+                <h2 className="text-lg font-bold text-primary">已提取/导入词本</h2>
                 <span className="px-2.5 py-0.5 text-xs font-bold bg-brand-50 text-brand-700 rounded-full border border-brand-100">
                   {extractedWords.length} 个核心词汇
                 </span>

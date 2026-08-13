@@ -331,7 +331,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
     if (rawParsed.length === 0) {
       setImportStatus({
         type: 'error',
-        message: '未发现有效英文单词，请输入教材格式、纯单词列表或“单词: 释义”。'
+        message: '未发现有效英文单词，请输入教材格式、纯词本或“单词: 释义”。'
       });
       return;
     }
@@ -533,7 +533,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
           {customWordLists.length > 0 && (
             <div className="space-y-3 pt-2">
               <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                <span>导入的自定义单词列表 ({customWordLists.length})</span>
+                <span>导入的自定义词本 ({customWordLists.length})</span>
                 <span className="text-xs text-slate-400 normal-case font-normal">来源于官方词库或自定义提取导入</span>
               </div>
 
@@ -733,6 +733,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
           icon={CheckCircle2}
           title={searchTerm ? '未找到符合条件的生词' : '生词本暂无记录'}
           description={searchTerm ? '尝试更换搜索关键字' : '在单词测试中答错的词汇会自动记录在这里，也可以通过【导入词汇】快捷批量添加。'}
+          descriptionClassName={searchTerm ? undefined : 'max-w-none whitespace-nowrap overflow-x-auto text-xs sm:text-sm px-2'}
         />
       ) : (
         <div className="space-y-4">
@@ -909,7 +910,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                   rows={6}
                   placeholder={`自动支持多种常见格式：
 
-1. 纯单词列表 (可带单元标题):
+1. 纯词本 (可带单元标题):
 ### Welcome Unit
 exchange
 lecture

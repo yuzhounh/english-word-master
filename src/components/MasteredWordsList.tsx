@@ -272,7 +272,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
     if (rawParsed.length === 0) {
       setImportStatus({
         type: 'error',
-        message: '未发现有效英文单词，请输入教材格式、纯单词列表或“单词: 释义”。'
+        message: '未发现有效英文单词，请输入教材格式、纯词本或“单词: 释义”。'
       });
       return;
     }
@@ -361,7 +361,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       {/* Word List Cards Grid */}
       <div className="space-y-4">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            熟词本 · 专属单词列表
+            熟词本 · 专属词本
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -758,7 +758,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                   rows={6}
                   placeholder={`自动支持多种常见格式：
 
-1. 纯单词列表 (可带单元标题):
+1. 纯词本 (可带单元标题):
 ### Welcome Unit
 exchange
 lecture
