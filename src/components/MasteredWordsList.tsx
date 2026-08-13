@@ -150,7 +150,6 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
     }
   };
 
-  const [viewMode, setViewMode] = useState<'lists' | 'details'>('lists');
   const [selectedListFilter, setSelectedListFilter] = useState<'all' | 'recent'>('all');
 
   // Computed sub-lists
@@ -352,43 +351,15 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       />
       )}
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100/80 dark:bg-slate-800/60 p-1.5 rounded-2xl">
-        <div className="flex items-center gap-1 bg-slate-200/60 dark:bg-slate-700/60 p-1 rounded-xl">
-          <button
-            onClick={() => { setViewMode('lists'); setSelectedListFilter('all'); }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'lists'
-                ? 'surface-tab-active text-emerald-800 dark:text-emerald-300'
-                : 'text-secondary hover:text-primary'
-            }`}
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-            <span>按单词列表浏览</span>
-          </button>
-          <button
-            onClick={() => setViewMode('details')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'details'
-                ? 'surface-tab-active text-emerald-800 dark:text-emerald-300'
-                : 'text-secondary hover:text-primary'
-            }`}
-          >
-            <BookOpen className="w-4 h-4 text-emerald-500" />
-            <span>查看全部熟词明细 ({activeWordSet.length})</span>
-          </button>
+      {selectedListFilter !== 'all' && (
+        <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-2">
+          <span>正在筛选：近期攻克熟词列表 ({activeWordSet.length}词)</span>
+          <button onClick={() => setSelectedListFilter('all')} className="underline hover:text-emerald-900 dark:hover:text-emerald-200 font-bold cursor-pointer">清除筛选</button>
         </div>
+      )}
 
-        {selectedListFilter !== 'all' && (
-          <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-2">
-            <span>正在筛选：近期攻克熟词列表 ({activeWordSet.length}词)</span>
-            <button onClick={() => setSelectedListFilter('all')} className="underline hover:text-emerald-900 font-bold cursor-pointer">清除筛选</button>
-          </div>
-        )}
-      </div>
-
-      {/* Word List Cards Grid (Shown when viewMode === 'lists') */}
-      {viewMode === 'lists' && (
-        <div className="space-y-4">
+      {/* Word List Cards Grid */}
+      <div className="space-y-4">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             熟词本 · 专属单词列表
           </div>
@@ -397,7 +368,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             
             {/* Card 1: All Mastered Words List */}
             <div 
-              onClick={() => { setSelectedListFilter('all'); setViewMode('details'); setCurrentPage(1); }}
+              onClick={() => { setSelectedListFilter('all'); setCurrentPage(1); }}
               className="surface-card rounded-2xl p-5 shadow-xs hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
             >
               <div className="flex items-center justify-between">
@@ -424,7 +395,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
             {/* Card 2: Recent Mastered List */}
             <div 
-              onClick={() => { setSelectedListFilter('recent'); setViewMode('details'); setCurrentPage(1); }}
+              onClick={() => { setSelectedListFilter('recent'); setCurrentPage(1); }}
               className="surface-card rounded-2xl p-5 shadow-xs hover:border-teal-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
             >
               <div className="flex items-center justify-between">
@@ -451,7 +422,6 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
           </div>
         </div>
-      )}
 
       {/* Filter and Toolbar Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 surface-card p-3.5 rounded-2xl shadow-card">

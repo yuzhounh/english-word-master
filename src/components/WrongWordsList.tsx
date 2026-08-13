@@ -166,7 +166,6 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
     }
   };
 
-  const [viewMode, setViewMode] = useState<'lists' | 'details'>('lists');
   const [selectedListFilter, setSelectedListFilter] = useState<'all' | 'high_error' | 'recent' | 'custom'>('all');
   const [selectedCustomListId, setSelectedCustomListId] = useState<string | null>(null);
 
@@ -417,54 +416,26 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
       />
       )}
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100/80 dark:bg-slate-800/60 p-1.5 rounded-2xl">
-        <div className="flex items-center gap-1 bg-slate-200/60 dark:bg-slate-700/60 p-1 rounded-xl">
-          <button
-            onClick={() => { setViewMode('lists'); setSelectedListFilter('all'); }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'lists'
-                ? 'surface-tab-active text-brand-800 dark:text-brand-300'
-                : 'text-secondary hover:text-primary'
-            }`}
+      {selectedListFilter !== 'all' && (
+        <div className="text-xs font-medium text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 px-3 py-2 rounded-lg border border-brand-200 dark:border-brand-800 flex items-center justify-between gap-2">
+          <span>
+            正在筛选：
+            {selectedListFilter === 'high_error' && '顽固高频难词列表'}
+            {selectedListFilter === 'recent' && '近期错题列表'}
+            {selectedListFilter === 'custom' && `自定义词表《${selectedCustomList?.name || ''}》`} 
+            ({activeWordSet.length}词)
+          </span>
+          <button 
+            onClick={() => { setSelectedListFilter('all'); setSelectedCustomListId(null); }} 
+            className="underline hover:text-brand-900 dark:hover:text-brand-200 font-bold cursor-pointer"
           >
-            <FileSpreadsheet className="w-4 h-4 text-brand-500" />
-            <span>按单词列表浏览</span>
-          </button>
-          <button
-            onClick={() => setViewMode('details')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'details'
-                ? 'surface-tab-active text-brand-800 dark:text-brand-300'
-                : 'text-secondary hover:text-primary'
-            }`}
-          >
-            <BookOpen className="w-4 h-4 text-brand-500" />
-            <span>查看全部生词明细 ({activeWordSet.length})</span>
+            清除筛选
           </button>
         </div>
+      )}
 
-        {selectedListFilter !== 'all' && (
-          <div className="text-xs font-medium text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 px-3 py-1 rounded-lg border border-brand-200 dark:border-brand-800 flex items-center justify-between gap-2">
-            <span>
-              正在筛选：
-              {selectedListFilter === 'high_error' && '顽固高频难词列表'}
-              {selectedListFilter === 'recent' && '近期错题列表'}
-              {selectedListFilter === 'custom' && `自定义词表《${selectedCustomList?.name || ''}》`} 
-              ({activeWordSet.length}词)
-            </span>
-            <button 
-              onClick={() => { setSelectedListFilter('all'); setSelectedCustomListId(null); }} 
-              className="underline hover:text-brand-900 font-bold cursor-pointer"
-            >
-              清除筛选
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Word List Cards Grid (Shown when viewMode === 'lists') */}
-      {viewMode === 'lists' && (
-        <div className="space-y-6">
+      {/* Word List Cards Grid */}
+      <div className="space-y-6">
           
           {/* Smart Classification Lists */}
           <div className="space-y-3">
@@ -476,7 +447,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               
               {/* Card 1: All Wrong Words List */}
               <div 
-                onClick={() => { setSelectedListFilter('all'); setSelectedCustomListId(null); setViewMode('details'); setCurrentPage(1); }}
+                onClick={() => { setSelectedListFilter('all'); setSelectedCustomListId(null); setCurrentPage(1); }}
                 className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
               >
                 <div className="flex items-center justify-between">
@@ -503,7 +474,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
 
               {/* Card 2: High Error List */}
               <div 
-                onClick={() => { setSelectedListFilter('high_error'); setSelectedCustomListId(null); setViewMode('details'); setCurrentPage(1); }}
+                onClick={() => { setSelectedListFilter('high_error'); setSelectedCustomListId(null); setCurrentPage(1); }}
                 className="surface-card rounded-2xl p-5 shadow-xs hover:border-red-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
               >
                 <div className="flex items-center justify-between">
@@ -530,7 +501,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
 
               {/* Card 3: Recent List */}
               <div 
-                onClick={() => { setSelectedListFilter('recent'); setSelectedCustomListId(null); setViewMode('details'); setCurrentPage(1); }}
+                onClick={() => { setSelectedListFilter('recent'); setSelectedCustomListId(null); setCurrentPage(1); }}
                 className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
               >
                 <div className="flex items-center justify-between">
@@ -573,7 +544,6 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                     onClick={() => {
                       setSelectedCustomListId(list.id);
                       setSelectedListFilter('custom');
-                      setViewMode('details');
                       setCurrentPage(1);
                     }}
                     className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all group space-y-3 relative flex flex-col justify-between cursor-pointer"
@@ -616,7 +586,6 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                           e.stopPropagation();
                           setSelectedCustomListId(list.id);
                           setSelectedListFilter('custom');
-                          setViewMode('details');
                           setCurrentPage(1);
                         }}
                         className="flex-1 py-1.5 px-3 surface-muted hover:opacity-90 text-secondary text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
@@ -640,9 +609,8 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
           )}
 
         </div>
-      )}
 
-      {/* Filter and Toolbar Bar (Shown when viewing details or lists) */}
+      {/* Filter and Toolbar Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 surface-card p-3.5 rounded-2xl shadow-card">
         
         {/* Search */}

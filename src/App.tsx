@@ -597,6 +597,7 @@ export default function App() {
                   setActiveTab('quiz');
                 }}
                 extractedWords={extractedWords}
+                customWordLists={customWordLists}
               />
             )}
 

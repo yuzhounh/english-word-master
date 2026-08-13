@@ -46,24 +46,24 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
     <PageHeader
       badge="我的词本"
       badgeIcon={BookOpen}
-      title={`生词 ${wrongWords.length} · 熟词 ${masteredWords.length}`}
+      title="生词本 · 熟词本"
       description="生词本收录待掌握词汇，熟词本记录已攻克单词。测试中连续答对 3 次自动移入熟词本。"
     />
 
-    <div className="flex items-center gap-1 bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-xl w-full sm:w-auto">
+    <div className="grid grid-cols-2 gap-2 bg-slate-100/80 dark:bg-slate-800/60 p-1.5 rounded-2xl w-full">
       <button
         type="button"
         onClick={() => onSubTabChange('wrong')}
-        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+        className={`flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl text-base font-bold transition-all cursor-pointer ${
           subTab === 'wrong'
             ? 'surface-tab-active text-brand-600 dark:text-brand-300'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
         }`}
       >
-        <Bookmark className="w-4 h-4" />
+        <Bookmark className="w-5 h-5" />
         <span>生词本</span>
         {wrongWords.length > 0 && (
-          <span className="px-1.5 py-0.5 text-xs bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 rounded-full font-bold">
+          <span className="px-2 py-0.5 text-sm bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 rounded-full font-bold">
             {wrongWords.length}
           </span>
         )}
@@ -71,16 +71,16 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
       <button
         type="button"
         onClick={() => onSubTabChange('mastered')}
-        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+        className={`flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl text-base font-bold transition-all cursor-pointer ${
           subTab === 'mastered'
             ? 'surface-tab-active text-emerald-600 dark:text-emerald-400'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
         }`}
       >
-        <Award className="w-4 h-4" />
+        <Award className="w-5 h-5" />
         <span>熟词本</span>
         {masteredWords.length > 0 && (
-          <span className="px-1.5 py-0.5 text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full font-bold">
+          <span className="px-2 py-0.5 text-sm bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full font-bold">
             {masteredWords.length}
           </span>
         )}

@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Upload, FileText, Sparkles, ArrowRight, CheckCircle2, AlertCircle, Loader2, BookOpen, Layers, ListPlus, Zap, Check, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { WordItem } from '../types';
+import { WordItem, WordListGroup } from '../types';
 import { parseWordListText, enrichWordsWithAI } from '../utils/wordParser';
 import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
@@ -12,6 +12,7 @@ interface TextAnalyzerProps {
   onWordsExtracted: (words: WordItem[], listName?: string) => void;
   onStartQuiz: (words: WordItem[]) => void;
   extractedWords: WordItem[];
+  customWordLists?: WordListGroup[];
 }
 
 const PRESET_SAMPLES = [
@@ -50,13 +51,29 @@ const PRESET_SAMPLES = [
 export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
   onWordsExtracted,
   onStartQuiz,
-  extractedWords
+  extractedWords,
+  customWordLists = [],
 }) => {
   const [inputMode, setInputMode] = useState<'analyze' | 'directList'>('analyze');
   const [inputText, setInputText] = useState<string>('');
   const [directText, setDirectText] = useState<string>('');
   const [fileName, setFileName] = useState<string | null>(null);
   const [listName, setListName] = useState<string>('默认单词列表');
+  const [isNewListName, setIsNewListName] = useState<boolean>(false);
+  const [newListName, setNewListName] = useState<string>('');
+
+  const existingListNames = useMemo(() => {
+    const names = new Set<string>(['默认单词列表']);
+    customWordLists.forEach((list) => names.add(list.name));
+    return Array.from(names);
+  }, [customWordLists]);
+
+  const resolveTargetListName = () => {
+    if (isNewListName) {
+      return newListName.trim() || '默认单词列表';
+    }
+    return listName.trim() || '默认单词列表';
+  };
   const [maxWords, setMaxWords] = useState<number>(30);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [progressStatus, setProgressStatus] = useState<string>('');
@@ -115,7 +132,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
           }
 
           // Automatically enrich words with AI if example sentences or definitions are missing
-          const targetListName = listName.trim() || fileName || '默认单词列表';
+          const targetListName = resolveTargetListName() || fileName || '默认单词列表';
           const needsEnrichment = parsedWords.some((w) => !w.exampleSentence || !w.chinese);
           if (needsEnrichment && autoEnrich) {
             setProgressStatus(`AI 正在智能补全中英双语例句与音标 (0/${parsedWords.length})...`);
@@ -217,7 +234,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
     setSuccessMessage(null);
     setProgressStatus('AI 正在分析文章并提取核心词汇...');
 
-    const targetListName = listName.trim() || '默认单词列表';
+    const targetListName = resolveTargetListName();
 
     const allWords: WordItem[] = [];
     let resume: string | null = null;
@@ -280,7 +297,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const targetListName = listName.trim() || '默认单词列表';
+    const targetListName = resolveTargetListName();
     const parsed = parseWordListText(directText);
 
     if (parsed.length === 0) {
@@ -334,9 +351,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
         badge="智能文本分析 & 快捷生词导入"
         badgeIcon={Sparkles}
         title="导入文本提取核心词，或直接导入单词列表"
-        description={
-          <>既可通过 AI 分析短文还原词干，也可<b>直接粘贴单词列表（由 AI 自动补充例句与测验）</b>批量加入生词本！</>
-        }
+        description="既可分析短文还原词干，也可直接粘贴单词列表批量加入生词本！"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
@@ -522,18 +537,39 @@ registration
 
             {/* Target Custom List Name Input & Action Button in one row */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
                 <label className="text-xs font-semibold text-secondary flex items-center gap-1.5 shrink-0">
                   <Layers className="w-3.5 h-3.5 text-brand-600" />
                   <span>保存至单词列表：</span>
                 </label>
-                <input
-                  type="text"
-                  value={listName}
-                  onChange={(e) => setListName(e.target.value)}
-                  placeholder="默认单词列表"
-                  className="w-44 sm:w-56 px-3 py-1.5 text-xs rounded-lg surface-input focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/40 outline-none font-medium transition-all"
-                />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 min-w-0">
+                  <select
+                    value={isNewListName ? '__new__' : listName}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') {
+                        setIsNewListName(true);
+                      } else {
+                        setIsNewListName(false);
+                        setListName(e.target.value);
+                      }
+                    }}
+                    className="w-full sm:w-56 px-3 py-1.5 text-xs rounded-lg surface-input focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/40 outline-none font-medium transition-all cursor-pointer"
+                  >
+                    {existingListNames.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                    <option value="__new__">＋ 新建列表...</option>
+                  </select>
+                  {isNewListName && (
+                    <input
+                      type="text"
+                      value={newListName}
+                      onChange={(e) => setNewListName(e.target.value)}
+                      placeholder="输入新列表名称"
+                      className="w-full sm:w-48 px-3 py-1.5 text-xs rounded-lg surface-input focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/40 outline-none font-medium transition-all"
+                    />
+                  )}
+                </div>
               </div>
 
               <div>
