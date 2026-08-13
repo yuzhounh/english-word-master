@@ -540,7 +540,26 @@ export default function App() {
       />
 
       <main className="flex-1 py-4 sm:py-8">
+        {/* Keep library mounted so folder navigation survives tab switches */}
+        <div className={activeTab === 'library' ? undefined : 'hidden'} aria-hidden={activeTab !== 'library'}>
+          <WordLibraryView
+            speechAccent={speechAccent}
+            onStartQuizWithWords={(words) => {
+              setQuizPool(words);
+              setActiveTab('quiz');
+            }}
+            onImportCustomList={(words, bookName) => {
+              handleImportCustomList(words, bookName);
+            }}
+            onGoToNotebook={() => {
+              setNotebookSubTab('wrong');
+              setActiveTab('notebook');
+            }}
+          />
+        </div>
+
         <AnimatePresence mode="wait">
+          {activeTab !== 'library' && (
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 10 }}
@@ -581,23 +600,6 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'library' && (
-              <WordLibraryView
-                speechAccent={speechAccent}
-                onStartQuizWithWords={(words) => {
-                  setQuizPool(words);
-                  setActiveTab('quiz');
-                }}
-                onImportCustomList={(words, bookName) => {
-                  handleImportCustomList(words, bookName);
-                }}
-                onGoToNotebook={() => {
-                  setNotebookSubTab('wrong');
-                  setActiveTab('notebook');
-                }}
-              />
-            )}
-
             {activeTab === 'notebook' && (
               <NotebookView
                 subTab={notebookSubTab}
@@ -623,7 +625,9 @@ export default function App() {
                 onImportMasteredWords={handleImportMasteredWords}
               />
             )}
+
           </motion.div>
+          )}
         </AnimatePresence>
       </main>
 

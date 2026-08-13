@@ -582,7 +582,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-2xl font-extrabold text-slate-900 tracking-tight transition-colors">{item.word}</span>
+                              <span className="text-2xl font-extrabold text-primary tracking-tight transition-colors">{item.word}</span>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -595,9 +595,9 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                               </button>
                             </div>
                             {(item.phoneticUs || item.phoneticUk || item.phonetic) && (
-                              <div className="text-sm font-mono text-slate-500 font-medium space-x-2">
-                                {item.phoneticUs && <span><span className="text-slate-400 text-xs">美</span> {item.phoneticUs}</span>}
-                                {item.phoneticUk && <span><span className="text-slate-400 text-xs">英</span> {item.phoneticUk}</span>}
+                              <div className="text-sm font-mono text-muted font-medium space-x-2">
+                                {item.phoneticUs && <span><span className="text-slate-400 dark:text-slate-500 text-xs">美</span> {item.phoneticUs}</span>}
+                                {item.phoneticUk && <span><span className="text-slate-400 dark:text-slate-500 text-xs">英</span> {item.phoneticUk}</span>}
                                 {!item.phoneticUs && !item.phoneticUk && item.phonetic && <span>{item.phonetic}</span>}
                               </div>
                             )}
@@ -638,31 +638,31 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                           <th className="py-3.5 px-5 min-w-[240px]">中文释义</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 text-sm">
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-sm">
                         {paginatedBookWords.map((item, idx) => (
                           <tr 
                             key={`${item.word}-${idx}`} 
                             onClick={() => speakWord(item.word, item.exampleSentence)}
                             className="hover:bg-brand-50/40 dark:hover:bg-brand-900/20 transition-colors cursor-pointer group"
                           >
-                            <td className="py-4 px-5 text-center text-slate-400 font-mono text-sm">{pageStartIndex + idx + 1}</td>
-                            <td className="py-4 px-5 font-extrabold text-slate-900 text-base">
+                            <td className="py-4 px-5 text-center text-muted font-mono text-sm">{pageStartIndex + idx + 1}</td>
+                            <td className="py-4 px-5 font-extrabold text-primary text-base">
                               <div className="flex items-center gap-2.5">
                                 <span className="transition-colors">{item.word}</span>
-                                <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-4.5 h-4.5 text-slate-400 hover:text-brand-600 transition-colors shrink-0" />
+                                <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-4.5 h-4.5 text-muted hover:text-brand-600 dark:hover:text-brand-400 transition-colors shrink-0" />
                               </div>
                             </td>
-                            <td className="py-4 px-5 text-slate-500 font-mono text-xs space-y-0.5">
+                            <td className="py-4 px-5 text-muted font-mono text-xs space-y-0.5">
                               {item.phoneticUs ? (
-                                <div><span className="text-slate-400 font-sans text-xs">美</span> {item.phoneticUs}</div>
+                                <div><span className="text-slate-400 dark:text-slate-500 font-sans text-xs">美</span> {item.phoneticUs}</div>
                               ) : null}
                               {item.phoneticUk ? (
-                                <div><span className="text-slate-400 font-sans text-xs">英</span> {item.phoneticUk}</div>
+                                <div><span className="text-slate-400 dark:text-slate-500 font-sans text-xs">英</span> {item.phoneticUk}</div>
                               ) : item.phonetic ? (
                                 <div>{item.phonetic}</div>
                               ) : null}
                             </td>
-                            <td className="py-4 px-5 font-medium text-slate-800 text-sm leading-relaxed whitespace-pre-line">{item.chinese}</td>
+                            <td className="py-4 px-5 font-medium text-secondary text-sm leading-relaxed whitespace-pre-line">{item.chinese}</td>
                           </tr>
                         ))}
                       </tbody>
