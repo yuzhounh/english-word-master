@@ -13,6 +13,7 @@ import { Button } from './ui/Button';
 
 interface MasteredWordsListProps {
   masteredWords: MasteredWordItem[];
+  hideHeader?: boolean;
   onRemoveMasteredWord: (wordId: string) => void;
   onMoveToWrongWords: (word: MasteredWordItem) => void;
   onStartMasteredWordsQuiz: (words: WordItem[]) => void;
@@ -22,6 +23,7 @@ interface MasteredWordsListProps {
 
 export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   masteredWords,
+  hideHeader = false,
   onRemoveMasteredWord,
   onMoveToWrongWords,
   onStartMasteredWordsQuiz,
@@ -330,8 +332,9 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 space-y-6">
+    <div className={hideHeader ? 'space-y-6' : 'max-w-5xl mx-auto px-4 space-y-6'}>
       
+      {!hideHeader && (
       <PageHeader
         badge="已掌握词汇库"
         badgeIcon={Award}
@@ -346,8 +349,9 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
           ) : undefined
         }
       />
+      )}
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100/80 p-1.5 rounded-2xl">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100/80 dark:bg-slate-800/60 p-1.5 rounded-2xl">
         <div className="flex items-center gap-1 bg-slate-200/60 p-1 rounded-xl">
           <button
             onClick={() => { setViewMode('lists'); setSelectedListFilter('all'); }}

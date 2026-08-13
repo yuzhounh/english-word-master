@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Navbar } from './components/Navbar';
 import { TextAnalyzer } from './components/TextAnalyzer';
 import { QuizView } from './components/QuizView';
-import { WrongWordsList } from './components/WrongWordsList';
-import { MasteredWordsList } from './components/MasteredWordsList';
+import { NotebookView } from './components/NotebookView';
 import { WordLibraryView } from './components/WordLibraryView';
 import { AuthModal } from './components/AuthModal';
 import { WordItem, WrongWordItem, MasteredWordItem, UserProfile, SpeechAccent, WordListGroup } from './types';
+import { AppTab, NotebookSubTab } from './types/navigation';
+import { useTheme } from './hooks/useTheme';
 import {
   auth,
   signInWithGoogle,
@@ -26,7 +28,9 @@ const LOCAL_STORAGE_SPEECH_ACCENT_KEY = 'wordmaster_speech_accent_v1';
 const LOCAL_STORAGE_CUSTOM_LISTS_KEY = 'wordmaster_custom_lists_v1';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'quiz' | 'extract' | 'library' | 'masteredWords' | 'wrongWords'>('quiz');
+  const { resolved, toggleTheme } = useTheme();
+  const [activeTab, setActiveTab] = useState<AppTab>('quiz');
+  const [notebookSubTab, setNotebookSubTab] = useState<NotebookSubTab>('wrong');
   const [speechAccent, setSpeechAccent] = useState<SpeechAccent>(() => {
     return (localStorage.getItem(LOCAL_STORAGE_SPEECH_ACCENT_KEY) as SpeechAccent) || 'en-US';
   });
@@ -518,9 +522,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-surface text-slate-800 flex flex-col font-sans">
+    <div className="min-h-screen bg-surface text-slate-800 dark:text-slate-100 flex flex-col font-sans">
       
-      {/* Navigation */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -532,90 +535,101 @@ export default function App() {
         extractedWordsCount={extractedWords.length}
         speechAccent={speechAccent}
         onToggleSpeechAccent={toggleSpeechAccent}
+        isDark={resolved === 'dark'}
+        onToggleTheme={toggleTheme}
       />
 
-      {/* Main Body View */}
       <main className="flex-1 py-4 sm:py-8">
-        <div className={activeTab === 'quiz' ? 'block' : 'hidden'}>
-          <QuizView
-            wordPool={quizPool.length > 0 ? quizPool : extractedWords}
-            onRecordWrongWord={handleRecordWrongWord}
-            onRecordMasteredWord={handleRecordMasteredWord}
-            onGoToWrongWords={() => setActiveTab('wrongWords')}
-            wrongWordsCount={wrongWords.length}
-            speechAccent={speechAccent}
-          />
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {activeTab === 'quiz' && (
+              <QuizView
+                wordPool={quizPool.length > 0 ? quizPool : extractedWords}
+                onRecordWrongWord={handleRecordWrongWord}
+                onRecordMasteredWord={handleRecordMasteredWord}
+                onGoToWrongWords={() => {
+                  setNotebookSubTab('wrong');
+                  setActiveTab('notebook');
+                }}
+                wrongWordsCount={wrongWords.length}
+                speechAccent={speechAccent}
+              />
+            )}
 
-        <div className={activeTab === 'extract' ? 'block' : 'hidden'}>
-          <TextAnalyzer
-            onWordsExtracted={(words, listName) => {
-              setExtractedWords(words);
-              setQuizPool(words);
-              if (listName) {
-                handleImportCustomList(words, listName);
-              } else {
-                handleAddWordsToNotebook(words);
-              }
-            }}
-            onStartQuiz={(words) => {
-              setQuizPool(words);
-              setActiveTab('quiz');
-            }}
-            extractedWords={extractedWords}
-          />
-        </div>
+            {activeTab === 'extract' && (
+              <TextAnalyzer
+                onWordsExtracted={(words, listName) => {
+                  setExtractedWords(words);
+                  setQuizPool(words);
+                  if (listName) {
+                    handleImportCustomList(words, listName);
+                  } else {
+                    handleAddWordsToNotebook(words);
+                  }
+                }}
+                onStartQuiz={(words) => {
+                  setQuizPool(words);
+                  setActiveTab('quiz');
+                }}
+                extractedWords={extractedWords}
+              />
+            )}
 
-        <div className={activeTab === 'library' ? 'block' : 'hidden'}>
-          <WordLibraryView
-            speechAccent={speechAccent}
-            onStartQuizWithWords={(words) => {
-              setQuizPool(words);
-              setActiveTab('quiz');
-            }}
-            onImportCustomList={(words, bookName) => {
-              handleImportCustomList(words, bookName);
-            }}
-            onGoToNotebook={() => {
-              setActiveTab('wrongWords');
-            }}
-          />
-        </div>
+            {activeTab === 'library' && (
+              <WordLibraryView
+                speechAccent={speechAccent}
+                onStartQuizWithWords={(words) => {
+                  setQuizPool(words);
+                  setActiveTab('quiz');
+                }}
+                onImportCustomList={(words, bookName) => {
+                  handleImportCustomList(words, bookName);
+                }}
+                onGoToNotebook={() => {
+                  setNotebookSubTab('wrong');
+                  setActiveTab('notebook');
+                }}
+              />
+            )}
 
-        <div className={activeTab === 'masteredWords' ? 'block' : 'hidden'}>
-          <MasteredWordsList
-            masteredWords={masteredWords}
-            onRemoveMasteredWord={handleRemoveMasteredWord}
-            onMoveToWrongWords={handleMoveMasteredToWrongWords}
-            onStartMasteredWordsQuiz={(words) => {
-              setQuizPool(words);
-              setActiveTab('quiz');
-            }}
-            onClearAllMasteredWords={handleClearAllMasteredWords}
-            onImportMasteredWords={handleImportMasteredWords}
-          />
-        </div>
-
-        <div className={activeTab === 'wrongWords' ? 'block' : 'hidden'}>
-          <WrongWordsList
-            wrongWords={wrongWords}
-            customWordLists={customWordLists}
-            onRemoveWrongWord={handleRemoveWrongWord}
-            onStartWrongWordsQuiz={(words) => {
-              setQuizPool(words);
-              setActiveTab('quiz');
-            }}
-            onClearAllWrongWords={handleClearAllWrongWords}
-            onImportWrongWords={handleImportWrongWords}
-            onDeleteCustomList={handleDeleteCustomList}
-          />
-        </div>
+            {activeTab === 'notebook' && (
+              <NotebookView
+                subTab={notebookSubTab}
+                onSubTabChange={setNotebookSubTab}
+                wrongWords={wrongWords}
+                masteredWords={masteredWords}
+                customWordLists={customWordLists}
+                onRemoveWrongWord={handleRemoveWrongWord}
+                onStartWrongWordsQuiz={(words) => {
+                  setQuizPool(words);
+                  setActiveTab('quiz');
+                }}
+                onClearAllWrongWords={handleClearAllWrongWords}
+                onImportWrongWords={handleImportWrongWords}
+                onDeleteCustomList={handleDeleteCustomList}
+                onRemoveMasteredWord={handleRemoveMasteredWord}
+                onMoveToWrongWords={handleMoveMasteredToWrongWords}
+                onStartMasteredWordsQuiz={(words) => {
+                  setQuizPool(words);
+                  setActiveTab('quiz');
+                }}
+                onClearAllMasteredWords={handleClearAllMasteredWords}
+                onImportMasteredWords={handleImportMasteredWords}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200/80 bg-white/60 backdrop-blur-sm py-8 text-center">
+      <footer className="border-t border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm py-8 text-center">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-slate-600 dark:text-slate-400">
             <span className="font-semibold gradient-brand-text">WordMaster AI</span>
             <span className="text-slate-400 mx-1.5">·</span>
             <span className="text-slate-500">智能英文文本提取、900+ 权威词库与词汇记忆平台</span>

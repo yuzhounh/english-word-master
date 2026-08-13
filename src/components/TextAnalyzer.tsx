@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { SpeakerIcon } from './SpeakerIcon';
 import { Upload, FileText, Sparkles, ArrowRight, CheckCircle2, AlertCircle, Loader2, BookOpen, Layers, ListPlus, Zap, Check, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { WordItem } from '../types';
@@ -7,6 +6,7 @@ import { parseWordListText, enrichWordsWithAI } from '../utils/wordParser';
 import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { WordCard } from './ui/WordCard';
 
 interface TextAnalyzerProps {
   onWordsExtracted: (words: WordItem[], listName?: string) => void;
@@ -661,48 +661,17 @@ registration
           {/* Word Table Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[520px] overflow-y-auto pr-1">
             {extractedWords.map((item, idx) => (
-              <div
+              <WordCard
                 key={item.id || idx}
+                word={item.word}
+                phonetic={item.phonetic}
+                chinese={item.chinese}
+                exampleSentence={item.exampleSentence}
+                exampleSentenceCn={item.exampleSentenceCn}
+                isSpeaking={speakingWord === item.word}
+                onSpeak={() => speakWord(item.word, item.exampleSentence)}
                 onClick={() => speakWord(item.word, item.exampleSentence)}
-                className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs hover:shadow-md hover:border-brand-300 transition-all space-y-2 relative group cursor-pointer active:scale-[0.99]"
-              >
-                {/* Top info */}
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">{item.word}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          speakWord(item.word, item.exampleSentence);
-                        }}
-                        className="p-1 text-slate-400 hover:text-brand-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer translate-y-[3.5px]"
-                        title="发音（单词+例句）"
-                      >
-                        <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-5 h-5" />
-                      </button>
-                    </div>
-                    {item.phonetic && (
-                      <span className="text-sm font-mono text-slate-500 font-medium">{item.phonetic}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Chinese definition */}
-                <div className="text-base font-bold text-brand-900 bg-brand-50/70 py-2 px-3 rounded-xl border border-brand-100/80 leading-snug">
-                  {item.chinese}
-                </div>
-
-                {/* Example sentence */}
-                {item.exampleSentence && (
-                  <div className="text-sm text-slate-700 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 space-y-0.5">
-                    <p className="font-medium text-slate-800 italic leading-snug">“{item.exampleSentence}”</p>
-                    {item.exampleSentenceCn && (
-                      <p className="text-slate-500 text-sm leading-snug">{item.exampleSentenceCn}</p>
-                    )}
-                  </div>
-                )}
-              </div>
+              />
             ))}
           </div>
         </Card>

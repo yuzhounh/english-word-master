@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
 import { SpeakerIcon } from './SpeakerIcon';
 import { CheckCircle, XCircle, RefreshCw, Bookmark, Award, RotateCcw, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { WordItem, QuizQuestion, SpeechAccent } from '../types';
@@ -490,14 +491,18 @@ export const QuizView: React.FC<QuizViewProps> = ({
             }
 
             return (
-              <button
+              <motion.button
                 key={idx}
+                layout
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: idx * 0.04, duration: 0.2 }}
                 disabled={isAnswered}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleSelectOption(idx);
                 }}
-                className={`p-4 text-left rounded-xl transition-all cursor-pointer flex flex-col justify-between group ${btnStyle}`}
+                className={`p-4 text-left rounded-xl transition-colors cursor-pointer flex flex-col justify-between group ${btnStyle}`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs transition-colors ${badgeStyle}`}>
@@ -506,13 +511,16 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   {icon}
                 </div>
                 <p className="text-sm sm:text-base font-medium leading-snug">{option}</p>
-              </button>
+              </motion.button>
             );
           })}
         </div>
 
         {isAnswered && (
-          <div className={`w-full p-4 rounded-xl border text-sm leading-relaxed space-y-2 transition-all ${
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className={`w-full p-4 rounded-xl border text-sm leading-relaxed space-y-2 ${
             selectedOption === currentQ.correctIndex
               ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
               : 'bg-rose-50/80 border-rose-200 text-rose-800'
@@ -567,7 +575,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 </button>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
       </Card>
 

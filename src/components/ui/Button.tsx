@@ -13,9 +13,9 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary:
     'gradient-brand text-white shadow-sm hover:opacity-95 active:scale-[0.98] disabled:opacity-50',
   secondary:
-    'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] disabled:opacity-50',
+    'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.98] disabled:opacity-50',
   ghost:
-    'text-slate-600 hover:text-brand-600 hover:bg-brand-50 active:scale-[0.98] disabled:opacity-50',
+    'text-slate-600 dark:text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 active:scale-[0.98] disabled:opacity-50',
   danger:
     'bg-rose-600 text-white hover:bg-rose-700 active:scale-[0.98] disabled:opacity-50',
   success:

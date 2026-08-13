@@ -8,6 +8,7 @@ import {
 import { WordItem, LibraryCategoryNode, SpeechAccent } from '../types';
 import { enrichWordsWithAI } from '../utils/wordParser';
 import { Pagination } from './Pagination';
+import { LibraryTreeSkeleton, WordGridSkeleton } from './ui/Skeleton';
 import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -310,12 +311,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
           )}
 
           {/* Directory Loading / Error States */}
-          {loadingTree && (
-            <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4 shadow-xs">
-              <RefreshCw className="w-8 h-8 text-brand-600 animate-spin mx-auto" />
-              <p className="text-sm text-slate-600 font-medium">正在读取词库架构...</p>
-            </div>
-          )}
+          {loadingTree && <LibraryTreeSkeleton />}
 
           {treeError && (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center space-y-3">
@@ -509,10 +505,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
           {/* Book Content Loading / Error / Table */}
           {loadingBook ? (
-            <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4 shadow-xs">
-              <RefreshCw className="w-8 h-8 text-brand-600 animate-spin mx-auto" />
-              <p className="text-sm text-slate-600 font-medium">正在解析词书内容 ({selectedBook.name})...</p>
-            </div>
+            <WordGridSkeleton count={4} />
           ) : bookError ? (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center space-y-3">
               <p className="text-sm text-red-600 font-medium">{bookError}</p>

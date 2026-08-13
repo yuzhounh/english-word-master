@@ -23,7 +23,7 @@ export const Card: React.FC<CardProps> = ({
 }) => (
   <div
     onClick={onClick}
-    className={`bg-white rounded-[var(--radius-card)] border border-slate-200/80 shadow-card ${paddingClasses[padding]} ${
+    className={`bg-white dark:bg-slate-800/80 rounded-[var(--radius-card)] border border-slate-200/80 dark:border-slate-700/80 shadow-card ${paddingClasses[padding]} ${
       hover || onClick ? 'hover:shadow-card-hover hover:border-brand-200 transition-all cursor-pointer' : ''
     } ${className}`}
   >

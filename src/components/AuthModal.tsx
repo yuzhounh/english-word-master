@@ -16,9 +16,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
-        className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-elevated relative border border-slate-200/80 space-y-6"
+        className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-elevated relative border border-slate-200/80 dark:border-slate-700 space-y-6"
         onClick={(e) => e.stopPropagation()}
       >
         <button
