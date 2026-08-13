@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-r
 
 interface PaginationProps {
   currentPage: number;
-  pageSize: number; // 20, 50, 100, 200, or 0 (All)
+  pageSize: number; // 30, 50, 100, or 0 (All)
   totalItems: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
@@ -11,13 +11,15 @@ interface PaginationProps {
   className?: string;
 }
 
+export const DEFAULT_PAGE_SIZE_OPTIONS = [30, 50, 100, 0];
+
 export const Pagination: React.FC<PaginationProps> = ({
   currentPage,
   pageSize,
   totalItems,
   onPageChange,
   onPageSizeChange,
-  pageSizeOptions = [20, 50, 100, 200, 0], // 0 means "All"
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   className = ''
 }) => {
   if (totalItems <= 0) return null;
@@ -29,7 +31,6 @@ export const Pagination: React.FC<PaginationProps> = ({
   const startItem = isAll ? 1 : (safeCurrentPage - 1) * pageSize + 1;
   const endItem = isAll ? totalItems : Math.min(safeCurrentPage * pageSize, totalItems);
 
-  // Generate page number array
   const getPageNumbers = () => {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -51,24 +52,22 @@ export const Pagination: React.FC<PaginationProps> = ({
   };
 
   return (
-    <div className={`bg-white rounded-xl border border-slate-200/80 p-3 sm:p-4 shadow-card flex flex-col sm:flex-row items-center justify-between gap-3 ${className}`}>
-      {/* Top Row on Mobile / Left on Desktop: Total Info & Page Size */}
-      <div className="flex items-center justify-between w-full sm:w-auto gap-3 text-xs text-slate-600 font-medium">
+    <div className={`surface-card rounded-xl p-3 sm:p-4 shadow-card flex flex-col sm:flex-row items-center justify-between gap-3 ${className}`}>
+      <div className="flex items-center justify-between w-full sm:w-auto gap-3 text-xs text-secondary font-medium">
         <div>
           <span className="hidden sm:inline">
-            显示 <strong className="text-slate-900 font-bold">{startItem}</strong> - <strong className="text-slate-900 font-bold">{endItem}</strong> 词，
+            显示 <strong className="text-primary font-bold">{startItem}</strong> - <strong className="text-primary font-bold">{endItem}</strong> 词，
           </span>
-          共 <strong className="text-brand-600 font-extrabold">{totalItems}</strong> 词
+          共 <strong className="text-brand-600 dark:text-brand-400 font-extrabold">{totalItems}</strong> 词
           {!isAll && totalPages > 1 && (
-            <span className="text-slate-400 ml-1">
-              (第 <strong className="text-slate-800">{safeCurrentPage}</strong> / {totalPages} 页)
+            <span className="text-muted ml-1">
+              (第 <strong className="text-primary">{safeCurrentPage}</strong> / {totalPages} 页)
             </span>
           )}
         </div>
 
-        {/* Page Size Selector */}
         <div className="flex items-center gap-1.5 text-xs shrink-0">
-          <span className="text-slate-400 font-normal text-[11px] sm:text-xs">每页:</span>
+          <span className="text-muted font-normal text-[11px] sm:text-xs">每页:</span>
           <select
             value={pageSize}
             onChange={(e) => {
@@ -76,7 +75,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               onPageSizeChange(newSize);
               onPageChange(1);
             }}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 hover:border-brand-400 focus:outline-none focus:border-brand-500 transition-colors cursor-pointer"
+            className="surface-input rounded-lg px-2 py-1 text-xs font-bold hover:border-brand-400 focus:outline-none focus:border-brand-500 transition-colors cursor-pointer"
           >
             {pageSizeOptions.map((opt) => (
               <option key={opt} value={opt}>
@@ -87,36 +86,32 @@ export const Pagination: React.FC<PaginationProps> = ({
         </div>
       </div>
 
-      {/* Page Navigation Buttons (Bottom Row on Mobile / Right on Desktop) */}
       {!isAll && totalPages > 1 && (
         <div className="w-full sm:w-auto flex justify-center overflow-x-auto py-0.5">
-          <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 max-w-full shrink-0">
-            {/* First Page */}
+          <div className="flex items-center gap-0.5 sm:gap-1 surface-muted p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80 max-w-full shrink-0">
             <button
               onClick={() => onPageChange(1)}
               disabled={safeCurrentPage === 1}
-              className="p-1 sm:p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer shrink-0"
+              className="p-1 sm:p-1.5 rounded-lg text-muted hover:text-primary hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer shrink-0"
               title="第一页"
             >
               <ChevronsLeft className="w-4 h-4" />
             </button>
 
-            {/* Prev Page */}
             <button
               onClick={() => onPageChange(safeCurrentPage - 1)}
               disabled={safeCurrentPage === 1}
-              className="p-1 sm:p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer shrink-0"
+              className="p-1 sm:p-1.5 rounded-lg text-muted hover:text-primary hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer shrink-0"
               title="上一页"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            {/* Page Numbers */}
             <div className="flex items-center gap-0.5 sm:gap-1 px-0.5">
               {getPageNumbers().map((p, idx) => {
                 if (typeof p === 'string') {
                   return (
-                    <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs">
+                    <span key={`ellipsis-${idx}`} className="px-1 text-muted text-xs">
                       ...
                     </span>
                   );
@@ -129,7 +124,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                     className={`min-w-[28px] h-7 px-1.5 sm:px-2 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
                       isActive
                         ? 'gradient-brand text-white shadow-sm'
-                        : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                        : 'text-secondary hover:bg-white dark:hover:bg-slate-700 hover:text-primary'
                     }`}
                   >
                     {p}
@@ -138,21 +133,19 @@ export const Pagination: React.FC<PaginationProps> = ({
               })}
             </div>
 
-            {/* Next Page */}
             <button
               onClick={() => onPageChange(safeCurrentPage + 1)}
               disabled={safeCurrentPage === totalPages}
-              className="p-1 sm:p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer shrink-0"
+              className="p-1 sm:p-1.5 rounded-lg text-muted hover:text-primary hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer shrink-0"
               title="下一页"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
 
-            {/* Last Page */}
             <button
               onClick={() => onPageChange(totalPages)}
               disabled={safeCurrentPage === totalPages}
-              className="p-1 sm:p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer shrink-0"
+              className="p-1 sm:p-1.5 rounded-lg text-muted hover:text-primary hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer shrink-0"
               title="最后一页"
             >
               <ChevronsRight className="w-4 h-4" />

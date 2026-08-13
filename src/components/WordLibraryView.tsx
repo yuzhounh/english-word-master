@@ -45,7 +45,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
   const [importSuccess, setImportSuccess] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(50);
+  const [pageSize, setPageSize] = useState<number>(30);
 
   // AI enrichment state
   const [isEnrichingBook, setIsEnrichingBook] = useState<boolean>(false);
@@ -235,7 +235,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
   const paginatedBookWords = isAllBook ? filteredBookWords : filteredBookWords.slice(pageStartIndex, pageStartIndex + pageSize);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 space-y-6">
+    <div className="page-container space-y-6">
       
       <PageHeader
         badge="全量内置词库 · 900+ 权威词书"
@@ -254,7 +254,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
             href="https://github.com/lilinji/English"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 hover:bg-brand-50 border border-slate-200 text-slate-600 hover:text-brand-700 text-xs font-medium transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl surface-muted hover:bg-brand-50 dark:hover:bg-brand-900/30 border border-slate-200 dark:border-slate-600 text-secondary hover:text-brand-700 dark:hover:text-brand-300 text-xs font-medium transition-colors"
             title="前往 GitHub 查看词库开源来源"
           >
             <Github className="w-3.5 h-3.5" />
@@ -268,19 +268,19 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
         <div className="space-y-6">
           
           {/* Global Search Bar */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex items-center gap-3">
+          <div className="surface-card rounded-2xl p-4 shadow-xs flex items-center gap-3">
             <Search className="w-5 h-5 text-slate-400 shrink-0" />
             <input 
               type="text"
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               placeholder="搜索所有 900+ 词书名称（如：人教版、高考、考研英语一、雅思核心、四级...）"
-              className="w-full bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
+              className="w-full bg-transparent text-sm text-primary placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
             />
             {globalSearch && (
               <button 
                 onClick={() => setGlobalSearch('')}
-                className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1 rounded-md bg-slate-100"
+                className="text-xs text-muted hover:text-primary px-2 py-1 rounded-md surface-muted"
               >
                 清除
               </button>
@@ -289,7 +289,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
           {/* Breadcrumbs Navigation */}
           {!globalSearch && (
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-600 overflow-x-auto pb-1">
+            <div className="flex items-center gap-2 text-xs font-medium text-secondary overflow-x-auto pb-1">
               <button 
                 onClick={() => setNavPath([])}
                 className={`hover:text-brand-600 flex items-center gap-1 shrink-0 ${navPath.length === 0 ? 'text-brand-600 font-bold' : ''}`}
@@ -333,7 +333,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
               </div>
 
               {filteredGlobalBooks.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-sm">
+                <div className="surface-card rounded-2xl p-8 text-center text-slate-400 text-sm">
                   未找到包含 "{globalSearch}" 的词书
                 </div>
               ) : (
@@ -342,13 +342,13 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                     <div
                       key={book.path}
                       onClick={() => handleSelectBook(book)}
-                      className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-start gap-3"
+                      className="surface-card rounded-2xl p-4 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-start gap-3"
                     >
                       <div className="p-2.5 rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
                         <BookOpen className="w-5 h-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-bold text-slate-800 text-sm truncate group-hover:text-brand-600 transition-colors">
+                        <div className="font-bold text-primary text-sm truncate group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
                           {book.name}
                         </div>
                         <div className="text-xs text-slate-400 truncate mt-0.5">
@@ -371,14 +371,14 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                     <div
                       key={node.path}
                       onClick={() => setNavPath([...navPath, node])}
-                      className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
+                      className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="p-3 rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
                           <Folder className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
-                          <div className="font-bold text-slate-800 text-sm truncate group-hover:text-brand-600 transition-colors">
+                          <div className="font-bold text-primary text-sm truncate group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
                             {node.name}
                           </div>
                           <div className="text-xs text-slate-400 mt-0.5">
@@ -394,14 +394,14 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                     <div
                       key={node.path}
                       onClick={() => handleSelectBook({ name: node.name, path: node.path })}
-                      className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
+                      className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="p-3 rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
                           <BookOpen className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
-                          <div className="font-bold text-slate-800 text-sm truncate group-hover:text-brand-600 transition-colors">
+                          <div className="font-bold text-primary text-sm truncate group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
                             {node.name}
                           </div>
                         </div>
@@ -420,18 +420,18 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
         <div className="space-y-6">
           
           {/* Back Button & Book Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 surface-card rounded-2xl p-5 shadow-xs">
             <div className="flex items-center gap-3 min-w-0">
               <button
                 onClick={() => setSelectedBook(null)}
-                className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors shrink-0 cursor-pointer"
+                className="p-2 text-muted hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors shrink-0 cursor-pointer"
                 title="返回词库目录"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div className="min-w-0">
                 <div className="text-xs font-semibold text-brand-600">官方分类词书</div>
-                <h2 className="text-lg font-bold text-slate-800 truncate">{selectedBook.name}</h2>
+                <h2 className="text-lg font-bold text-primary truncate">{selectedBook.name}</h2>
               </div>
             </div>
 
@@ -520,7 +520,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
             <div className="space-y-4">
               
               {/* Inner Search Box & View Mode Toggle */}
-              <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="surface-card rounded-3xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="relative flex-1 w-full max-w-md">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -531,7 +531,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       setCurrentPage(1);
                     }}
                     placeholder="在当前词书中搜索单词或释义..."
-                    className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-brand-400"
+                    className="w-full pl-10 pr-4 py-2.5 text-xs surface-input rounded-xl focus:outline-none focus:border-brand-400"
                   />
                 </div>
 
@@ -546,7 +546,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       onClick={() => setViewMode('cards')}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         viewMode === 'cards' 
-                          ? 'bg-white text-brand-700 shadow-xs' 
+                          ? 'surface-card text-brand-700 dark:text-brand-300 shadow-xs' 
                           : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
@@ -557,7 +557,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       onClick={() => setViewMode('table')}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         viewMode === 'table' 
-                          ? 'bg-white text-brand-700 shadow-xs' 
+                          ? 'surface-card text-brand-700 dark:text-brand-300 shadow-xs' 
                           : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
@@ -575,7 +575,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                     <div 
                       key={`${item.word}-${idx}`}
                       onClick={() => speakWord(item.word, item.exampleSentence)}
-                      className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-md hover:border-brand-300 transition-all space-y-3 flex flex-col justify-between cursor-pointer group"
+                      className="surface-card rounded-2xl/80 p-5 shadow-xs hover:shadow-md hover:border-brand-300 transition-all space-y-3 flex flex-col justify-between cursor-pointer group"
                     >
                       <div className="space-y-3">
                         {/* Header: Word & Index */}
@@ -627,7 +627,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                 </div>
               ) : (
                 /* Words Table View */
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden p-6">
+                <div className="surface-card rounded-3xl shadow-xs overflow-hidden p-6">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>

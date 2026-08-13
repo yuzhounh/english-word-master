@@ -101,7 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
+      <div className="page-container h-14 sm:h-16 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsMobileMenuOpen(true)}

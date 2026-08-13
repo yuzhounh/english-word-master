@@ -10,6 +10,7 @@ import { parseWordListText, enrichWordsWithAI } from '../utils/wordParser';
 import { Pagination } from './Pagination';
 import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
+import { EmptyState } from './ui/EmptyState';
 
 interface MasteredWordsListProps {
   masteredWords: MasteredWordItem[];
@@ -33,7 +34,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recent' | 'alphabetical'>('recent');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(50);
+  const [pageSize, setPageSize] = useState<number>(30);
 
   // Modals & Popups
   const [isClearModalOpen, setIsClearModalOpen] = useState<boolean>(false);
@@ -332,7 +333,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   };
 
   return (
-    <div className={hideHeader ? 'space-y-6' : 'max-w-5xl mx-auto px-4 space-y-6'}>
+    <div className={hideHeader ? 'space-y-6' : 'page-container space-y-6'}>
       
       {!hideHeader && (
       <PageHeader
@@ -357,8 +358,8 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             onClick={() => { setViewMode('lists'); setSelectedListFilter('all'); }}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'lists'
-                ? 'bg-white text-emerald-800 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'surface-card text-emerald-800 dark:text-emerald-300 shadow-xs'
+                : 'text-secondary hover:text-primary'
             }`}
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
@@ -368,8 +369,8 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             onClick={() => setViewMode('details')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'details'
-                ? 'bg-white text-emerald-800 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'surface-card text-emerald-800 dark:text-emerald-300 shadow-xs'
+                : 'text-secondary hover:text-primary'
             }`}
           >
             <BookOpen className="w-4 h-4 text-emerald-500" />
@@ -397,7 +398,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             {/* Card 1: All Mastered Words List */}
             <div 
               onClick={() => { setSelectedListFilter('all'); setViewMode('details'); setCurrentPage(1); }}
-              className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+              className="surface-card rounded-2xl p-5 shadow-xs hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
             >
               <div className="flex items-center justify-between">
                 <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
@@ -408,7 +409,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                 </span>
               </div>
               <div>
-                <h3 className="font-bold text-slate-800 text-base group-hover:text-emerald-600 transition-colors">
+                <h3 className="font-bold text-primary text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">
                   全量熟词列表
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
@@ -424,7 +425,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             {/* Card 2: Recent Mastered List */}
             <div 
               onClick={() => { setSelectedListFilter('recent'); setViewMode('details'); setCurrentPage(1); }}
-              className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-teal-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+              className="surface-card rounded-2xl p-5 shadow-xs hover:border-teal-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
             >
               <div className="flex items-center justify-between">
                 <div className="p-3 rounded-xl bg-teal-50 text-teal-600 group-hover:bg-teal-500 group-hover:text-white transition-colors">
@@ -453,7 +454,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       )}
 
       {/* Filter and Toolbar Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 surface-card p-3.5 rounded-2xl shadow-card">
         
         {/* Search */}
         <div className="relative w-full md:w-72">
@@ -466,7 +467,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
               setCurrentPage(1);
             }}
             placeholder="搜索熟词或中文解释..."
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-emerald-500 focus:bg-white text-slate-700 transition-all"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl surface-input focus:outline-none focus:border-emerald-500 transition-all"
           />
         </div>
 
@@ -474,7 +475,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
         <div className="flex flex-wrap items-center gap-2 justify-end">
           
           {/* Sort selector */}
-          <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 border border-slate-200 rounded-xl">
+          <div className="flex items-center gap-1.5 surface-muted px-2.5 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl">
             <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
             <select
               value={sortBy}
@@ -482,7 +483,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                 setSortBy(e.target.value);
                 setCurrentPage(1);
               }}
-              className="text-xs font-medium bg-transparent text-slate-700 focus:outline-none cursor-pointer"
+              className="text-xs font-medium bg-transparent text-primary focus:outline-none cursor-pointer"
             >
               <option value="recent">按最新掌握时间排序</option>
               <option value="alphabetical">按字母顺序 A-Z 排序</option>
@@ -513,7 +514,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
           {/* Import Button */}
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 surface-muted hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-secondary hover:text-emerald-700 dark:hover:text-emerald-300 font-semibold text-xs rounded-xl border border-slate-200 dark:border-slate-600 transition-all cursor-pointer"
             title="导入词汇到熟词本"
           >
             <Upload className="w-3.5 h-3.5 text-emerald-600" />
@@ -524,7 +525,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
           <div className="relative">
             <button
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 surface-muted hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-secondary hover:text-emerald-700 dark:hover:text-emerald-300 font-semibold text-xs rounded-xl border border-slate-200 dark:border-slate-600 transition-all cursor-pointer"
               title="导出熟词本"
             >
               <Download className="w-3.5 h-3.5 text-emerald-600" />
@@ -532,7 +533,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             </button>
 
             {isExportMenuOpen && (
-              <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-30 animate-in fade-in zoom-in-95">
+              <div className="absolute right-0 mt-2 w-44 surface-card rounded-xl shadow-elevated py-1 z-30 animate-in fade-in zoom-in-95">
                 <button
                   onClick={handleExportJSON}
                   disabled={masteredWords.length === 0}
@@ -570,17 +571,11 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
       {/* Words Grid */}
       {filteredWords.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
-          <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-          <h3 className="font-semibold text-slate-700 text-base">
-            {searchTerm ? '未找到符合条件的熟词' : '熟词本暂无单词'}
-          </h3>
-          <p className="text-slate-400 text-xs max-w-sm mx-auto">
-            {searchTerm ? '尝试更换搜索关键字' : '在单词测试中连续答对 3 次即可将词汇自动录入熟词本，也可直接在此【导入词汇】！'}
-          </p>
-        </div>
+        <EmptyState
+          icon={CheckCircle2}
+          title={searchTerm ? '未找到符合条件的熟词' : '熟词本暂无单词'}
+          description={searchTerm ? '尝试更换搜索关键字' : '在单词测试中连续答对 3 次即可将词汇自动录入熟词本，也可直接在此【导入词汇】！'}
+        />
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -588,19 +583,18 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
               <div
                 key={item.id}
                 onClick={() => speakWord(item.word, item.exampleSentence)}
-                className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs hover:shadow-md hover:border-emerald-300 transition-all space-y-2 relative group cursor-pointer active:scale-[0.99]"
+                className="surface-card rounded-2xl p-3.5 shadow-card hover:shadow-card-hover hover:border-emerald-400 dark:hover:border-emerald-600 transition-all space-y-2 relative group cursor-pointer active:scale-[0.99]"
               >
-                {/* Top info */}
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">{item.word}</span>
+                      <span className="text-2xl font-extrabold text-primary tracking-tight leading-none">{item.word}</span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           speakWord(item.word, item.exampleSentence);
                         }}
-                        className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer translate-y-[3.5px]"
+                        className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors cursor-pointer translate-y-[3.5px]"
                         title="发音（单词+例句）"
                       >
                         <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-5 h-5" />
@@ -612,28 +606,28 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                   </div>
 
                   {/* Mastered badge */}
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold shrink-0">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold shrink-0">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                     <span>已掌握</span>
                   </div>
                 </div>
 
                 {/* Chinese definition */}
-                <div className="text-base font-bold text-emerald-800 bg-emerald-50/60 py-2 px-3 rounded-xl border border-emerald-100 leading-snug">
+                <div className="text-base font-bold text-emerald-800 dark:text-emerald-200 bg-emerald-50/60 dark:bg-emerald-900/20 py-2 px-3 rounded-xl border border-emerald-100 dark:border-emerald-800 leading-snug">
                   {item.chinese}
                 </div>
 
                 {/* Example sentence or AI Enrich trigger */}
                 {item.exampleSentence ? (
-                  <div className="text-sm text-slate-700 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 space-y-0.5">
-                    <p className="font-medium text-slate-800 italic leading-snug">“{item.exampleSentence}”</p>
+                  <div className="text-sm text-secondary bg-slate-50/80 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700 space-y-0.5">
+                    <p className="font-medium text-primary italic leading-snug">“{item.exampleSentence}”</p>
                     {item.exampleSentenceCn && (
-                      <p className="text-slate-500 text-sm leading-snug">{item.exampleSentenceCn}</p>
+                      <p className="text-muted text-sm leading-snug">{item.exampleSentenceCn}</p>
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between bg-emerald-50/50 p-2.5 rounded-xl border border-dashed border-emerald-200/80">
-                    <span className="text-xs text-emerald-700/80 italic font-medium">暂无例句与音标</span>
+                  <div className="flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-900/20 p-2.5 rounded-xl border border-dashed border-emerald-200/80 dark:border-emerald-700/50">
+                    <span className="text-xs text-emerald-700/80 dark:text-emerald-300/80 italic font-medium">暂无例句与音标</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -653,7 +647,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                 )}
 
                 {/* Actions */}
-                <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-700 text-xs">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -701,7 +695,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       {/* Clear Confirmation Modal */}
       {isClearModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 border border-slate-100 animate-in fade-in zoom-in-95">
+          <div className="surface-card rounded-2xl max-w-md w-full p-6 shadow-elevated space-y-5 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 text-rose-600">
               <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center shrink-0">
                 <Trash2 className="w-5 h-5" />
@@ -740,7 +734,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       {/* Import Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 border border-slate-100 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+          <div className="surface-card rounded-2xl max-w-xl w-full p-6 shadow-elevated space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">

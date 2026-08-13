@@ -37,7 +37,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<'errorCount' | 'recent' | 'alphabetical'>('errorCount');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(50);
+  const [pageSize, setPageSize] = useState<number>(30);
 
   // Modals & Popups
   const [isClearModalOpen, setIsClearModalOpen] = useState<boolean>(false);
@@ -398,7 +398,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   };
 
   return (
-    <div className={hideHeader ? 'space-y-6' : 'max-w-5xl mx-auto px-4 space-y-6'}>
+    <div className={hideHeader ? 'space-y-6' : 'page-container space-y-6'}>
       
       {!hideHeader && (
       <PageHeader
@@ -423,8 +423,8 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             onClick={() => { setViewMode('lists'); setSelectedListFilter('all'); }}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'lists'
-                ? 'bg-white text-brand-800 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'surface-card text-brand-800 dark:text-brand-300 shadow-xs'
+                : 'text-secondary hover:text-primary'
             }`}
           >
             <FileSpreadsheet className="w-4 h-4 text-brand-500" />
@@ -434,8 +434,8 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             onClick={() => setViewMode('details')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'details'
-                ? 'bg-white text-brand-800 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'surface-card text-brand-800 dark:text-brand-300 shadow-xs'
+                : 'text-secondary hover:text-primary'
             }`}
           >
             <BookOpen className="w-4 h-4 text-brand-500" />
@@ -477,7 +477,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               {/* Card 1: All Wrong Words List */}
               <div 
                 onClick={() => { setSelectedListFilter('all'); setSelectedCustomListId(null); setViewMode('details'); setCurrentPage(1); }}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+                className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="p-3 rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
@@ -488,7 +488,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base group-hover:text-brand-600 transition-colors">
+                  <h3 className="font-bold text-primary text-base group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
                     全量生词列表
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
@@ -504,7 +504,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               {/* Card 2: High Error List */}
               <div 
                 onClick={() => { setSelectedListFilter('high_error'); setSelectedCustomListId(null); setViewMode('details'); setCurrentPage(1); }}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-red-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+                className="surface-card rounded-2xl p-5 shadow-xs hover:border-red-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="p-3 rounded-xl bg-red-50 text-red-600 group-hover:bg-red-500 group-hover:text-white transition-colors">
@@ -531,7 +531,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               {/* Card 3: Recent List */}
               <div 
                 onClick={() => { setSelectedListFilter('recent'); setSelectedCustomListId(null); setViewMode('details'); setCurrentPage(1); }}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+                className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="p-3 rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
@@ -542,7 +542,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base group-hover:text-brand-600 transition-colors">
+                  <h3 className="font-bold text-primary text-base group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
                     近期新增错题列表
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
@@ -576,7 +576,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                       setViewMode('details');
                       setCurrentPage(1);
                     }}
-                    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all group space-y-3 relative flex flex-col justify-between cursor-pointer"
+                    className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all group space-y-3 relative flex flex-col justify-between cursor-pointer"
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -619,7 +619,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                           setViewMode('details');
                           setCurrentPage(1);
                         }}
-                        className="flex-1 py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
+                        className="flex-1 py-1.5 px-3 surface-muted hover:opacity-90 text-secondary text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
                       >
                         查看明细
                       </button>
@@ -628,7 +628,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                           e.stopPropagation();
                           onStartWrongWordsQuiz(list.words);
                         }}
-                        className="flex-1 py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
+                        className="flex-1 py-1.5 px-3 surface-muted hover:opacity-90 text-secondary text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
                       >
                         测试此词表
                       </button>
@@ -643,7 +643,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
       )}
 
       {/* Filter and Toolbar Bar (Shown when viewing details or lists) */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 surface-card p-3.5 rounded-2xl shadow-card">
         
         {/* Search */}
         <div className="relative w-full md:w-72">
@@ -656,7 +656,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               setCurrentPage(1);
             }}
             placeholder="搜索单词或中文解释..."
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-brand-500 focus:bg-white text-slate-700 transition-all"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl surface-input focus:outline-none focus:border-brand-500 transition-all"
           />
         </div>
 
@@ -664,7 +664,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
         <div className="flex flex-wrap items-center gap-2 justify-end">
           
           {/* Sort selector */}
-          <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 border border-slate-200 rounded-xl">
+          <div className="flex items-center gap-1.5 surface-muted px-2.5 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl">
             <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
             <select
               value={sortBy}
@@ -672,7 +672,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                 setSortBy(e.target.value);
                 setCurrentPage(1);
               }}
-              className="text-xs font-medium bg-transparent text-slate-700 focus:outline-none cursor-pointer"
+              className="text-xs font-medium bg-transparent text-primary focus:outline-none cursor-pointer"
             >
               <option value="errorCount">按出错次数排序</option>
               <option value="recent">按最新出错时间排序</option>
@@ -704,7 +704,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
           {/* Import Button */}
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 surface-muted hover:bg-brand-50 dark:hover:bg-brand-900/30 text-secondary hover:text-brand-700 dark:hover:text-brand-300 font-semibold text-xs rounded-xl border border-slate-200 dark:border-slate-600 transition-all cursor-pointer"
             title="导入词汇到生词本"
           >
             <Upload className="w-3.5 h-3.5 text-brand-600" />
@@ -715,7 +715,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
           <div className="relative">
             <button
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 surface-muted hover:bg-brand-50 dark:hover:bg-brand-900/30 text-secondary hover:text-brand-700 dark:hover:text-brand-300 font-semibold text-xs rounded-xl border border-slate-200 dark:border-slate-600 transition-all cursor-pointer"
               title="导出生词本"
             >
               <Download className="w-3.5 h-3.5 text-brand-600" />
@@ -723,7 +723,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             </button>
 
             {isExportMenuOpen && (
-              <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-30 animate-in fade-in zoom-in-95">
+              <div className="absolute right-0 mt-2 w-44 surface-card rounded-xl shadow-elevated py-1 z-30 animate-in fade-in zoom-in-95">
                 <button
                   onClick={handleExportJSON}
                   disabled={wrongWords.length === 0}
@@ -848,7 +848,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
       {/* Clear Confirmation Modal */}
       {isClearModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 border border-slate-100 animate-in fade-in zoom-in-95">
+          <div className="surface-card rounded-2xl max-w-md w-full p-6 shadow-elevated space-y-5 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 text-rose-600">
               <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center shrink-0">
                 <Trash2 className="w-5 h-5" />
@@ -887,7 +887,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
       {/* Import Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 border border-slate-100 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+          <div className="surface-card rounded-2xl max-w-xl w-full p-6 shadow-elevated space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1033,7 +1033,7 @@ apple - 苹果`}
       {/* Delete Custom List Confirmation Modal */}
       {deletingListForConfirm && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 border border-slate-100">
+          <div className="surface-card rounded-3xl p-6 max-w-md w-full shadow-elevated space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-red-600 font-bold text-base">
                 <Trash2 className="w-5 h-5" />

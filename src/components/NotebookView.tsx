@@ -42,7 +42,7 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
   onClearAllMasteredWords,
   onImportMasteredWords,
 }) => (
-  <div className="max-w-5xl mx-auto px-4 space-y-6">
+    <div className="page-container space-y-6">
     <PageHeader
       badge="我的词本"
       badgeIcon={BookOpen}

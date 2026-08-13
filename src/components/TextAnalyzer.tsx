@@ -328,7 +328,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto px-4">
+    <div className="page-container space-y-6">
       
       <PageHeader
         badge="智能文本分析 & 快捷生词导入"
@@ -345,14 +345,14 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
           <Card padding="md" className="flex-1 flex flex-col justify-between space-y-4">
             
             {/* Mode Switcher */}
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
               <button
                 type="button"
                 onClick={() => { setInputMode('analyze'); setErrorMessage(null); setSuccessMessage(null); }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   inputMode === 'analyze'
                     ? 'gradient-brand text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+                    : 'surface-muted text-secondary hover:opacity-90'
                 }`}
               >
                 <Sparkles className="w-4 h-4" />
@@ -365,7 +365,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   inputMode === 'directList'
                     ? 'gradient-brand text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+                    : 'surface-muted text-secondary hover:opacity-90'
                 }`}
               >
                 <Zap className="w-4 h-4" />
@@ -378,7 +378,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                 {/* AI Textarea Mode */}
                 <div className="space-y-3">
                   <div className="grid grid-cols-3 items-center text-xs">
-                    <label className="font-semibold text-slate-800 text-sm flex items-center gap-2 justify-start">
+                    <label className="font-semibold text-primary text-sm flex items-center gap-2 justify-start">
                       <FileText className="w-4 h-4 text-brand-600 shrink-0" />
                       <span className="truncate">英文文章 / 段落内容</span>
                     </label>
@@ -412,7 +412,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
 
 💡 提示：系统会自动过滤文章标题与非词汇干扰，准确提取有效英文单词；分析时将由 AI 智能补全词性、音标、精美例句与测验题。`}
                     rows={8}
-                    className="w-full p-3.5 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none resize-none text-slate-700 text-sm leading-relaxed transition-all placeholder:text-slate-400"
+                    className="w-full p-3.5 rounded-xl surface-input focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/40 outline-none resize-none text-sm leading-relaxed transition-all"
                   />
                 </div>
 
@@ -423,7 +423,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors flex items-center justify-center gap-3 ${
-                    isDragOver ? 'border-brand-500 bg-brand-50/50' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/80'
+                    isDragOver ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-900/30' : 'border-slate-200 dark:border-slate-600 surface-muted hover:opacity-90'
                   }`}
                 >
                   <input
@@ -434,16 +434,16 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                     onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
                   />
                   <Upload className="w-5 h-5 text-brand-600" />
-                  <div className="text-xs text-slate-600 text-left">
-                    <span className="font-medium text-slate-800">点击上传文件</span> 或拖拽 txt, md, csv 到这里
+                  <div className="text-xs text-secondary text-left">
+                    <span className="font-medium text-primary">点击上传文件</span> 或拖拽 txt, md, csv 到这里
                     {fileName && <span className="block font-semibold text-brand-600 mt-0.5">已选中: {fileName}</span>}
                   </div>
                 </div>
 
                 {/* Extraction Quantity Selector */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 pb-1 border-t border-slate-100">
-                  <span className="text-xs font-medium text-slate-500">目标提取词量：</span>
-                  <div className="inline-flex rounded-lg bg-slate-100 p-1 gap-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 pb-1 border-t border-slate-100 dark:border-slate-700">
+                  <span className="text-xs font-medium text-muted">目标提取词量：</span>
+                  <div className="inline-flex rounded-lg surface-muted p-1 gap-1">
                     {[
                       { count: 20, label: '20 核心词' },
                       { count: 30, label: '30 标准词' },
@@ -455,8 +455,8 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                         onClick={() => setMaxWords(opt.count)}
                         className={`px-3 py-1 text-xs rounded-md transition-all cursor-pointer font-medium ${
                           maxWords === opt.count
-                            ? 'bg-white text-brand-600 shadow-xs font-semibold'
-                            : 'text-slate-600 hover:text-slate-900'
+                            ? 'surface-card text-brand-600 dark:text-brand-300 shadow-xs font-semibold'
+                            : 'text-secondary hover:text-primary'
                         }`}
                       >
                         {opt.label}
@@ -471,7 +471,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <label className="font-semibold text-slate-800 text-sm flex items-center gap-2 shrink-0">
+                      <label className="font-semibold text-primary text-sm flex items-center gap-2 shrink-0">
                         <ListPlus className="w-4 h-4 text-brand-600" />
                         <span>粘贴单词列表（自动兼容各种格式）</span>
                       </label>
@@ -514,16 +514,16 @@ registration
 
 💡 提示：系统会自动忽略“Welcome Unit”、“按通用教材整理”等非词汇行，准确提取有效英文单词；系统将由 AI 智能自动补全词性、音标、精美例句与测验题。`}
                     rows={9}
-                    className="w-full p-3.5 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none resize-none text-slate-700 text-xs sm:text-sm leading-relaxed transition-all placeholder:text-slate-400 font-mono"
+                    className="w-full p-3.5 rounded-xl surface-input focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/40 outline-none resize-none text-xs sm:text-sm leading-relaxed transition-all font-mono"
                   />
                 </div>
               </>
             )}
 
             {/* Target Custom List Name Input & Action Button in one row */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
               <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 shrink-0">
+                <label className="text-xs font-semibold text-secondary flex items-center gap-1.5 shrink-0">
                   <Layers className="w-3.5 h-3.5 text-brand-600" />
                   <span>保存至单词列表：</span>
                 </label>
@@ -532,7 +532,7 @@ registration
                   value={listName}
                   onChange={(e) => setListName(e.target.value)}
                   placeholder="默认单词列表"
-                  className="w-44 sm:w-56 px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-slate-700 font-medium transition-all"
+                  className="w-44 sm:w-56 px-3 py-1.5 text-xs rounded-lg surface-input focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/40 outline-none font-medium transition-all"
                 />
               </div>
 
@@ -581,7 +581,7 @@ registration
 
             {/* Error message */}
             {errorMessage && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 flex items-center gap-2">
+              <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-600 dark:text-red-300 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
@@ -589,7 +589,7 @@ registration
 
             {/* Success message */}
             {successMessage && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 flex items-center gap-2 font-medium">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2 font-medium">
                 <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
                 <span>{successMessage}</span>
               </div>
@@ -600,11 +600,11 @@ registration
         <div className="flex flex-col">
           <Card padding="md" className="flex-1 flex flex-col justify-between space-y-3">
             <div>
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+              <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-2.5">
                 <BookOpen className="w-4 h-4 text-brand-600" />
-                <h3 className="font-bold text-slate-800 text-sm">预置阅读素材样张</h3>
+                <h3 className="font-bold text-primary text-sm">预置阅读素材样张</h3>
               </div>
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-xs text-muted mt-2">
                 点击下方示例快速填入进行测试：
               </p>
             </div>
@@ -620,9 +620,9 @@ registration
                     setErrorMessage(null);
                     setSuccessMessage(null);
                   }}
-                  className="p-2.5 rounded-xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/40 transition-all cursor-pointer group flex-1 flex flex-col justify-center"
+                  className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-700 hover:border-brand-200 dark:hover:border-brand-700 hover:bg-brand-50/40 dark:hover:bg-brand-900/20 transition-all cursor-pointer group flex-1 flex flex-col justify-center"
                 >
-                  <div className="font-semibold text-xs text-slate-800 group-hover:text-brand-600 transition-colors">
+                  <div className="font-semibold text-xs text-primary group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
                     {sample.title}
                   </div>
                   <div className="text-[11px] text-slate-400 mt-1.5 line-clamp-1">
@@ -637,11 +637,11 @@ registration
 
       {extractedWords && extractedWords.length > 0 && (
         <Card padding="lg" className="space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
             <div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-brand-500" />
-                <h2 className="text-lg font-bold text-slate-800">已提取/导入单词列表</h2>
+                <h2 className="text-lg font-bold text-primary">已提取/导入单词列表</h2>
                 <span className="px-2.5 py-0.5 text-xs font-bold bg-brand-50 text-brand-700 rounded-full border border-brand-100">
                   {extractedWords.length} 个核心词汇
                 </span>

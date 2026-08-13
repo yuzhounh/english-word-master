@@ -628,7 +628,7 @@ export default function App() {
       </main>
 
       <footer className="border-t border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm py-8 text-center">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="page-container flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-sm text-slate-600 dark:text-slate-400">
             <span className="font-semibold gradient-brand-text">WordMaster AI</span>
             <span className="text-slate-400 mx-1.5">·</span>
