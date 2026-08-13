@@ -51,14 +51,14 @@ export const Pagination: React.FC<PaginationProps> = ({
   };
 
   return (
-    <div className={`bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3 ${className}`}>
+    <div className={`bg-white rounded-xl border border-slate-200/80 p-3 sm:p-4 shadow-card flex flex-col sm:flex-row items-center justify-between gap-3 ${className}`}>
       {/* Top Row on Mobile / Left on Desktop: Total Info & Page Size */}
       <div className="flex items-center justify-between w-full sm:w-auto gap-3 text-xs text-slate-600 font-medium">
         <div>
           <span className="hidden sm:inline">
             显示 <strong className="text-slate-900 font-bold">{startItem}</strong> - <strong className="text-slate-900 font-bold">{endItem}</strong> 词，
           </span>
-          共 <strong className="text-indigo-600 font-extrabold">{totalItems}</strong> 词
+          共 <strong className="text-brand-600 font-extrabold">{totalItems}</strong> 词
           {!isAll && totalPages > 1 && (
             <span className="text-slate-400 ml-1">
               (第 <strong className="text-slate-800">{safeCurrentPage}</strong> / {totalPages} 页)
@@ -76,7 +76,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               onPageSizeChange(newSize);
               onPageChange(1);
             }}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 hover:border-indigo-400 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+            className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 hover:border-brand-400 focus:outline-none focus:border-brand-500 transition-colors cursor-pointer"
           >
             {pageSizeOptions.map((opt) => (
               <option key={opt} value={opt}>
@@ -128,7 +128,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                     onClick={() => onPageChange(p)}
                     className={`min-w-[28px] h-7 px-1.5 sm:px-2 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
                       isActive
-                        ? 'bg-indigo-600 text-white shadow-xs'
+                        ? 'gradient-brand text-white shadow-sm'
                         : 'text-slate-600 hover:bg-white hover:text-slate-900'
                     }`}
                   >

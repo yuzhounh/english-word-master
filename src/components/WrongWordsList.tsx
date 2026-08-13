@@ -8,6 +8,8 @@ import {
 import { WrongWordItem, WordItem, WordListGroup } from '../types';
 import { parseWordListText, enrichWordsWithAI } from '../utils/wordParser';
 import { Pagination } from './Pagination';
+import { PageHeader } from './ui/PageHeader';
+import { Button } from './ui/Button';
 
 interface WrongWordsListProps {
   wrongWords: WrongWordItem[];
@@ -392,67 +394,51 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 space-y-6">
       
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-200 text-xs font-medium border border-indigo-400/20">
-              <Bookmark className="w-3.5 h-3.5 text-indigo-400" />
-              <span>待测试生词本</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              待测试生词本 ({wrongWords.length})
-            </h1>
-            <p className="text-indigo-100/80 text-xs sm:text-sm">
-              文本提取的词汇与测试答错的单词均会自动收录于此。<b>在测试中答对即可标记【已掌握】并自动移出生词本</b>！
-            </p>
-          </div>
-
-          {wrongWords.length > 0 && (
-            <button
-              onClick={handleStartQuiz}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-900/30 transition-all shrink-0 cursor-pointer"
-            >
+      <PageHeader
+        badge="待测试生词本"
+        badgeIcon={Bookmark}
+        title={`待测试生词本 (${wrongWords.length})`}
+        description={<>文本提取的词汇与测试答错的单词均会自动收录于此。<b>在测试中答对即可标记【已掌握】并自动移出生词本</b>！</>}
+        action={
+          wrongWords.length > 0 ? (
+            <Button onClick={handleStartQuiz}>
               <BookOpen className="w-4 h-4" />
               <span>对生词发起强化测试</span>
-            </button>
-          )}
-        </div>
-      </div>
+            </Button>
+          ) : undefined
+        }
+      />
 
-      {/* View Mode Toggle Bar (单词列表 vs 全部明细) */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100 p-1.5 rounded-2xl">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100/80 p-1.5 rounded-2xl">
         <div className="flex items-center gap-1 bg-slate-200/60 p-1 rounded-xl">
           <button
             onClick={() => { setViewMode('lists'); setSelectedListFilter('all'); }}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'lists'
-                ? 'bg-white text-indigo-800 shadow-xs'
+                ? 'bg-white text-brand-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <FileSpreadsheet className="w-4 h-4 text-indigo-500" />
+            <FileSpreadsheet className="w-4 h-4 text-brand-500" />
             <span>按单词列表浏览</span>
           </button>
           <button
             onClick={() => setViewMode('details')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'details'
-                ? 'bg-white text-indigo-800 shadow-xs'
+                ? 'bg-white text-brand-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <BookOpen className="w-4 h-4 text-indigo-500" />
+            <BookOpen className="w-4 h-4 text-brand-500" />
             <span>查看全部生词明细 ({activeWordSet.length})</span>
           </button>
         </div>
 
         {selectedListFilter !== 'all' && (
-          <div className="text-xs font-medium text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-200 flex items-center justify-between gap-2">
+          <div className="text-xs font-medium text-brand-700 bg-brand-50 px-3 py-1 rounded-lg border border-brand-200 flex items-center justify-between gap-2">
             <span>
               正在筛选：
               {selectedListFilter === 'high_error' && '顽固高频难词列表'}
@@ -462,7 +448,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             </span>
             <button 
               onClick={() => { setSelectedListFilter('all'); setSelectedCustomListId(null); }} 
-              className="underline hover:text-indigo-900 font-bold cursor-pointer"
+              className="underline hover:text-brand-900 font-bold cursor-pointer"
             >
               清除筛选
             </button>
@@ -485,25 +471,25 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               {/* Card 1: All Wrong Words List */}
               <div 
                 onClick={() => { setSelectedListFilter('all'); setSelectedCustomListId(null); setViewMode('details'); setCurrentPage(1); }}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <div className="p-3 rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
                     <Bookmark className="w-5 h-5" />
                   </div>
-                  <span className="px-2 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-800 rounded-full">
+                  <span className="px-2 py-0.5 text-xs font-bold bg-brand-100 text-brand-800 rounded-full">
                     {wrongWords.length} 词
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base group-hover:text-indigo-600 transition-colors">
+                  <h3 className="font-bold text-slate-800 text-base group-hover:text-brand-600 transition-colors">
                     全量生词列表
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     包含文章提取与测试答错的所有待掌握生词
                   </p>
                 </div>
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-indigo-600">
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-brand-600">
                   <span>进入列表明细</span>
                   <span>→</span>
                 </div>
@@ -539,25 +525,25 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               {/* Card 3: Recent List */}
               <div 
                 onClick={() => { setSelectedListFilter('recent'); setSelectedCustomListId(null); setViewMode('details'); setCurrentPage(1); }}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <div className="p-3 rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
                     <Sparkles className="w-5 h-5" />
                   </div>
-                  <span className="px-2 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-800 rounded-full">
+                  <span className="px-2 py-0.5 text-xs font-bold bg-brand-100 text-brand-800 rounded-full">
                     {recentWords.length} 词
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base group-hover:text-indigo-600 transition-colors">
+                  <h3 className="font-bold text-slate-800 text-base group-hover:text-brand-600 transition-colors">
                     近期新增错题列表
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     近 7 天内收录进入生词本的最新词汇
                   </p>
                 </div>
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-indigo-600">
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-brand-600">
                   <span>及时巩固复习</span>
                   <span>→</span>
                 </div>
@@ -584,15 +570,15 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                       setViewMode('details');
                       setCurrentPage(1);
                     }}
-                    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-indigo-400 hover:shadow-md transition-all group space-y-3 relative flex flex-col justify-between cursor-pointer"
+                    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all group space-y-3 relative flex flex-col justify-between cursor-pointer"
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <div className="p-2.5 rounded-xl bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
                           <FileSpreadsheet className="w-5 h-5" />
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="px-2.5 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
+                          <span className="px-2.5 py-0.5 text-xs font-bold bg-brand-50 text-brand-700 rounded-full border border-brand-100">
                             {list.words.length} 词
                           </span>
                           {onDeleteCustomList && (
@@ -610,7 +596,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                         </div>
                       </div>
 
-                      <h3 className="font-bold text-slate-800 text-base group-hover:text-indigo-600 transition-colors line-clamp-1">
+                      <h3 className="font-bold text-slate-800 text-base group-hover:text-brand-600 transition-colors line-clamp-1">
                         {list.name}
                       </h3>
                       <p className="text-xs text-slate-400 mt-1 line-clamp-2">
@@ -664,7 +650,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               setCurrentPage(1);
             }}
             placeholder="搜索单词或中文解释..."
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white text-slate-700 transition-all"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-brand-500 focus:bg-white text-slate-700 transition-all"
           />
         </div>
 
@@ -693,13 +679,13 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             <button
               onClick={handleBulkEnrichWords}
               disabled={isBulkEnriching}
-              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-brand-600 via-brand-700 to-brand-800 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer disabled:opacity-50"
               title="自动调用 DeepSeek AI 补全缺乏例句与音标的生词"
             >
               {isBulkEnriching ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
               ) : (
-                <Sparkles className="w-3.5 h-3.5 text-indigo-200 animate-pulse" />
+                <Sparkles className="w-3.5 h-3.5 text-brand-200 animate-pulse" />
               )}
               <span>
                 {isBulkEnriching 
@@ -712,10 +698,10 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
           {/* Import Button */}
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
             title="导入词汇到生词本"
           >
-            <Upload className="w-3.5 h-3.5 text-indigo-600" />
+            <Upload className="w-3.5 h-3.5 text-brand-600" />
             <span>导入词汇</span>
           </button>
 
@@ -723,10 +709,10 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
           <div className="relative">
             <button
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-700 font-semibold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
               title="导出生词本"
             >
-              <Download className="w-3.5 h-3.5 text-indigo-600" />
+              <Download className="w-3.5 h-3.5 text-brand-600" />
               <span>导出词汇</span>
             </button>
 
@@ -737,7 +723,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                   disabled={wrongWords.length === 0}
                   className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <FileJson className="w-3.5 h-3.5 text-indigo-600" />
+                  <FileJson className="w-3.5 h-3.5 text-brand-600" />
                   <span>导出 JSON 文件</span>
                 </button>
                 <button
@@ -770,7 +756,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
       {/* Words Grid */}
       {filteredWords.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
-          <div className="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto">
+          <div className="w-12 h-12 bg-brand-50 text-brand-500 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <h3 className="font-semibold text-slate-700 text-base">
@@ -787,7 +773,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               <div
                 key={item.id}
                 onClick={() => speakWord(item.word, item.exampleSentence)}
-                className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs hover:shadow-md hover:border-indigo-300 transition-all space-y-2 relative group cursor-pointer active:scale-[0.99]"
+                className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs hover:shadow-md hover:border-brand-300 transition-all space-y-2 relative group cursor-pointer active:scale-[0.99]"
               >
                 {/* Top info */}
                 <div className="flex items-start justify-between gap-3">
@@ -799,7 +785,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                           e.stopPropagation();
                           speakWord(item.word, item.exampleSentence);
                         }}
-                        className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer translate-y-[3.5px]"
+                        className="p-1 text-slate-400 hover:text-brand-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer translate-y-[3.5px]"
                         title="发音（单词+例句）"
                       >
                         <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-5 h-5" />
@@ -826,7 +812,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                 </div>
 
                 {/* Chinese definition */}
-                <div className="text-base font-bold text-indigo-900 bg-indigo-50/80 py-2 px-3 rounded-xl border border-indigo-200/70 leading-snug">
+                <div className="text-base font-bold text-brand-900 bg-brand-50/80 py-2 px-3 rounded-xl border border-brand-200/70 leading-snug">
                   {item.chinese}
                 </div>
 
@@ -839,20 +825,20 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between bg-indigo-50/50 p-2.5 rounded-xl border border-dashed border-indigo-200/80">
-                    <span className="text-xs text-indigo-800/80 italic font-medium">暂无例句与音标</span>
+                  <div className="flex items-center justify-between bg-brand-50/50 p-2.5 rounded-xl border border-dashed border-brand-200/80">
+                    <span className="text-xs text-brand-800/80 italic font-medium">暂无例句与音标</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEnrichSingleWord(item);
                       }}
                       disabled={enrichingWordId === item.id}
-                      className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2.5 py-1 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer disabled:opacity-50"
                     >
                       {enrichingWordId === item.id ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                       ) : (
-                        <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
+                        <Sparkles className="w-3.5 h-3.5 text-brand-200" />
                       )}
                       <span>{enrichingWordId === item.id ? '生成中...' : '补全例句'}</span>
                     </button>
@@ -938,7 +924,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2 text-indigo-700 font-bold text-lg">
+              <div className="flex items-center gap-2 text-brand-700 font-bold text-lg">
                 <Upload className="w-5 h-5" />
                 <span>批量导入到生词本</span>
               </div>
@@ -961,9 +947,9 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                 <label className="block text-xs font-bold text-slate-700">方法 1：上传 JSON / CSV / TXT 文件</label>
                 <div 
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-indigo-300 hover:border-indigo-500 bg-indigo-50/40 hover:bg-indigo-50 p-4 rounded-xl text-center cursor-pointer transition-all space-y-1"
+                  className="border-2 border-dashed border-brand-300 hover:border-brand-500 bg-brand-50/40 hover:bg-brand-50 p-4 rounded-xl text-center cursor-pointer transition-all space-y-1"
                 >
-                  <Upload className="w-6 h-6 text-indigo-600 mx-auto" />
+                  <Upload className="w-6 h-6 text-brand-600 mx-auto" />
                   <p className="text-xs font-semibold text-slate-700">点击上传文件 (.json, .csv, .txt)</p>
                   <p className="text-[11px] text-slate-400">支持 WordMaster 导出的 JSON，或每行单词 CSV 格式</p>
                   <input
@@ -1001,23 +987,23 @@ registration
 3. 各种分隔符:
 abandon : 放弃；抛弃
 apple - 苹果`}
-                  className="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white text-slate-800 transition-all placeholder:text-slate-400"
+                  className="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-brand-500 focus:bg-white text-slate-800 transition-all placeholder:text-slate-400"
                 />
               </div>
 
               {/* AI Enrich Toggle */}
-              <div className="flex items-center justify-between bg-indigo-50/60 p-3 rounded-xl border border-indigo-200/60">
-                <label className="flex items-center gap-2.5 text-xs font-semibold text-indigo-900 cursor-pointer select-none">
+              <div className="flex items-center justify-between bg-brand-50/60 p-3 rounded-xl border border-brand-200/60">
+                <label className="flex items-center gap-2.5 text-xs font-semibold text-brand-900 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={importAutoEnrich}
                     onChange={(e) => setImportAutoEnrich(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded border-indigo-300 focus:ring-indigo-500 cursor-pointer"
+                    className="w-4 h-4 text-brand-600 rounded border-brand-300 focus:ring-brand-500 cursor-pointer"
                   />
-                  <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <Sparkles className="w-4 h-4 text-brand-600 shrink-0" />
                   <span>✨ AI 智能补全词性、音标与精美例句</span>
                 </label>
-                <span className="text-[11px] text-indigo-700/80 hidden sm:inline">
+                <span className="text-[11px] text-brand-700/80 hidden sm:inline">
                   {importAutoEnrich ? '自动补全缺失例句与词性' : '快捷导入原数据'}
                 </span>
               </div>
@@ -1030,7 +1016,7 @@ apple - 苹果`}
                     : 'bg-rose-50 text-rose-800 border-rose-200'
                 }`}>
                   {isEnriching ? (
-                    <Loader2 className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
+                    <Loader2 className="w-4 h-4 text-brand-600 animate-spin shrink-0" />
                   ) : importStatus.type === 'success' ? (
                     <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                   ) : (
@@ -1057,7 +1043,7 @@ apple - 苹果`}
               <button
                 onClick={handleConfirmImport}
                 disabled={isEnriching || !importText.trim()}
-                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                className="px-5 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
               >
                 {isEnriching ? (
                   <>

@@ -518,7 +518,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-surface text-slate-800 flex flex-col font-sans">
       
       {/* Navigation */}
       <Navbar
@@ -535,7 +535,7 @@ export default function App() {
       />
 
       {/* Main Body View */}
-      <main className="flex-1 py-2 sm:py-6">
+      <main className="flex-1 py-4 sm:py-8">
         <div className={activeTab === 'quiz' ? 'block' : 'hidden'}>
           <QuizView
             wordPool={quizPool.length > 0 ? quizPool : extractedWords}
@@ -613,18 +613,20 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200/80 bg-white py-6 text-center text-xs text-slate-400">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div>
-            <b>WordMaster AI</b> — 智能英文文本提取、900+权威词库与词汇记忆平台
+      <footer className="border-t border-slate-200/80 bg-white/60 backdrop-blur-sm py-8 text-center">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-sm text-slate-600">
+            <span className="font-semibold gradient-brand-text">WordMaster AI</span>
+            <span className="text-slate-400 mx-1.5">·</span>
+            <span className="text-slate-500">智能英文文本提取、900+ 权威词库与词汇记忆平台</span>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center text-slate-400">
+          <div className="flex items-center gap-2 flex-wrap justify-center text-xs text-slate-400">
             <span>智能分词还原</span>
-            <span>·</span>
-            <span>900+内置词书</span>
-            <span>·</span>
+            <span className="text-slate-300">·</span>
+            <span>900+ 内置词书</span>
+            <span className="text-slate-300">·</span>
             <span>四选一强化测试</span>
-            <span>·</span>
+            <span className="text-slate-300">·</span>
             <span>生词熟词云端同步</span>
           </div>
         </div>

@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SpeakerIcon } from './SpeakerIcon';
-import { CheckCircle, XCircle, RefreshCw, ArrowRight, Bookmark, Sparkles, Award, RotateCcw, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Bookmark, Award, RotateCcw, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { WordItem, QuizQuestion, SpeechAccent } from '../types';
+import { ProgressBar } from './ui/ProgressBar';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { PageHeader } from './ui/PageHeader';
 
 interface QuizViewProps {
   wordPool: WordItem[];
@@ -309,47 +313,44 @@ export const QuizView: React.FC<QuizViewProps> = ({
   if (isFinished) {
     const accuracy = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
     return (
-      <div className="w-full max-w-2xl mx-auto px-4 pt-4 sm:pt-8 md:pt-10 pb-6 space-y-6 text-slate-800">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-lg text-center space-y-6">
-          
-          <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-            <Award className="w-8 h-8 text-amber-600" />
+      <div className="w-full max-w-2xl mx-auto px-4 space-y-6">
+        <Card padding="lg" className="text-center space-y-6 shadow-elevated">
+          <div className="w-16 h-16 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center mx-auto">
+            <Award className="w-8 h-8" />
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-slate-800">本轮 30 词测试完成！</h2>
-            <p className="text-slate-500 text-xs mt-1">坚持练习，词汇量稳步提升</p>
+            <h2 className="text-2xl font-bold text-slate-900">本轮 30 词测试完成！</h2>
+            <p className="text-slate-500 text-sm mt-1">坚持练习，词汇量稳步提升</p>
           </div>
 
-          {/* Stats Bar */}
           <div className="grid grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
             <div>
-              <div className="text-xs text-slate-400 font-medium">答对单词</div>
+              <div className="text-xs text-slate-500 font-medium">答对单词</div>
               <div className="text-xl font-bold text-emerald-600">{score} / {questions.length}</div>
             </div>
             <div className="border-x border-slate-200">
-              <div className="text-xs text-slate-400 font-medium">准确率</div>
-              <div className="text-xl font-bold text-amber-600">{accuracy}%</div>
+              <div className="text-xs text-slate-500 font-medium">准确率</div>
+              <div className="text-xl font-bold text-brand-600">{accuracy}%</div>
             </div>
             <div>
-              <div className="text-xs text-slate-400 font-medium">进入生词本</div>
-              <div className="text-xl font-bold text-amber-600">{wrongInRound.length}</div>
+              <div className="text-xs text-slate-500 font-medium">进入生词本</div>
+              <div className="text-xl font-bold text-rose-600">{wrongInRound.length}</div>
             </div>
           </div>
 
-          {/* Wrong words review in this round */}
           {wrongInRound.length > 0 && (
             <div className="text-left space-y-3 pt-2">
-              <h3 className="text-xs font-semibold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
+              <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
                 <Bookmark className="w-3.5 h-3.5" />
                 <span>本轮未掌握生词 ({wrongInRound.length})</span>
               </h3>
-              <div className="bg-amber-50/50 border border-amber-200/60 rounded-xl p-3 space-y-2 max-h-48 overflow-y-auto">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 max-h-48 overflow-y-auto">
                 {wrongInRound.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-amber-100/80 last:border-0">
+                  <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-800">{item.word}</span>
-                      <span className="text-slate-400">{item.phonetic}</span>
+                      <span className="text-slate-400 font-mono">{item.phonetic}</span>
                     </div>
                     <span className="text-slate-600 font-medium">{item.chinese}</span>
                   </div>
@@ -358,25 +359,17 @@ export const QuizView: React.FC<QuizViewProps> = ({
             </div>
           )}
 
-          {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button
-              onClick={initQuiz}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold rounded-xl transition-all shadow-md shadow-amber-100 cursor-pointer"
-            >
+            <Button variant="primary" size="lg" className="flex-1" onClick={initQuiz}>
               <RotateCcw className="w-4 h-4" />
               <span>再测一轮 (随机30词)</span>
-            </button>
-
-            <button
-              onClick={onGoToWrongWords}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl transition-all shadow-md shadow-amber-100 cursor-pointer"
-            >
+            </Button>
+            <Button variant="secondary" size="lg" className="flex-1" onClick={onGoToWrongWords}>
               <Bookmark className="w-4 h-4" />
               <span>查看生词本 ({wrongWordsCount})</span>
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -390,9 +383,19 @@ export const QuizView: React.FC<QuizViewProps> = ({
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 pt-4 sm:pt-8 md:pt-10 pb-6 space-y-4">
-      {/* Word Card */}
-      <div 
+    <div className="w-full max-w-2xl mx-auto px-4 space-y-5">
+      <PageHeader
+        badge="词汇测试"
+        badgeIcon={BookOpen}
+        title="四选一单词测验"
+        description="听音辨义，连续答对 3 次自动标记为已掌握"
+      />
+
+      <ProgressBar value={currentIndex + 1} max={questions.length} showLabel />
+
+      <Card
+        padding="lg"
+        className="space-y-6 hover:border-brand-200 transition-colors cursor-pointer"
         onClick={() => {
           if (isAnswered) {
             speakWord(currentQ.word, currentQ.exampleSentence);
@@ -400,34 +403,32 @@ export const QuizView: React.FC<QuizViewProps> = ({
             speakText(currentQ.word);
           }
         }}
-        className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm flex flex-col items-center justify-center space-y-6 relative overflow-hidden cursor-pointer hover:border-amber-300 transition-colors"
       >
-        {/* Navigation Toolbar (上一词, 1/30, 下一词) - Placed ABOVE the word */}
-        <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-between w-full max-w-xl pb-4 border-b border-slate-100">
+        <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-between w-full pb-4 border-b border-slate-100">
           <button
             type="button"
             onClick={handlePrev}
             disabled={currentIndex === 0}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-2xs active:scale-98"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold transition-all cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
             <span>上一词</span>
           </button>
 
-          <div className="text-xs font-semibold text-slate-400">
-            <span className="text-amber-600 font-bold">{currentIndex + 1}</span> / {questions.length}
+          <div className="text-sm font-semibold text-slate-500">
+            <span className="text-brand-600 font-bold">{currentIndex + 1}</span> / {questions.length}
           </div>
 
           <button
             type="button"
             onClick={handleNext}
-            className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-sm active:scale-98 ${
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
               isAnswered
-                ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-100'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                ? 'gradient-brand text-white shadow-sm'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
             }`}
           >
-            <span>{currentIndex < questions.length - 1 ? '下一词' : '查看测试结算'}</span>
+            <span>{currentIndex < questions.length - 1 ? '下一词' : '查看结算'}</span>
             {currentIndex < questions.length - 1 ? (
               <ChevronRight className="w-4 h-4" />
             ) : (
@@ -436,7 +437,6 @@ export const QuizView: React.FC<QuizViewProps> = ({
           </button>
         </div>
 
-        {/* Main Word Section */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center gap-3 flex-wrap">
             <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
@@ -452,38 +452,37 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 }
               }}
               title={isAnswered ? "播放发音（单词+例句）" : "播放单词发音"}
-              className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-slate-100 rounded-lg transition-colors shrink-0 cursor-pointer"
+              className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-colors shrink-0 cursor-pointer"
             >
               <SpeakerIcon isSpeaking={speakingText === currentQ.word} className="w-5 h-5" />
             </button>
           </div>
 
           {currentQ.phonetic && (
-            <div className="text-xs sm:text-sm font-mono text-slate-400 tracking-wide">
+            <div className="text-sm font-mono text-slate-400 tracking-wide">
               {currentQ.phonetic}
             </div>
           )}
         </div>
 
-        {/* 4 Chinese Options Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
           {currentQ.options.map((option, idx) => {
             const isSelected = selectedOption === idx;
             const isCorrect = idx === currentQ.correctIndex;
 
-            let btnStyle = "border border-slate-200 hover:border-amber-600 hover:bg-amber-50/80 text-slate-800";
-            let badgeStyle = "bg-slate-100 text-slate-500 group-hover:bg-amber-600 group-hover:text-white";
+            let btnStyle = "border border-slate-200 hover:border-brand-400 hover:bg-brand-50/50 text-slate-800";
+            let badgeStyle = "bg-slate-100 text-slate-500 group-hover:bg-brand-600 group-hover:text-white";
             let icon = null;
 
             if (isAnswered) {
               if (isCorrect) {
-                btnStyle = "bg-emerald-500 text-white border-2 border-emerald-600 font-semibold shadow-sm shadow-emerald-100";
-                badgeStyle = "bg-white/20 text-white";
-                icon = <CheckCircle className="w-4 h-4 shrink-0 text-white" />;
+                btnStyle = "bg-emerald-50 text-emerald-900 border-2 border-emerald-500 font-semibold";
+                badgeStyle = "bg-emerald-500 text-white";
+                icon = <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />;
               } else if (isSelected && !isCorrect) {
-                btnStyle = "bg-rose-500 text-white border-2 border-rose-600 font-semibold shadow-sm shadow-rose-100";
-                badgeStyle = "bg-white/20 text-white";
-                icon = <XCircle className="w-4 h-4 shrink-0 text-white" />;
+                btnStyle = "bg-rose-50 text-rose-900 border-2 border-rose-500 font-semibold";
+                badgeStyle = "bg-rose-500 text-white";
+                icon = <XCircle className="w-4 h-4 shrink-0 text-rose-600" />;
               } else {
                 btnStyle = "bg-slate-50 text-slate-400 border border-slate-100 opacity-60";
                 badgeStyle = "bg-slate-100 text-slate-400";
@@ -498,9 +497,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   e.stopPropagation();
                   handleSelectOption(idx);
                 }}
-                className={`p-3.5 sm:p-4 text-left rounded-xl transition-all cursor-pointer flex flex-col justify-between group ${btnStyle}`}
+                className={`p-4 text-left rounded-xl transition-all cursor-pointer flex flex-col justify-between group ${btnStyle}`}
               >
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-2">
                   <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs transition-colors ${badgeStyle}`}>
                     {String.fromCharCode(65 + idx)}
                   </span>
@@ -512,49 +511,45 @@ export const QuizView: React.FC<QuizViewProps> = ({
           })}
         </div>
 
-        {/* Answer Feedback Alert */}
         {isAnswered && (
-          <div className={`w-full max-w-xl p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed space-y-2 transition-all ${
+          <div className={`w-full p-4 rounded-xl border text-sm leading-relaxed space-y-2 transition-all ${
             selectedOption === currentQ.correctIndex
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-rose-50 border-rose-200 text-rose-800'
+              ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50/80 border-rose-200 text-rose-800'
           }`}>
-            <div className="font-bold flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                {selectedOption === currentQ.correctIndex ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                    {(() => {
-                      const wordId = (currentQ.id || currentQ.word).toLowerCase().trim();
-                      const currentCount = correctCounts[wordId] || 0;
-                      if (currentCount >= 3) {
-                        return <span>回答正确！🎉 已累计答对 3 次，标记【已掌握】，已自动从待测试生词本中移出！</span>;
-                      }
-                      return (
-                        <span>
-                          回答正确！正确进度：<b className="text-emerald-700">{currentCount}/3 次</b>
-                          （还需答对 {3 - currentCount} 次即自动标记已掌握）
-                        </span>
-                      );
-                    })()}
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                    <span>回答错误！答对进度已重置，已自动记入生词本（学习记录 +1）</span>
-                  </>
-                )}
-              </div>
+            <div className="font-semibold flex items-center gap-1.5">
+              {selectedOption === currentQ.correctIndex ? (
+                <>
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  {(() => {
+                    const wordId = (currentQ.id || currentQ.word).toLowerCase().trim();
+                    const currentCount = correctCounts[wordId] || 0;
+                    if (currentCount >= 3) {
+                      return <span>回答正确！已累计答对 3 次，已标记【已掌握】</span>;
+                    }
+                    return (
+                      <span>
+                        回答正确！进度 <b className="text-emerald-700">{currentCount}/3</b>（还需 {3 - currentCount} 次）
+                      </span>
+                    );
+                  })()}
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>回答错误，已记入生词本</span>
+                </>
+              )}
             </div>
 
             {currentQ.exampleSentence && (
-              <div className="pt-2.5 flex items-start justify-between gap-3 border-t border-emerald-200/50 mt-1 bg-white/80 p-3 rounded-xl shadow-2xs">
+              <div className="pt-3 flex items-start justify-between gap-3 border-t border-slate-200/60 mt-1 bg-white/80 p-3 rounded-xl">
                 <div className="space-y-1">
-                  <div className="text-sm sm:text-base font-bold italic text-slate-900 leading-snug">
-                    “{currentQ.exampleSentence}”
+                  <div className="text-sm sm:text-base font-medium italic text-slate-900 leading-snug">
+                    "{currentQ.exampleSentence}"
                   </div>
                   {currentQ.exampleSentenceCn && (
-                    <div className="text-xs sm:text-sm text-slate-600 font-normal leading-normal">
+                    <div className="text-sm text-slate-600 leading-normal">
                       {currentQ.exampleSentenceCn}
                     </div>
                   )}
@@ -566,35 +561,29 @@ export const QuizView: React.FC<QuizViewProps> = ({
                     speakText(currentQ.exampleSentence);
                   }}
                   title="朗读例句"
-                  className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-slate-100 rounded-lg shrink-0 cursor-pointer transition-colors"
+                  className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg shrink-0 cursor-pointer transition-colors"
                 >
-                  <SpeakerIcon isSpeaking={speakingText === currentQ.exampleSentence} className="w-4.5 h-4.5" />
+                  <SpeakerIcon isSpeaking={speakingText === currentQ.exampleSentence} className="w-4 h-4" />
                 </button>
               </div>
             )}
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Test Progress Status - Moved to bottom */}
-      <div className="flex items-center justify-between text-xs font-semibold text-slate-500 bg-white px-5 py-3 rounded-xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <span>词汇测试</span>
-          <span>·</span>
-          <span>进度: {currentIndex + 1} / {questions.length}</span>
+      <div className="flex items-center justify-between text-sm font-medium text-slate-500 bg-white px-5 py-3 rounded-xl border border-slate-200/80 shadow-card">
+        <div className="flex items-center gap-3">
+          <span className="text-emerald-600 font-semibold">正确 {score}</span>
+          <span className="text-slate-300">|</span>
+          <span className="text-rose-600 font-semibold">错误 {wrongInRound.length}</span>
         </div>
-
-        <div className="flex items-center gap-4">
-          <span className="text-emerald-600 font-bold">正确: {score}</span>
-          <span className="text-amber-600 font-bold">错误: {wrongInRound.length}</span>
-          <button
-            onClick={initQuiz}
-            title="换一轮随机30词"
-            className="p-1 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <button
+          onClick={initQuiz}
+          title="换一轮随机30词"
+          className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

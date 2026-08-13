@@ -4,6 +4,9 @@ import { Upload, FileText, Sparkles, ArrowRight, CheckCircle2, AlertCircle, Load
 import * as XLSX from 'xlsx';
 import { WordItem } from '../types';
 import { parseWordListText, enrichWordsWithAI } from '../utils/wordParser';
+import { PageHeader } from './ui/PageHeader';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
 
 interface TextAnalyzerProps {
   onWordsExtracted: (words: WordItem[], listName?: string) => void;
@@ -325,31 +328,21 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto px-4 py-6">
+    <div className="space-y-6 max-w-5xl mx-auto px-4">
       
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-purple-900 via-pink-900 to-rose-950 text-white rounded-2xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/20 text-pink-200 text-xs font-medium mb-3 border border-pink-400/30">
-            <Sparkles className="w-3.5 h-3.5 text-pink-300" />
-            <span>智能文本分析 & 快捷生词导入</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
-            导入文本提取核心词，或直接导入单词列表
-          </h1>
-          <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-            既可通过 AI 分析短文还原词干，也可<b>直接粘贴单词列表（由 AI 自动补充例句与测验）</b>批量加入生词本！
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        badge="智能文本分析 & 快捷生词导入"
+        badgeIcon={Sparkles}
+        title="导入文本提取核心词，或直接导入单词列表"
+        description={
+          <>既可通过 AI 分析短文还原词干，也可<b>直接粘贴单词列表（由 AI 自动补充例句与测验）</b>批量加入生词本！</>
+        }
+      />
 
-      {/* Input Mode Tabs & Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
         
-        {/* Main Text Input & File Upload */}
         <div className="lg:col-span-2 flex flex-col">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex-1 flex flex-col justify-between space-y-4">
+          <Card padding="md" className="flex-1 flex flex-col justify-between space-y-4">
             
             {/* Mode Switcher */}
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
@@ -358,7 +351,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                 onClick={() => { setInputMode('analyze'); setErrorMessage(null); setSuccessMessage(null); }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   inputMode === 'analyze'
-                    ? 'bg-pink-600 text-white shadow-sm shadow-pink-100'
+                    ? 'gradient-brand text-white shadow-sm'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
                 }`}
               >
@@ -371,7 +364,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                 onClick={() => { setInputMode('directList'); setErrorMessage(null); setSuccessMessage(null); }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   inputMode === 'directList'
-                    ? 'bg-pink-600 text-white shadow-sm shadow-pink-100'
+                    ? 'gradient-brand text-white shadow-sm'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
                 }`}
               >
@@ -386,7 +379,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                 <div className="space-y-3">
                   <div className="grid grid-cols-3 items-center text-xs">
                     <label className="font-semibold text-slate-800 text-sm flex items-center gap-2 justify-start">
-                      <FileText className="w-4 h-4 text-pink-600 shrink-0" />
+                      <FileText className="w-4 h-4 text-brand-600 shrink-0" />
                       <span className="truncate">英文文章 / 段落内容</span>
                     </label>
                     <div className="text-center text-slate-400 font-normal">
@@ -419,7 +412,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
 
 💡 提示：系统会自动过滤文章标题与非词汇干扰，准确提取有效英文单词；分析时将由 AI 智能补全词性、音标、精美例句与测验题。`}
                     rows={8}
-                    className="w-full p-3.5 rounded-xl border border-slate-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 outline-none resize-none text-slate-700 text-sm leading-relaxed transition-all placeholder:text-slate-400"
+                    className="w-full p-3.5 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none resize-none text-slate-700 text-sm leading-relaxed transition-all placeholder:text-slate-400"
                   />
                 </div>
 
@@ -430,7 +423,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors flex items-center justify-center gap-3 ${
-                    isDragOver ? 'border-pink-500 bg-pink-50/50' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/80'
+                    isDragOver ? 'border-brand-500 bg-brand-50/50' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/80'
                   }`}
                 >
                   <input
@@ -440,10 +433,10 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                     className="hidden"
                     onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
                   />
-                  <Upload className="w-5 h-5 text-pink-600" />
+                  <Upload className="w-5 h-5 text-brand-600" />
                   <div className="text-xs text-slate-600 text-left">
                     <span className="font-medium text-slate-800">点击上传文件</span> 或拖拽 txt, md, csv 到这里
-                    {fileName && <span className="block font-semibold text-pink-600 mt-0.5">已选中: {fileName}</span>}
+                    {fileName && <span className="block font-semibold text-brand-600 mt-0.5">已选中: {fileName}</span>}
                   </div>
                 </div>
 
@@ -462,7 +455,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                         onClick={() => setMaxWords(opt.count)}
                         className={`px-3 py-1 text-xs rounded-md transition-all cursor-pointer font-medium ${
                           maxWords === opt.count
-                            ? 'bg-white text-pink-600 shadow-xs font-semibold'
+                            ? 'bg-white text-brand-600 shadow-xs font-semibold'
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
@@ -479,7 +472,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <label className="font-semibold text-slate-800 text-sm flex items-center gap-2 shrink-0">
-                        <ListPlus className="w-4 h-4 text-pink-600" />
+                        <ListPlus className="w-4 h-4 text-brand-600" />
                         <span>粘贴单词列表（自动兼容各种格式）</span>
                       </label>
                       <span className="text-xs text-slate-400 font-normal">
@@ -521,7 +514,7 @@ registration
 
 💡 提示：系统会自动忽略“Welcome Unit”、“按通用教材整理”等非词汇行，准确提取有效英文单词；系统将由 AI 智能自动补全词性、音标、精美例句与测验题。`}
                     rows={9}
-                    className="w-full p-3.5 rounded-xl border border-slate-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 outline-none resize-none text-slate-700 text-xs sm:text-sm leading-relaxed transition-all placeholder:text-slate-400 font-mono"
+                    className="w-full p-3.5 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none resize-none text-slate-700 text-xs sm:text-sm leading-relaxed transition-all placeholder:text-slate-400 font-mono"
                   />
                 </div>
               </>
@@ -531,7 +524,7 @@ registration
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
               <div className="flex items-center gap-2">
                 <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 shrink-0">
-                  <Layers className="w-3.5 h-3.5 text-pink-600" />
+                  <Layers className="w-3.5 h-3.5 text-brand-600" />
                   <span>保存至单词列表：</span>
                 </label>
                 <input
@@ -539,7 +532,7 @@ registration
                   value={listName}
                   onChange={(e) => setListName(e.target.value)}
                   placeholder="默认单词列表"
-                  className="w-44 sm:w-56 px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-100 outline-none text-slate-700 font-medium transition-all"
+                  className="w-44 sm:w-56 px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-slate-700 font-medium transition-all"
                 />
               </div>
 
@@ -549,7 +542,7 @@ registration
                     type="button"
                     onClick={handleAnalyze}
                     disabled={isLoading || !inputText.trim()}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 text-white font-medium text-sm rounded-xl shadow-md shadow-pink-200 transition-all cursor-pointer"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 gradient-brand disabled:opacity-50 text-white font-medium text-sm rounded-xl shadow-sm transition-all cursor-pointer"
                   >
                     {isLoading ? (
                       <>
@@ -568,7 +561,7 @@ registration
                     type="button"
                     onClick={handleDirectImport}
                     disabled={isLoading || !directText.trim()}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 text-white font-medium text-sm rounded-xl shadow-md shadow-pink-200 transition-all cursor-pointer"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 gradient-brand disabled:opacity-50 text-white font-medium text-sm rounded-xl shadow-sm transition-all cursor-pointer"
                   >
                     {isLoading ? (
                       <>
@@ -601,15 +594,14 @@ registration
                 <span>{successMessage}</span>
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
-        {/* Preset Sample Text Cards */}
         <div className="flex flex-col">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex-1 flex flex-col justify-between space-y-3">
+          <Card padding="md" className="flex-1 flex flex-col justify-between space-y-3">
             <div>
               <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
-                <BookOpen className="w-4 h-4 text-pink-600" />
+                <BookOpen className="w-4 h-4 text-brand-600" />
                 <h3 className="font-bold text-slate-800 text-sm">预置阅读素材样张</h3>
               </div>
               <p className="text-xs text-slate-500 mt-2">
@@ -628,9 +620,9 @@ registration
                     setErrorMessage(null);
                     setSuccessMessage(null);
                   }}
-                  className="p-2.5 rounded-xl border border-slate-100 hover:border-pink-200 hover:bg-pink-50/40 transition-all cursor-pointer group flex-1 flex flex-col justify-center"
+                  className="p-2.5 rounded-xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/40 transition-all cursor-pointer group flex-1 flex flex-col justify-center"
                 >
-                  <div className="font-semibold text-xs text-slate-800 group-hover:text-pink-600 transition-colors">
+                  <div className="font-semibold text-xs text-slate-800 group-hover:text-brand-600 transition-colors">
                     {sample.title}
                   </div>
                   <div className="text-[11px] text-slate-400 mt-1.5 line-clamp-1">
@@ -639,19 +631,18 @@ registration
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
 
-      {/* Extracted Words List Section */}
       {extractedWords && extractedWords.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
+        <Card padding="lg" className="space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-pink-500" />
+                <CheckCircle2 className="w-5 h-5 text-brand-500" />
                 <h2 className="text-lg font-bold text-slate-800">已提取/导入单词列表</h2>
-                <span className="px-2.5 py-0.5 text-xs font-bold bg-pink-50 text-pink-700 rounded-full border border-pink-100">
+                <span className="px-2.5 py-0.5 text-xs font-bold bg-brand-50 text-brand-700 rounded-full border border-brand-100">
                   {extractedWords.length} 个核心词汇
                 </span>
               </div>
@@ -660,14 +651,11 @@ registration
               </p>
             </div>
 
-            <button
-              onClick={() => onStartQuiz(extractedWords)}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium text-sm rounded-xl shadow-md shadow-amber-100 transition-all cursor-pointer"
-            >
+            <Button onClick={() => onStartQuiz(extractedWords)}>
               <BookOpen className="w-4 h-4" />
               <span>以此词库发起测试 (最多30词)</span>
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
 
           {/* Word Table Grid */}
@@ -676,7 +664,7 @@ registration
               <div
                 key={item.id || idx}
                 onClick={() => speakWord(item.word, item.exampleSentence)}
-                className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs hover:shadow-md hover:border-pink-300 transition-all space-y-2 relative group cursor-pointer active:scale-[0.99]"
+                className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs hover:shadow-md hover:border-brand-300 transition-all space-y-2 relative group cursor-pointer active:scale-[0.99]"
               >
                 {/* Top info */}
                 <div className="flex items-start justify-between gap-3">
@@ -688,7 +676,7 @@ registration
                           e.stopPropagation();
                           speakWord(item.word, item.exampleSentence);
                         }}
-                        className="p-1 text-slate-400 hover:text-pink-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer translate-y-[3.5px]"
+                        className="p-1 text-slate-400 hover:text-brand-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer translate-y-[3.5px]"
                         title="发音（单词+例句）"
                       >
                         <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-5 h-5" />
@@ -701,7 +689,7 @@ registration
                 </div>
 
                 {/* Chinese definition */}
-                <div className="text-base font-bold text-pink-900 bg-pink-50/70 py-2 px-3 rounded-xl border border-pink-100/80 leading-snug">
+                <div className="text-base font-bold text-brand-900 bg-brand-50/70 py-2 px-3 rounded-xl border border-brand-100/80 leading-snug">
                   {item.chinese}
                 </div>
 
@@ -717,7 +705,7 @@ registration
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

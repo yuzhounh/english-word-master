@@ -8,6 +8,8 @@ import {
 import { MasteredWordItem, WordItem } from '../types';
 import { parseWordListText, enrichWordsWithAI } from '../utils/wordParser';
 import { Pagination } from './Pagination';
+import { PageHeader } from './ui/PageHeader';
+import { Button } from './ui/Button';
 
 interface MasteredWordsListProps {
   masteredWords: MasteredWordItem[];
@@ -328,40 +330,24 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 space-y-6">
       
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-emerald-900 via-teal-800 to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 text-xs font-medium border border-emerald-400/20">
-              <Award className="w-3.5 h-3.5 text-emerald-300" />
-              <span>已掌握词汇库</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              熟词本 🎉 ({masteredWords.length})
-            </h1>
-            <p className="text-emerald-100/80 text-xs sm:text-sm">
-              在测试中<b>连续答对 3 次</b>或手动标记的词汇均会收录于熟词本中。随时可发起温故知新强化复习！
-            </p>
-          </div>
-
-          {masteredWords.length > 0 && (
-            <button
-              onClick={handleStartQuiz}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-900/30 transition-all shrink-0 cursor-pointer"
-            >
+      <PageHeader
+        badge="已掌握词汇库"
+        badgeIcon={Award}
+        title={`熟词本 (${masteredWords.length})`}
+        description={<>在测试中<b>连续答对 3 次</b>或手动标记的词汇均会收录于熟词本中。随时可发起温故知新强化复习！</>}
+        action={
+          masteredWords.length > 0 ? (
+            <Button variant="success" onClick={handleStartQuiz}>
               <BookOpen className="w-4 h-4" />
               <span>对熟词发起巩固复习</span>
-            </button>
-          )}
-        </div>
-      </div>
+            </Button>
+          ) : undefined
+        }
+      />
 
-      {/* View Mode Toggle Bar (单词列表 vs 全部明细) */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100 p-1.5 rounded-2xl">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100/80 p-1.5 rounded-2xl">
         <div className="flex items-center gap-1 bg-slate-200/60 p-1 rounded-xl">
           <button
             onClick={() => { setViewMode('lists'); setSelectedListFilter('all'); }}
@@ -504,13 +490,13 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             <button
               onClick={handleBulkEnrichWords}
               disabled={isBulkEnriching}
-              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 gradient-brand text-white font-bold text-xs rounded-xl shadow-sm hover:opacity-95 transition-all cursor-pointer disabled:opacity-50"
               title="自动调用 DeepSeek AI 补全缺乏例句与音标的熟词"
             >
               {isBulkEnriching ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
               ) : (
-                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                <Sparkles className="w-3.5 h-3.5 text-brand-200 animate-pulse" />
               )}
               <span>
                 {isBulkEnriching 
