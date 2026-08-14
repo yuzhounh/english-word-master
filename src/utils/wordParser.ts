@@ -181,8 +181,154 @@ export function parseWordListText(rawText: string): ParsedWord[] {
   return result;
 }
 
+interface EnrichBatchResult {
+  words: WordItem[];
+  pending: ParsedWord[];
+  done: boolean;
+  success: boolean;
+}
+
+async function enrichWordsBatch(
+  words: ParsedWord[],
+  light: boolean
+): Promise<EnrichBatchResult> {
+  try {
+    const response = await fetch('/api/enrich-words', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ words, light })
+    });
+    const data = await response.json();
+    if (data?.success && Array.isArray(data.words)) {
+      return {
+        words: data.words,
+        pending: Array.isArray(data.pending) ? data.pending : [],
+        done: !!data.done,
+        success: true
+      };
+    }
+    return { words: [], pending: words, done: false, success: false };
+  } catch (err) {
+    console.error('Enrich words batch failed:', err);
+    return { words: [], pending: words, done: false, success: false };
+  }
+}
+
+function fallbackWordItems(words: ParsedWord[]): WordItem[] {
+  return words.map(w => {
+    const base = w.word.toLowerCase().trim();
+    return {
+      id: base,
+      word: w.word,
+      phonetic: w.phonetic || '',
+      chinese: w.chinese || w.word,
+      exampleSentence: w.exampleSentence || '',
+      exampleSentenceCn: w.exampleSentenceCn || ''
+    };
+  });
+}
+
+async function enrichWordsStream(
+  words: ParsedWord[],
+  light: boolean,
+  onSliceProgress?: (processed: number) => void
+): Promise<WordItem[]> {
+  const results: WordItem[] = [];
+  let pending: ParsedWord[] = words.slice();
+  let guard = 0;
+
+  while (pending.length > 0 && guard < 500) {
+    guard++;
+    const data = await enrichWordsBatch(pending, light);
+
+    if (data.success) {
+      results.push(...data.words);
+      onSliceProgress?.(data.words.length);
+      if (data.done) break;
+      if (data.pending.length > 0) {
+        pending = data.pending;
+      } else {
+        break;
+      }
+    } else {
+      results.push(...fallbackWordItems(pending));
+      onSliceProgress?.(pending.length);
+      break;
+    }
+  }
+
+  return results;
+}
+
+/** Look up words in the pre-enriched server dictionary; return resolved items and words still needing AI. */
+export async function resolveWordsWithDictionary(
+  words: ParsedWord[]
+): Promise<{ resolved: WordItem[]; needsAi: ParsedWord[] }> {
+  if (!words.length) return { resolved: [], needsAi: [] };
+
+  try {
+    const response = await fetch('/api/word-dictionary/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ words })
+    });
+    const data = await response.json();
+    if (!data?.success || !Array.isArray(data.words)) {
+      return { resolved: [], needsAi: words };
+    }
+
+    const resolved: WordItem[] = [];
+    const needsAi: ParsedWord[] = [];
+
+    data.words.forEach((item: any, i: number) => {
+      const source = words[i];
+      const key = (source?.word || item.word || '').toLowerCase().trim();
+      const wordItem: WordItem = {
+        id: key,
+        word: item.word || source?.word || '',
+        phonetic: item.phonetic || source?.phonetic || '',
+        phoneticUk: item.phoneticUk,
+        phoneticUs: item.phoneticUs,
+        chinese: item.chinese || source?.chinese || '',
+        exampleSentence: item.exampleSentence || source?.exampleSentence || '',
+        exampleSentenceCn: item.exampleSentenceCn || source?.exampleSentenceCn || ''
+      };
+
+      if (item.enriched) {
+        resolved.push(wordItem);
+      } else {
+        needsAi.push(source || { word: wordItem.word, chinese: wordItem.chinese });
+      }
+    });
+
+    return { resolved, needsAi };
+  } catch (err) {
+    console.warn('Dictionary lookup failed, falling back to AI for all words:', err);
+    return { resolved: [], needsAi: words };
+  }
+}
+
+/** Enrich words, using dictionary first and AI only for missing entries. */
+export async function enrichWordsWithDictionaryFallback(
+  words: ParsedWord[],
+  onProgress?: (processed: number, total: number) => void
+): Promise<WordItem[]> {
+  const { resolved, needsAi } = await resolveWordsWithDictionary(words);
+  if (needsAi.length === 0) {
+    onProgress?.(words.length, words.length);
+    return resolved;
+  }
+
+  const aiEnriched = await enrichWordsWithAI(needsAi, (processed, total) => {
+    onProgress?.(resolved.length + processed, words.length);
+  });
+
+  return [...resolved, ...aiEnriched];
+}
+
 /**
- * Call server AI to enrich parsed words with phonetics, part-of-speech Chinese definitions, example sentences & quiz options
+ * Call server AI to enrich parsed words with phonetics, part-of-speech Chinese definitions & example sentences.
+ * Quiz options are generated locally during quizzes (light mode) for faster bulk processing.
  * The server returns partial results within its time budget; the client keeps calling until done.
  * Reports progress via the (processed, total) callback.
  */
@@ -192,58 +338,29 @@ export async function enrichWordsWithAI(
 ): Promise<WordItem[]> {
   if (!words || words.length === 0) return [];
 
-  const results: WordItem[] = [];
   const total = words.length;
-  let pending: ParsedWord[] = words.slice();
+  const light = words.length > 5;
+  const parallelStreams = words.length >= 120 ? 2 : 1;
   let processedCount = 0;
-  let guard = 0;
 
-  while (pending.length > 0 && guard < 500) {
-    guard++;
-    let data: any = null;
-    try {
-      const response = await fetch('/api/enrich-words', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ words: pending })
-      });
-      data = await response.json();
-    } catch (err) {
-      console.error('Enrich words batch failed:', err);
-      break;
-    }
+  const reportProgress = (delta: number) => {
+    processedCount = Math.min(processedCount + delta, total);
+    onProgress?.(processedCount, total);
+  };
 
-    if (data && data.success && Array.isArray(data.words)) {
-      results.push(...data.words);
-      processedCount += data.words.length;
-      if (onProgress) {
-        onProgress(Math.min(processedCount, total), total);
-      }
-      if (data.done) break;
-      if (Array.isArray(data.pending) && data.pending.length > 0) {
-        pending = data.pending;
-      } else {
-        break;
-      }
-    } else {
-      // Fallback for the remaining pending words (server error)
-      pending.forEach(w => {
-        const base = w.word.toLowerCase().trim();
-        results.push({
-          id: base,
-          word: w.word,
-          phonetic: w.phonetic || '',
-          chinese: w.chinese || w.word,
-          exampleSentence: w.exampleSentence || '',
-          exampleSentenceCn: w.exampleSentenceCn || ''
-        });
-      });
-      if (onProgress) {
-        onProgress(total, total);
-      }
-      break;
-    }
+  if (parallelStreams === 1) {
+    return enrichWordsStream(words, light, reportProgress);
   }
 
-  return results;
+  const sliceSize = Math.ceil(words.length / parallelStreams);
+  const slices: ParsedWord[][] = [];
+  for (let i = 0; i < words.length; i += sliceSize) {
+    slices.push(words.slice(i, i + sliceSize));
+  }
+
+  const sliceResults = await Promise.all(
+    slices.map(slice => enrichWordsStream(slice, light, reportProgress))
+  );
+
+  return sliceResults.flat();
 }

@@ -7,3 +7,8 @@ coverage/
 .env*
 !.env.example
 .vercel
+data/build-checkpoint.json
+data/library-word-index.json
+data/book-index.json
+data/word-dictionary.json
+data/english-word-enriched/

@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { Upload, FileText, Sparkles, ArrowRight, CheckCircle2, AlertCircle, Loader2, BookOpen, Layers, ListPlus, Zap, Check, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { WordItem, WordListGroup } from '../types';
-import { parseWordListText, enrichWordsWithAI } from '../utils/wordParser';
+import { parseWordListText, enrichWordsWithAI, enrichWordsWithDictionaryFallback } from '../utils/wordParser';
 import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -139,7 +139,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
           const needsEnrichment = parsedWords.some((w) => !w.exampleSentence || !w.chinese);
           if (needsEnrichment && autoEnrich) {
             setProgressStatus(`AI 正在智能补全中英双语例句与音标 (0/${parsedWords.length})...`);
-            const enriched = await enrichWordsWithAI(parsedWords, (processed, total) => {
+            const enriched = await enrichWordsWithDictionaryFallback(parsedWords, (processed, total) => {
               const percent = Math.round((processed / total) * 100);
               setProgressStatus(`AI 正在智能生成例句与音标... 已完成 ${processed} / ${total} 词 (${percent}%)`);
             });
@@ -312,7 +312,7 @@ export const TextAnalyzer: React.FC<TextAnalyzerProps> = ({
       setIsLoading(true);
       setProgressStatus(`AI 正在智能生成中英双语例句与音标 (0/${parsed.length})...`);
       try {
-        const enrichedWords = await enrichWordsWithAI(parsed, (processed, total) => {
+        const enrichedWords = await enrichWordsWithDictionaryFallback(parsed, (processed, total) => {
           const percent = Math.round((processed / total) * 100);
           setProgressStatus(`AI 正在智能生成例句与音标... 已完成 ${processed} / ${total} 词 (${percent}%)`);
         });
