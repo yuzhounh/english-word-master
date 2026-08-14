@@ -12,3 +12,5 @@ data/library-word-index.json
 data/book-index.json
 data/word-dictionary.json
 data/english-word-enriched/
+api/handler.cjs
+api/_bundle_test.cjs

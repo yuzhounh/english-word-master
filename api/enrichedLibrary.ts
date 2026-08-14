@@ -186,6 +186,6 @@ export async function getEnrichedBookWords(bookPath: string): Promise<any[]> {
   return words;
 }
 
-export function getEnrichedMeta(): any {
-  return readLocalJson("meta.json");
+export async function getEnrichedMeta(): Promise<any> {
+  return loadJson("meta.json");
 }
