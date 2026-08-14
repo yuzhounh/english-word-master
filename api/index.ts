@@ -20,7 +20,7 @@ import {
 dotenv.config();
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
-const WORD_LIBRARY_REPO = process.env.WORD_LIBRARY_REPO || "lilinji/English";
+const WORD_LIBRARY_REPO = process.env.WORD_LIBRARY_REPO || "yuzhounh/english-word-enriched";
 const WORD_LIBRARY_BRANCH = process.env.WORD_LIBRARY_BRANCH || "main";
 
 function githubHeaders(): Record<string, string> {

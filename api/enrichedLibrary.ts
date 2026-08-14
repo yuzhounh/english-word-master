@@ -13,7 +13,7 @@ export { mergeWordWithDictionary, isDictionaryEntryComplete, lookupWord, getDict
 
 const LOCAL_ROOT =
   process.env.WORD_LIBRARY_LOCAL_PATH || path.join(process.cwd(), "data", "english-word-enriched");
-const REMOTE_REPO = process.env.WORD_LIBRARY_REPO || "lilinji/English";
+const REMOTE_REPO = process.env.WORD_LIBRARY_REPO || "yuzhounh/english-word-enriched";
 const REMOTE_BRANCH = process.env.WORD_LIBRARY_BRANCH || "main";
 const FORMAT = process.env.WORD_LIBRARY_FORMAT || "auto";
 
