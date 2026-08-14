@@ -425,7 +425,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             onClick={handleNext}
             className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
               isAnswered
-                ? 'gradient-brand text-white shadow-sm'
+                ? 'gradient-brand shadow-sm'
                 : 'surface-muted hover:bg-slate-200 dark:hover:bg-slate-600 text-secondary border border-slate-200 dark:border-slate-600'
             }`}
           >

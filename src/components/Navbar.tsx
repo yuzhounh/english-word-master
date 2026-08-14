@@ -22,7 +22,7 @@ interface NavbarProps {
 
 const navItems = [
   { id: 'quiz' as const, label: '单词测试', icon: BookOpen },
-  { id: 'extract' as const, label: '文本提取', icon: FileText, countKey: 'extracted' as const },
+  { id: 'extract' as const, label: '导入词本', icon: FileText, countKey: 'extracted' as const },
   { id: 'library' as const, label: '词库', icon: Layers, badge: '900+本' },
   { id: 'notebook' as const, label: '我的词本', icon: Notebook, countKey: 'notebook' as const },
 ];
@@ -166,7 +166,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             <button
               onClick={onOpenAuthModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white gradient-brand rounded-full transition-all cursor-pointer shadow-sm hover:opacity-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold gradient-brand rounded-full transition-all cursor-pointer shadow-sm"
             >
               <LogIn className="w-3.5 h-3.5" />
               <span>Google 登录</span>
@@ -203,7 +203,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button onClick={onLogout} className="p-1 text-slate-400 hover:text-rose-600"><LogOut className="w-4 h-4" /></button>
                 </div>
               ) : (
-                <button onClick={() => { setIsMobileMenuOpen(false); onOpenAuthModal(); }} className="w-full py-2.5 gradient-brand text-white rounded-xl text-xs font-bold cursor-pointer">
+                <button onClick={() => { setIsMobileMenuOpen(false); onOpenAuthModal(); }} className="w-full py-2.5 gradient-brand rounded-xl text-xs font-bold cursor-pointer">
                   Google 登录
                 </button>
               )}

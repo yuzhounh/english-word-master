@@ -653,7 +653,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             <button
               onClick={handleBulkEnrichWords}
               disabled={isBulkEnriching}
-              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-brand-600 via-brand-700 to-brand-800 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 gradient-brand font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
               title="自动调用 DeepSeek AI 补全缺乏例句与音标的生词"
             >
               {isBulkEnriching ? (
@@ -770,7 +770,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                       <button
                         onClick={(e) => { e.stopPropagation(); handleEnrichSingleWord(item); }}
                         disabled={enrichingWordId === item.id}
-                        className="flex items-center gap-1.5 px-2.5 py-1 gradient-brand text-white rounded-lg text-xs font-bold cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-2.5 py-1 gradient-brand rounded-lg text-xs font-bold cursor-pointer disabled:opacity-50"
                       >
                         {enrichingWordId === item.id ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />

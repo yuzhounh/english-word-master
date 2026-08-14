@@ -479,7 +479,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                   }
                 }}
                 disabled={loadingBook || isEnrichingBook || bookWords.length === 0}
-                className="flex items-center gap-2 px-4 py-2 gradient-brand text-white rounded-xl text-xs font-bold hover:opacity-95 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 gradient-brand rounded-xl text-xs font-bold active:scale-95 transition-all cursor-pointer disabled:opacity-50"
               >
                 <Play className="w-4 h-4 fill-white" />
                 <span>开始专项测试</span>

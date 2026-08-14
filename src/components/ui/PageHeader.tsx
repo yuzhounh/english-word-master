@@ -19,9 +19,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   stats,
 }) => (
   <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800/80 shadow-card">
-    <div className="absolute inset-x-0 top-0 h-1 gradient-brand" />
-    <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brand-100/40 blur-3xl pointer-events-none" />
-    <div className="absolute -left-8 bottom-0 h-32 w-32 rounded-full bg-accent-500/5 blur-2xl pointer-events-none" />
+    <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-slate-100/40 dark:bg-slate-700/20 blur-3xl pointer-events-none" />
 
     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-8">
       <div className="space-y-3 min-w-0">

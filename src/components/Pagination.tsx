@@ -123,7 +123,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                     onClick={() => onPageChange(p)}
                     className={`min-w-[28px] h-7 px-1.5 sm:px-2 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
                       isActive
-                        ? 'gradient-brand text-white shadow-sm'
+                        ? 'gradient-brand shadow-sm'
                         : 'text-secondary hover:bg-white dark:hover:bg-slate-700 hover:text-primary'
                     }`}
                   >

@@ -8,6 +8,39 @@ export interface ParsedWord {
   exampleSentenceCn?: string;
 }
 
+/** Parse a plain word list: one English word (or hyphenated phrase) per line. */
+export function parsePlainWordList(rawText: string): ParsedWord[] {
+  if (!rawText?.trim()) return [];
+
+  const result: ParsedWord[] = [];
+  const seen = new Set<string>();
+
+  for (const line of rawText.split(/[\r\n]+/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    if (/[\u4e00-\u9fa5]/.test(trimmed)) continue;
+    if (/[:：]/.test(trimmed)) continue;
+
+    const word = trimmed
+      .replace(/^[\d.\-*•\[\]\s]+/, '')
+      .trim()
+      .replace(/^[^a-zA-Z]+|[^a-zA-Z'\-\s]+$/g, '')
+      .trim();
+
+    if (!word || word.length > 45) continue;
+    if (!/^[a-zA-Z][a-zA-Z0-9'\-\s]*$/.test(word)) continue;
+
+    const key = word.toLowerCase().replace(/\s+/g, ' ');
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    result.push({ word, chinese: '' });
+  }
+
+  return result;
+}
+
 /**
  * Smart multi-format parser for English vocabulary lists.
  * Supports:

@@ -465,7 +465,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             <button
               onClick={handleBulkEnrichWords}
               disabled={isBulkEnriching}
-              className="flex items-center gap-1.5 px-3 py-2 gradient-brand text-white font-bold text-xs rounded-xl shadow-sm hover:opacity-95 transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 gradient-brand font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50"
               title="自动调用 DeepSeek AI 补全缺乏例句与音标的熟词"
             >
               {isBulkEnriching ? (
@@ -604,7 +604,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                         handleEnrichSingleWord(item);
                       }}
                       disabled={enrichingWordId === item.id}
-                      className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2.5 py-1 gradient-brand rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                     >
                       {enrichingWordId === item.id ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
