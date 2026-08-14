@@ -1,16 +1,24 @@
-import React, { useState, useRef } from 'react';
-import { SpeakerIcon } from './SpeakerIcon';
+import React, { useState, useRef, useCallback } from 'react';
+import { WordCard } from './ui/WordCard';
 import { 
   Award, Search, Trash2, BookOpen, ArrowUpDown, 
   CheckCircle2, RotateCcw, Download, Upload, FileText, X, 
   FileSpreadsheet, FileJson, Check, AlertTriangle, Sparkles, Loader2 
 } from 'lucide-react';
-import { MasteredWordItem, WordItem } from '../types';
-import { parseWordListText, enrichWordsWithAI } from '../utils/wordParser';
+import { MasteredWordItem, WordItem, SpeechAccent } from '../types';
+import {
+  parsePlainWordList,
+  parseExportedWordMasterJson,
+  parseExportedWordMasterCsv,
+  parsedToWordItems,
+  enrichParsedWords,
+  enrichWordsWithAI
+} from '../utils/wordParser';
 import { Pagination } from './Pagination';
 import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 interface MasteredWordsListProps {
   masteredWords: MasteredWordItem[];
@@ -20,6 +28,7 @@ interface MasteredWordsListProps {
   onStartMasteredWordsQuiz: (words: WordItem[]) => void;
   onClearAllMasteredWords?: () => void;
   onImportMasteredWords?: (words: MasteredWordItem[]) => void;
+  speechAccent?: SpeechAccent;
 }
 
 export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
@@ -29,8 +38,23 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   onMoveToWrongWords,
   onStartMasteredWordsQuiz,
   onClearAllMasteredWords,
-  onImportMasteredWords
+  onImportMasteredWords,
+  speechAccent = 'en-US',
 }) => {
+  const listCardSelectedGreen =
+    'border border-emerald-200/80 dark:border-emerald-700/40 !bg-emerald-50/90 dark:!bg-emerald-950/25 shadow-sm ring-1 ring-emerald-200/60 dark:ring-emerald-600/20';
+  const listCardUnselected =
+    'surface-card shadow-xs hover:border-emerald-200/60 dark:hover:border-emerald-700/40 hover:shadow-sm';
+  const listIconBoxLg =
+    'p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors';
+  const listIconSelectedLg = 'p-3 rounded-xl bg-emerald-500 text-white transition-colors';
+  const listBadgeSelected = 'font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300';
+  const listBadgeUnselected = 'font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400';
+  const listTitleSelected = 'text-emerald-700 dark:text-emerald-300';
+  const listTitleUnselected = 'text-slate-700 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400';
+  const listFooterSelected = 'font-semibold text-emerald-600 dark:text-emerald-400';
+  const listFooterUnselected = 'font-medium text-slate-500 dark:text-slate-400';
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recent' | 'alphabetical'>('recent');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -41,9 +65,13 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
   const [importText, setImportText] = useState<string>('');
+  const [importFilePayload, setImportFilePayload] = useState<{ kind: 'json' | 'csv'; content: string } | null>(null);
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+  const closeExportMenu = useCallback(() => setIsExportMenuOpen(false), []);
+  useClickOutside(exportMenuRef, closeExportMenu, isExportMenuOpen);
   const speechTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // AI enrichment state
@@ -155,6 +183,9 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   // Computed sub-lists
   const recentMasteredWords = masteredWords.filter(w => Date.now() - (w.masteredAt || 0) <= 7 * 86400000);
 
+  const getSelectedGroupLabel = (): string =>
+    selectedListFilter === 'recent' ? '近期攻克熟词列表' : '全量熟词列表';
+
   // Active word set depending on filter selection
   const activeWordSet = selectedListFilter === 'recent' ? recentMasteredWords : masteredWords;
 
@@ -187,6 +218,20 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       exampleSentenceCn: w.exampleSentenceCn
     }));
     onStartMasteredWordsQuiz(wordItems);
+  };
+
+  const handleStartActiveListQuiz = () => {
+    const wordItems: WordItem[] = activeWordSet.map((w) => ({
+      id: w.id,
+      word: w.word,
+      phonetic: w.phonetic,
+      chinese: w.chinese,
+      exampleSentence: w.exampleSentence,
+      exampleSentenceCn: w.exampleSentenceCn
+    }));
+    if (wordItems.length > 0) {
+      onStartMasteredWordsQuiz(wordItems);
+    }
   };
 
   // Export handlers
@@ -227,108 +272,98 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   const [isEnriching, setIsEnriching] = useState<boolean>(false);
   const [importAutoEnrich, setImportAutoEnrich] = useState<boolean>(true);
 
-  // Parse text/JSON string to MasteredWordItem[]
-  const parseWords = (text: string): MasteredWordItem[] => {
-    const rawParsed = parseWordListText(text);
-    return rawParsed.map((p) => ({
-      id: p.word.toLowerCase(),
-      word: p.word,
-      phonetic: p.phonetic || '',
-      chinese: p.chinese || p.word,
-      exampleSentence: p.exampleSentence || '',
-      exampleSentenceCn: p.exampleSentenceCn || '',
-      masteredAt: Date.now()
-    }));
+  const resetImportModal = () => {
+    setImportText('');
+    setImportFilePayload(null);
+    setImportStatus(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  const parseImportFile = (content: string, kind: 'json' | 'csv') =>
+    kind === 'json' ? parseExportedWordMasterJson(content) : parseExportedWordMasterCsv(content);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const lower = file.name.toLowerCase();
+    const kind = lower.endsWith('.json') ? 'json' : lower.endsWith('.csv') ? 'csv' : null;
+    if (!kind) {
+      setImportStatus({ type: 'error', message: '仅支持 .json 或 .csv 文件（与导出格式一致）' });
+      return;
+    }
+
+    setImportText('');
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
-      if (content) {
-        setImportText(content);
-        const parsed = parseWords(content);
-        if (parsed.length > 0) {
-          setImportStatus({
-            type: 'success',
-            message: `已提取出 ${parsed.length} 个单词，可开启 AI 补全或直接导入！`
-          });
-        } else {
-          setImportStatus({
-            type: 'error',
-            message: '未能在文件内容中解析出有效英文单词，请检查文件格式。'
-          });
-        }
+      if (!content) return;
+      const parsed = parseImportFile(content, kind);
+      if (parsed.length > 0) {
+        setImportFilePayload({ kind, content });
+        setImportStatus({
+          type: 'success',
+          message: `已读取 ${parsed.length} 个单词（${kind.toUpperCase()}）`
+        });
+      } else {
+        setImportFilePayload(null);
+        setImportStatus({ type: 'error', message: '未能从文件中解析出有效单词，请检查文件格式。' });
       }
     };
     reader.readAsText(file);
   };
 
   const handleConfirmImport = async () => {
-    const rawParsed = parseWordListText(importText);
+    const rawParsed = importFilePayload
+      ? parseImportFile(importFilePayload.content, importFilePayload.kind)
+      : parsePlainWordList(importText);
+
     if (rawParsed.length === 0) {
       setImportStatus({
         type: 'error',
-        message: '未发现有效英文单词，请输入教材格式、纯词本或“单词: 释义”。'
+        message: importFilePayload
+          ? '未能从文件中解析出有效单词。'
+          : '未能解析出有效单词。请确保每行仅包含一个英文单词。'
       });
       return;
     }
 
-    let finalWords: MasteredWordItem[] = [];
+    setIsEnriching(true);
+    try {
+      let wordItems: WordItem[];
 
-    if (importAutoEnrich) {
-      setIsEnriching(true);
-      setImportStatus({
-        type: 'success',
-        message: `AI 正在智能补充 ${rawParsed.length} 个单词的词性、音标与例句...`
-      });
-
-      try {
-        const enriched = await enrichWordsWithAI(rawParsed);
-        finalWords = enriched.map((item) => ({
-          id: item.word.toLowerCase(),
-          word: item.word,
-          phonetic: item.phonetic || '',
-          chinese: item.chinese || item.word,
-          exampleSentence: item.exampleSentence || '',
-          exampleSentenceCn: item.exampleSentenceCn || '',
-          masteredAt: Date.now()
-        }));
-      } catch (err) {
-        console.error('Enrichment error in MasteredWordsList:', err);
-        finalWords = rawParsed.map((p) => ({
-          id: p.word.toLowerCase(),
-          word: p.word,
-          phonetic: p.phonetic || '',
-          chinese: p.chinese || p.word,
-          exampleSentence: p.exampleSentence || '',
-          exampleSentenceCn: p.exampleSentenceCn || '',
-          masteredAt: Date.now()
-        }));
-      } finally {
-        setIsEnriching(false);
+      if (importFilePayload && !importAutoEnrich) {
+        wordItems = parsedToWordItems(rawParsed);
+      } else if (importAutoEnrich) {
+        wordItems = await enrichParsedWords(rawParsed, (msg) => {
+          setImportStatus({ type: 'success', message: msg });
+        });
+      } else {
+        wordItems = parsedToWordItems(rawParsed);
       }
-    } else {
-      finalWords = rawParsed.map((p) => ({
-        id: p.word.toLowerCase(),
-        word: p.word,
-        phonetic: p.phonetic || '',
-        chinese: p.chinese || p.word,
-        exampleSentence: p.exampleSentence || '',
-        exampleSentenceCn: p.exampleSentenceCn || '',
+
+      const finalWords: MasteredWordItem[] = wordItems.map((item) => ({
+        id: item.id,
+        word: item.word,
+        phonetic: item.phonetic || '',
+        chinese: item.chinese || item.word,
+        exampleSentence: item.exampleSentence || '',
+        exampleSentenceCn: item.exampleSentenceCn || '',
         masteredAt: Date.now()
       }));
-    }
 
-    if (onImportMasteredWords) {
-      onImportMasteredWords(finalWords);
+      if (onImportMasteredWords) {
+        onImportMasteredWords(finalWords);
+      }
+
+      resetImportModal();
+      setIsImportModalOpen(false);
+    } catch (err) {
+      console.error('Import error:', err);
+      setImportStatus({ type: 'error', message: '导入失败，请检查网络后重试。' });
+    } finally {
+      setIsEnriching(false);
     }
-    setImportStatus(null);
-    setImportText('');
-    setIsImportModalOpen(false);
   };
 
   return (
@@ -351,17 +386,11 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       />
       )}
 
-      {selectedListFilter !== 'all' && (
-        <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-2">
-          <span>正在筛选：近期攻克熟词列表 ({activeWordSet.length}词)</span>
-          <button onClick={() => setSelectedListFilter('all')} className="underline hover:text-emerald-900 dark:hover:text-emerald-200 font-bold cursor-pointer">清除筛选</button>
-        </div>
-      )}
 
       {/* Word List Cards Grid */}
       <div className="space-y-4">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            熟词本 · 专属词本
+            熟词本 · 系统分组
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -369,25 +398,33 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             {/* Card 1: All Mastered Words List */}
             <div 
               onClick={() => { setSelectedListFilter('all'); setCurrentPage(1); }}
-              className="surface-card rounded-2xl p-5 shadow-xs hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+              className={`rounded-2xl p-5 transition-all cursor-pointer group space-y-3 ${
+                selectedListFilter === 'all' ? listCardSelectedGreen : listCardUnselected
+              }`}
             >
               <div className="flex items-center justify-between">
-                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                <div className={selectedListFilter === 'all' ? listIconSelectedLg : listIconBoxLg}>
                   <Award className="w-5 h-5" />
                 </div>
-                <span className="px-2 py-0.5 text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 rounded-full">
+                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                  selectedListFilter === 'all' ? listBadgeSelected : listBadgeUnselected
+                }`}>
                   {masteredWords.length} 词
                 </span>
               </div>
               <div>
-                <h3 className="font-bold text-primary text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">
+                <h3 className={`font-bold text-base transition-colors ${
+                  selectedListFilter === 'all' ? listTitleSelected : listTitleUnselected
+                }`}>
                   全量熟词列表
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
                   包含所有在测试中攻克并标记为已掌握的单词
                 </p>
               </div>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-emerald-600">
+              <div className={`pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs ${
+                selectedListFilter === 'all' ? listFooterSelected : listFooterUnselected
+              }`}>
                 <span>进入列表明细</span>
                 <span>→</span>
               </div>
@@ -396,25 +433,33 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             {/* Card 2: Recent Mastered List */}
             <div 
               onClick={() => { setSelectedListFilter('recent'); setCurrentPage(1); }}
-              className="surface-card rounded-2xl p-5 shadow-xs hover:border-teal-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+              className={`rounded-2xl p-5 transition-all cursor-pointer group space-y-3 ${
+                selectedListFilter === 'recent' ? listCardSelectedGreen : listCardUnselected
+              }`}
             >
               <div className="flex items-center justify-between">
-                <div className="p-3 rounded-xl bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                <div className={selectedListFilter === 'recent' ? listIconSelectedLg : listIconBoxLg}>
                   <Sparkles className="w-5 h-5" />
                 </div>
-                <span className="px-2 py-0.5 text-xs font-bold bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300 rounded-full">
+                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                  selectedListFilter === 'recent' ? listBadgeSelected : listBadgeUnselected
+                }`}>
                   {recentMasteredWords.length} 词
                 </span>
               </div>
               <div>
-                <h3 className="font-bold text-slate-800 text-base group-hover:text-teal-600 transition-colors">
+                <h3 className={`font-bold text-base transition-colors ${
+                  selectedListFilter === 'recent' ? listTitleSelected : listTitleUnselected
+                }`}>
                   近期攻克熟词列表
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
                   近 7 天内成功攻克并加入熟词本的最新词汇
                 </p>
               </div>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-teal-600">
+              <div className={`pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs ${
+                selectedListFilter === 'recent' ? listFooterSelected : listFooterUnselected
+              }`}>
                 <span>巩固近 7 天战果</span>
                 <span>→</span>
               </div>
@@ -465,7 +510,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             <button
               onClick={handleBulkEnrichWords}
               disabled={isBulkEnriching}
-              className="flex items-center gap-1.5 px-3 py-2 gradient-brand font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 gradient-brand text-white font-bold text-xs rounded-xl shadow-sm hover:opacity-95 transition-all cursor-pointer disabled:opacity-50"
               title="自动调用 DeepSeek AI 补全缺乏例句与音标的熟词"
             >
               {isBulkEnriching ? (
@@ -492,7 +537,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
           </button>
 
           {/* Export Menu */}
-          <div className="relative">
+          <div className="relative" ref={exportMenuRef}>
             <button
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
               className="flex items-center gap-1.5 px-3 py-2 surface-muted hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-secondary hover:text-emerald-700 dark:hover:text-emerald-300 font-semibold text-xs rounded-xl border border-slate-200 dark:border-slate-600 transition-all cursor-pointer"
@@ -536,6 +581,17 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             </button>
           )}
 
+          {activeWordSet.length > 0 && (
+            <button
+              onClick={handleStartActiveListQuiz}
+              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold text-xs rounded-xl shadow-xs hover:opacity-95 transition-all cursor-pointer"
+              title={`对当前选中的「${getSelectedGroupLabel()}」发起测试`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>测试此词本</span>
+            </button>
+          )}
+
         </div>
       </div>
 
@@ -550,99 +606,79 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {paginatedWords.map((item) => (
-              <div
+              <WordCard
                 key={item.id}
+                variant="emerald"
+                word={item.word}
+                phonetic={item.phonetic}
+                phoneticUs={item.phoneticUs}
+                phoneticUk={item.phoneticUk}
+                speechAccent={speechAccent}
+                chinese={item.chinese}
+                exampleSentence={item.exampleSentence}
+                exampleSentenceCn={item.exampleSentenceCn}
+                isSpeaking={speakingWord === item.word}
+                onSpeak={(e) => {
+                  e?.stopPropagation();
+                  speakWord(item.word, item.exampleSentence);
+                }}
                 onClick={() => speakWord(item.word, item.exampleSentence)}
-                className="surface-card rounded-2xl p-3.5 shadow-card hover:shadow-card-hover hover:border-emerald-400 dark:hover:border-emerald-600 transition-all space-y-2 relative group cursor-pointer active:scale-[0.99]"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-extrabold text-primary tracking-tight leading-none">{item.word}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          speakWord(item.word, item.exampleSentence);
-                        }}
-                        className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors cursor-pointer translate-y-[3.5px]"
-                        title="发音（单词+例句）"
-                      >
-                        <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-5 h-5" />
-                      </button>
-                    </div>
-                    {item.phonetic && (
-                      <span className="text-sm font-mono text-slate-500 font-medium">{item.phonetic}</span>
-                    )}
-                  </div>
-
-                  {/* Mastered badge */}
+                badge={
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold shrink-0">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                     <span>已掌握</span>
                   </div>
-                </div>
-
-                {/* Chinese definition */}
-                <div className="text-base font-bold text-emerald-800 dark:text-emerald-200 bg-emerald-50/60 dark:bg-emerald-900/20 py-2 px-3 rounded-xl border border-emerald-100 dark:border-emerald-800 leading-snug">
-                  {item.chinese}
-                </div>
-
-                {/* Example sentence or AI Enrich trigger */}
-                {item.exampleSentence ? (
-                  <div className="text-sm text-secondary bg-slate-50/80 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700 space-y-0.5">
-                    <p className="font-medium text-primary italic leading-snug">“{item.exampleSentence}”</p>
-                    {item.exampleSentenceCn && (
-                      <p className="text-muted text-sm leading-snug">{item.exampleSentenceCn}</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-900/20 p-2.5 rounded-xl border border-dashed border-emerald-200/80 dark:border-emerald-700/50">
-                    <span className="text-xs text-emerald-700/80 dark:text-emerald-300/80 italic font-medium">暂无例句与音标</span>
+                }
+                footer={
+                  !item.exampleSentence ? (
+                    <div className="flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-900/20 p-2.5 rounded-xl border border-dashed border-emerald-200/80 dark:border-emerald-700/50">
+                      <span className="text-xs text-emerald-700/80 dark:text-emerald-300/80 italic font-medium">暂无例句与音标</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEnrichSingleWord(item);
+                        }}
+                        disabled={enrichingWordId === item.id}
+                        className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {enrichingWordId === item.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                        ) : (
+                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        )}
+                        <span>{enrichingWordId === item.id ? '生成中...' : '补全例句'}</span>
+                      </button>
+                    </div>
+                  ) : undefined
+                }
+                actionsClassName="flex items-center justify-between w-full text-xs"
+                actions={
+                  <>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleEnrichSingleWord(item);
+                        onMoveToWrongWords(item);
                       }}
-                      disabled={enrichingWordId === item.id}
-                      className="flex items-center gap-1.5 px-2.5 py-1 gradient-brand rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                      className="flex items-center gap-1.5 text-slate-500 hover:text-amber-600 transition-colors p-1 cursor-pointer font-medium"
+                      title="移回待测试生词本重新练习"
                     >
-                      {enrichingWordId === item.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                      ) : (
-                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                      )}
-                      <span>{enrichingWordId === item.id ? '生成中...' : '补全例句'}</span>
+                      <RotateCcw className="w-3.5 h-3.5 text-amber-500" />
+                      <span>移回待测试生词本</span>
                     </button>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-700 text-xs">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onMoveToWrongWords(item);
-                    }}
-                    className="flex items-center gap-1.5 text-slate-500 hover:text-amber-600 transition-colors p-1 cursor-pointer font-medium"
-                    title="移回待测试生词本重新练习"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 text-amber-500" />
-                    <span>移回待测试生词本</span>
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemoveMasteredWord(item.id);
-                    }}
-                    className="flex items-center gap-1 text-slate-400 hover:text-rose-600 transition-colors p-1 cursor-pointer"
-                    title="彻底删除"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>删除</span>
-                  </button>
-                </div>
-              </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveMasteredWord(item.id);
+                      }}
+                      className="flex items-center gap-1 text-slate-400 hover:text-rose-600 transition-colors p-1 cursor-pointer"
+                      title="彻底删除"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>删除</span>
+                    </button>
+                  </>
+                }
+              />
             ))}
           </div>
 
@@ -708,14 +744,14 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2 text-emerald-700 font-bold text-lg">
+              <div className="flex items-center gap-2 text-emerald-700 font-bold text-xl">
                 <Upload className="w-5 h-5" />
                 <span>批量导入到熟词本</span>
               </div>
               <button
                 onClick={() => {
                   setIsImportModalOpen(false);
-                  setImportStatus(null);
+                  resetImportModal();
                 }}
                 className="p-1 text-muted hover:text-primary rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
@@ -725,76 +761,48 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
             {/* Modal Content */}
             <div className="space-y-4 overflow-y-auto flex-1 pr-1">
-              
-              {/* File upload prompt */}
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700">方法 1：上传 JSON / CSV / TXT 文件</label>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">方法 1：上传 JSON / CSV 文件</label>
                 <div 
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-emerald-300 dark:border-emerald-700 hover:border-emerald-500 bg-emerald-50/40 dark:bg-emerald-900/20 hover:bg-emerald-50 dark:hover:bg-emerald-900/40 p-4 rounded-xl text-center cursor-pointer transition-all space-y-1"
+                  className="border-2 border-dashed border-emerald-300 dark:border-emerald-700 hover:border-emerald-500 bg-emerald-50/40 dark:bg-emerald-900/20 hover:bg-emerald-50 dark:hover:bg-emerald-900/40 p-4 rounded-xl text-center cursor-pointer transition-all space-y-1.5"
                 >
-                  <Upload className="w-6 h-6 text-emerald-600 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-700">点击上传文件 (.json, .csv, .txt)</p>
-                  <p className="text-[11px] text-slate-400">支持 WordMaster 导出的 JSON，或每行单词 CSV 格式</p>
+                  <Upload className="w-7 h-7 text-emerald-600 mx-auto" />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">点击上传文件 (.json, .csv)</p>
+                  <p className="text-xs text-slate-400">与「导出词汇」格式一致：WordMaster 导出的 JSON 或 CSV</p>
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".json,.csv,.txt"
+                    accept=".json,.csv"
                     onChange={handleFileUpload}
                     className="hidden"
                   />
                 </div>
               </div>
 
-              {/* Text input prompt */}
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700">方法 2：直接粘贴文本（自动兼容教材词表与纯词表）</label>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">方法 2：粘贴纯单词列表</label>
                 <textarea
                   value={importText}
                   onChange={(e) => {
                     setImportText(e.target.value);
+                    setImportFilePayload(null);
                     if (importStatus) setImportStatus(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
                   }}
                   rows={6}
-                  placeholder={`自动支持多种常见格式：
+                  placeholder={`每行一个英文单词，例如：
 
-1. 纯词本 (可带单元标题):
-### Welcome Unit
-exchange
-lecture
-registration
-
-2. 编号释义列表 (人教版新课标/Markdown):
-1. **exchange** n. 交换；交流 vt. 交换；交流；兑换
-2. **lecture** n. 讲座；讲课 vi. 讲座 vt. 训斥
-
-3. 各种分隔符:
-abandon : 放弃；抛弃
-apple - 苹果`}
-                  className="w-full p-3 text-xs font-mono surface-input rounded-xl focus:outline-none focus:border-emerald-500 transition-all"
+explore
+curious
+discover`}
+                  className="w-full p-3.5 text-sm font-mono surface-input rounded-xl focus:outline-none focus:border-emerald-500 transition-all leading-relaxed"
                 />
-              </div>
-
-              {/* AI Enrich Toggle */}
-              <div className="flex items-center justify-between bg-emerald-50/60 dark:bg-emerald-900/30 p-3 rounded-xl border border-emerald-200/60 dark:border-emerald-800/60">
-                <label className="flex items-center gap-2.5 text-xs font-semibold text-emerald-900 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={importAutoEnrich}
-                    onChange={(e) => setImportAutoEnrich(e.target.checked)}
-                    className="w-4 h-4 text-emerald-600 rounded border-emerald-300 focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>✨ AI 智能补全词性、音标与精美例句</span>
-                </label>
-                <span className="text-[11px] text-emerald-700/80 hidden sm:inline">
-                  {importAutoEnrich ? '自动补全缺失例句与词性' : '快捷导入原数据'}
-                </span>
               </div>
 
               {/* Status Notice */}
               {importStatus && (
-                <div className={`p-3 rounded-xl text-xs flex items-center gap-2 border ${
+                <div className={`p-3.5 rounded-xl text-sm flex items-center gap-2 border ${
                   importStatus.type === 'success' 
                     ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
                     : 'bg-rose-50 text-rose-800 border-rose-200'
@@ -812,22 +820,26 @@ apple - 苹果`}
 
             </div>
 
+            <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 px-3.5 py-2.5 rounded-lg border border-emerald-100 dark:border-emerald-800 shrink-0">
+              导入单词至：{getSelectedGroupLabel()}
+            </div>
+
             {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 shrink-0">
+            <div className="flex items-center gap-2 pt-3 border-t border-slate-100 shrink-0">
               <button
                 disabled={isEnriching}
                 onClick={() => {
                   setIsImportModalOpen(false);
-                  setImportStatus(null);
+                  resetImportModal();
                 }}
-                className="px-4 py-2 text-xs font-semibold text-secondary surface-muted hover:opacity-90 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                className="flex-1 px-5 py-2.5 text-sm font-semibold text-secondary surface-muted hover:opacity-90 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
               >
                 取消
               </button>
               <button
                 onClick={handleConfirmImport}
-                disabled={isEnriching || !importText.trim()}
-                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                disabled={isEnriching || (!importFilePayload && !importText.trim())}
+                className="flex-1 px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 {isEnriching ? (
                   <>
@@ -835,10 +847,7 @@ apple - 苹果`}
                     <span>AI 正在生成与补全...</span>
                   </>
                 ) : (
-                  <>
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>{importAutoEnrich ? '确认并由 AI 智能补全导入' : '快捷直接导入熟词本'}</span>
-                  </>
+                  <span>{importAutoEnrich ? '确认' : '快捷直接导入熟词本'}</span>
                 )}
               </button>
             </div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { SpeakerIcon } from './SpeakerIcon';
+import { WordCard } from './ui/WordCard';
 import { 
-  Folder, BookOpen, Search, ArrowLeft, Download, Play, 
-  Sparkles, RefreshCw, ChevronRight, Check, FileSpreadsheet, Layers, Loader2, LayoutGrid, List, ListPlus,
+  Folder, BookOpen, Search, Download, Play, 
+  Sparkles, RefreshCw, ChevronRight, Check, FileSpreadsheet, Layers, Loader2, ListPlus,
   Github, ExternalLink
 } from 'lucide-react';
 import { WordItem, LibraryCategoryNode, SpeechAccent } from '../types';
@@ -26,6 +26,12 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
   onGoToNotebook,
   speechAccent
 }) => {
+  const libraryNodeIconClass =
+    'p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 shrink-0 transition-colors';
+  const libraryNodeIconSmClass =
+    'p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 shrink-0 transition-colors';
+  const breadcrumbIconClass = 'w-4 h-4 shrink-0';
+
   const [tree, setTree] = useState<LibraryCategoryNode[]>([]);
   const [loadingTree, setLoadingTree] = useState<boolean>(true);
   const [treeError, setTreeError] = useState<string | null>(null);
@@ -43,7 +49,6 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
   const [bookError, setBookError] = useState<string | null>(null);
   const [bookSearch, setBookSearch] = useState<string>('');
   const [importSuccess, setImportSuccess] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(30);
 
@@ -168,7 +173,37 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
   };
 
   // Load specific book content
+  const findFolderPathToBook = (
+    nodes: LibraryCategoryNode[],
+    bookPath: string,
+    acc: LibraryCategoryNode[] = [],
+  ): LibraryCategoryNode[] | null => {
+    for (const node of nodes) {
+      if (node.type === 'book' && node.path === bookPath) return acc;
+      if (node.type === 'folder' && node.children) {
+        const found = findFolderPathToBook(node.children, bookPath, [...acc, node]);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const navigateToRoot = () => {
+    setNavPath([]);
+    setSelectedBook(null);
+    setGlobalSearch('');
+  };
+
+  const navigateToFolder = (index: number) => {
+    setNavPath(navPath.slice(0, index + 1));
+    setSelectedBook(null);
+  };
+
   const handleSelectBook = async (book: { name: string; path: string }) => {
+    setGlobalSearch('');
+    const folderPath = findFolderPathToBook(tree, book.path);
+    if (folderPath) setNavPath(folderPath);
+
     setSelectedBook(book);
     setLoadingBook(true);
     setBookError(null);
@@ -300,6 +335,40 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
         }
       />
 
+      {/* Breadcrumbs — folders + open book name */}
+      {!globalSearch.trim() && (
+        <div className="flex items-center gap-2.5 text-sm font-medium text-secondary overflow-x-auto pb-1">
+          <button
+            onClick={navigateToRoot}
+            className={`text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1.5 shrink-0 transition-colors ${navPath.length === 0 && !selectedBook ? 'text-brand-600 dark:text-brand-400 font-bold' : ''}`}
+          >
+            <span aria-hidden="true"><Folder className={breadcrumbIconClass} /></span>
+            <span>根目录</span>
+          </button>
+          {navPath.map((node, index) => (
+            <React.Fragment key={node.path}>
+              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+              <button
+                onClick={() => navigateToFolder(index)}
+                className={`text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1.5 shrink-0 transition-colors ${!selectedBook && index === navPath.length - 1 ? 'text-brand-600 dark:text-brand-400 font-bold' : ''}`}
+              >
+                <span aria-hidden="true"><Folder className={breadcrumbIconClass} /></span>
+                <span>{node.name}</span>
+              </button>
+            </React.Fragment>
+          ))}
+          {selectedBook && (
+            <>
+              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="text-brand-600 dark:text-brand-400 font-bold shrink-0 flex items-center gap-1.5">
+                <BookOpen className={breadcrumbIconClass} aria-hidden="true" />
+                <span>{selectedBook.name}</span>
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
       {!selectedBook ? (
         <div className="space-y-6">
           
@@ -322,29 +391,6 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
               </button>
             )}
           </div>
-
-          {/* Breadcrumbs Navigation */}
-          {!globalSearch && (
-            <div className="flex items-center gap-2 text-xs font-medium text-secondary overflow-x-auto pb-1">
-              <button 
-                onClick={() => setNavPath([])}
-                className={`hover:text-brand-600 flex items-center gap-1 shrink-0 ${navPath.length === 0 ? 'text-brand-600 font-bold' : ''}`}
-              >
-                <span>根目录</span>
-              </button>
-              {navPath.map((node, index) => (
-                <React.Fragment key={node.path}>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <button
-                    onClick={() => setNavPath(navPath.slice(0, index + 1))}
-                    className={`hover:text-brand-600 shrink-0 ${index === navPath.length - 1 ? 'text-brand-600 font-bold' : ''}`}
-                  >
-                    {node.name}
-                  </button>
-                </React.Fragment>
-              ))}
-            </div>
-          )}
 
           {/* Directory Loading / Error States */}
           {loadingTree && <LibraryTreeSkeleton />}
@@ -380,7 +426,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       onClick={() => handleSelectBook(book)}
                       className="surface-card rounded-2xl p-4 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-start gap-3"
                     >
-                      <div className="p-2.5 rounded-xl surface-icon group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
+                      <div className={libraryNodeIconSmClass}>
                         <BookOpen className="w-5 h-5" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -410,7 +456,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-3 rounded-xl surface-icon group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
+                        <div className={libraryNodeIconClass}>
                           <Folder className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
@@ -433,7 +479,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-3 rounded-xl surface-icon group-hover:bg-brand-600 group-hover:text-white transition-colors shrink-0">
+                        <div className={libraryNodeIconClass}>
                           <BookOpen className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
@@ -454,24 +500,29 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
       ) : (
         /* Detailed Book View */
         <div className="space-y-6">
-          
-          {/* Back Button & Book Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 surface-card rounded-2xl p-5 shadow-xs">
-            <div className="flex items-center gap-3 min-w-0">
-              <button
-                onClick={() => setSelectedBook(null)}
-                className="p-2 text-muted hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors shrink-0 cursor-pointer"
-                title="返回词库目录"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold text-brand-600">官方分类词书</div>
-                <h2 className="text-lg font-bold text-primary truncate">{selectedBook.name}</h2>
-              </div>
+
+          {/* Search + actions toolbar */}
+          <div className="surface-card rounded-2xl p-4 shadow-xs flex flex-col lg:flex-row lg:items-center gap-3">
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={bookSearch}
+                onChange={(e) => {
+                  setBookSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="在当前词书中搜索单词或释义..."
+                disabled={loadingBook}
+                className="w-full pl-10 pr-4 py-2.5 text-xs surface-input rounded-xl focus:outline-none focus:border-brand-400 disabled:opacity-50"
+              />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <span className="text-xs text-slate-500 font-medium px-1">
+                共 {bookWords.length} 词{bookSearch ? ` · 筛选 ${filteredBookWords.length}` : ''}
+              </span>
+
               <button
                 onClick={() => {
                   if (bookWords.length > 0) {
@@ -479,16 +530,16 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                   }
                 }}
                 disabled={loadingBook || isEnrichingBook || bookWords.length === 0}
-                className="flex items-center gap-2 px-4 py-2 gradient-brand rounded-xl text-xs font-bold active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 surface-muted border border-slate-200 dark:border-slate-600 text-secondary rounded-xl text-xs font-bold hover:opacity-95 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
               >
-                <Play className="w-4 h-4 fill-white" />
-                <span>开始专项测试</span>
+                <Play className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <span>开始测试</span>
               </button>
 
               <button
                 onClick={() => importBookToList(bookWords)}
                 disabled={loadingBook || isEnrichingBook || bookWords.length === 0}
-                className="flex items-center gap-2 px-4 py-2 surface-stat text-primary rounded-xl text-xs font-bold hover:opacity-95 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 gradient-brand text-white rounded-xl text-xs font-bold hover:opacity-95 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
                 title={isBookFullyEnriched ? '词书已含完整释义与例句，直接加入词本' : '加入词本（缺失词条将尝试从词库词典补全）'}
               >
                 <ListPlus className="w-4 h-4" />
@@ -496,19 +547,19 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
               </button>
 
               {!isBookFullyEnriched && (
-              <button
-                onClick={() => enrichCurrentBookWithAI(true)}
-                disabled={loadingBook || isEnrichingBook || bookWords.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
-                title="对词典中未收录的单词调用 DeepSeek AI 补全"
-              >
-                {isEnrichingBook ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                ) : (
-                  <Sparkles className="w-4 h-4 text-brand-200 animate-pulse" />
-                )}
-                <span>{isEnrichingBook ? '正在生成例句...' : 'AI 补全并导入'}</span>
-              </button>
+                <button
+                  onClick={() => enrichCurrentBookWithAI(true)}
+                  disabled={loadingBook || isEnrichingBook || bookWords.length === 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                  title="对词典中未收录的单词调用 DeepSeek AI 补全"
+                >
+                  {isEnrichingBook ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 text-brand-200 animate-pulse" />
+                  )}
+                  <span>{isEnrichingBook ? '正在生成例句...' : 'AI 补全并导入'}</span>
+                </button>
               )}
             </div>
           </div>
@@ -566,158 +617,25 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              
-              {/* Inner Search Box & View Mode Toggle */}
-              <div className="surface-card rounded-3xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="relative flex-1 w-full max-w-md">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={bookSearch}
-                    onChange={(e) => {
-                      setBookSearch(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    placeholder="在当前词书中搜索单词或释义..."
-                    className="w-full pl-10 pr-4 py-2.5 text-xs surface-input rounded-xl focus:outline-none focus:border-brand-400"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {paginatedBookWords.map((item, idx) => (
+                  <WordCard
+                    key={`${item.word}-${idx}`}
+                    word={item.word}
+                    phonetic={item.phonetic}
+                    phoneticUs={item.phoneticUs}
+                    phoneticUk={item.phoneticUk}
+                    speechAccent={speechAccent}
+                    chinese={item.chinese}
+                    exampleSentence={item.exampleSentence}
+                    exampleSentenceCn={item.exampleSentenceCn}
+                    isSpeaking={speakingWord === item.word}
+                    onSpeak={() => speakWord(item.word, item.exampleSentence)}
+                    onClick={() => speakWord(item.word, item.exampleSentence)}
+                    indexLabel={pageStartIndex + idx + 1}
                   />
-                </div>
-
-                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                  <div className="text-xs text-slate-500 font-medium">
-                    共 {bookWords.length} 词 {bookSearch && `(筛选出 ${filteredBookWords.length} 词)`}
-                  </div>
-
-                  {/* Toggle Cards / Table */}
-                  <div className="surface-muted p-1 rounded-xl flex items-center gap-1 border border-slate-200 dark:border-slate-600">
-                    <button
-                      onClick={() => setViewMode('cards')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        viewMode === 'cards' 
-                          ? 'surface-tab-active text-brand-700 dark:text-brand-300' 
-                          : 'text-muted hover:text-primary'
-                      }`}
-                    >
-                      <LayoutGrid className="w-3.5 h-3.5" />
-                      <span>卡片网格</span>
-                    </button>
-                    <button
-                      onClick={() => setViewMode('table')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        viewMode === 'table' 
-                          ? 'surface-tab-active text-brand-700 dark:text-brand-300' 
-                          : 'text-muted hover:text-primary'
-                      }`}
-                    >
-                      <List className="w-3.5 h-3.5" />
-                      <span>列表视图</span>
-                    </button>
-                  </div>
-                </div>
+                ))}
               </div>
-
-              {/* Cards Grid View */}
-              {viewMode === 'cards' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {paginatedBookWords.map((item, idx) => (
-                    <div 
-                      key={`${item.word}-${idx}`}
-                      onClick={() => speakWord(item.word, item.exampleSentence)}
-                      className="surface-card rounded-2xl/80 p-5 shadow-xs hover:shadow-md hover:border-brand-300 transition-all space-y-3 flex flex-col justify-between cursor-pointer group"
-                    >
-                      <div className="space-y-3">
-                        {/* Header: Word & Index */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl font-extrabold text-primary tracking-tight transition-colors">{item.word}</span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  speakWord(item.word, item.exampleSentence);
-                                }}
-                                className="p-1.5 text-muted hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/40 rounded-lg transition-colors cursor-pointer"
-                                title="播放发音"
-                              >
-                                <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-5 h-5" />
-                              </button>
-                            </div>
-                            {(item.phoneticUs || item.phoneticUk || item.phonetic) && (
-                              <div className="text-sm font-mono text-muted font-medium space-x-2">
-                                {item.phoneticUs && <span><span className="text-slate-400 dark:text-slate-500 text-xs">美</span> {item.phoneticUs}</span>}
-                                {item.phoneticUk && <span><span className="text-slate-400 dark:text-slate-500 text-xs">英</span> {item.phoneticUk}</span>}
-                                {!item.phoneticUs && !item.phoneticUk && item.phonetic && <span>{item.phonetic}</span>}
-                              </div>
-                            )}
-                          </div>
-                          <span className="px-2 py-0.5 surface-muted text-muted text-xs font-mono font-bold rounded-lg shrink-0">
-                            #{pageStartIndex + idx + 1}
-                          </span>
-                        </div>
-
-                        {/* Chinese definition */}
-                        <div className="text-base font-bold text-sky-950 dark:text-sky-200 bg-sky-50/80 dark:bg-sky-900/30 p-3.5 rounded-xl border border-sky-100/90 dark:border-sky-800/50 leading-relaxed whitespace-pre-line">
-                          {item.chinese}
-                        </div>
-
-                        {/* Example sentence */}
-                        {item.exampleSentence && (
-                          <div className="text-sm text-secondary bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-xl border border-slate-100 dark:border-slate-700 space-y-1.5">
-                            <p className="font-medium text-primary italic leading-relaxed">“{item.exampleSentence}”</p>
-                            {item.exampleSentenceCn && (
-                              <p className="text-muted text-xs leading-normal">{item.exampleSentenceCn}</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                /* Words Table View */
-                <div className="surface-card rounded-3xl shadow-xs overflow-hidden p-6">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="surface-muted border-y border-slate-200/80 dark:border-slate-700/80 text-sm font-bold text-secondary uppercase tracking-wider">
-                          <th className="py-3.5 px-5 w-14 text-center">#</th>
-                          <th className="py-3.5 px-5 min-w-[200px]">单词</th>
-                          <th className="py-3.5 px-5 min-w-[160px]">音标 (英/美)</th>
-                          <th className="py-3.5 px-5 min-w-[240px]">中文释义</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-sm">
-                        {paginatedBookWords.map((item, idx) => (
-                          <tr 
-                            key={`${item.word}-${idx}`} 
-                            onClick={() => speakWord(item.word, item.exampleSentence)}
-                            className="hover:bg-brand-50/40 dark:hover:bg-brand-900/20 transition-colors cursor-pointer group"
-                          >
-                            <td className="py-4 px-5 text-center text-muted font-mono text-sm">{pageStartIndex + idx + 1}</td>
-                            <td className="py-4 px-5 font-extrabold text-primary text-base">
-                              <div className="flex items-center gap-2.5">
-                                <span className="transition-colors">{item.word}</span>
-                                <SpeakerIcon isSpeaking={speakingWord === item.word} className="w-4.5 h-4.5 text-muted hover:text-brand-600 dark:hover:text-brand-400 transition-colors shrink-0" />
-                              </div>
-                            </td>
-                            <td className="py-4 px-5 text-muted font-mono text-xs space-y-0.5">
-                              {item.phoneticUs ? (
-                                <div><span className="text-slate-400 dark:text-slate-500 font-sans text-xs">美</span> {item.phoneticUs}</div>
-                              ) : null}
-                              {item.phoneticUk ? (
-                                <div><span className="text-slate-400 dark:text-slate-500 font-sans text-xs">英</span> {item.phoneticUk}</div>
-                              ) : item.phonetic ? (
-                                <div>{item.phonetic}</div>
-                              ) : null}
-                            </td>
-                            <td className="py-4 px-5 font-medium text-secondary text-sm leading-relaxed whitespace-pre-line">{item.chinese}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
 
               {/* Bottom Pagination */}
               <Pagination

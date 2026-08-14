@@ -5,7 +5,7 @@ import { NotebookSubTab } from '../types/navigation';
 import { WrongWordsList } from './WrongWordsList';
 import { MasteredWordsList } from './MasteredWordsList';
 import { PageHeader } from './ui/PageHeader';
-import { WrongWordItem, MasteredWordItem, WordItem, WordListGroup } from '../types';
+import { WrongWordItem, MasteredWordItem, WordItem, WordListGroup, SpeechAccent } from '../types';
 
 interface NotebookViewProps {
   subTab: NotebookSubTab;
@@ -17,12 +17,15 @@ interface NotebookViewProps {
   onStartWrongWordsQuiz: (words: WordItem[]) => void;
   onClearAllWrongWords?: () => void;
   onImportWrongWords?: (words: WrongWordItem[]) => void;
+  onImportToWordList?: (words: WordItem[], listName: string, listId?: string | null) => void;
+  onCreateCustomList?: (listName: string) => string | null;
   onDeleteCustomList?: (listId: string, removeWords?: boolean) => void;
   onRemoveMasteredWord: (wordId: string) => void;
   onMoveToWrongWords: (word: MasteredWordItem) => void;
   onStartMasteredWordsQuiz: (words: WordItem[]) => void;
   onClearAllMasteredWords?: () => void;
   onImportMasteredWords?: (words: MasteredWordItem[]) => void;
+  speechAccent?: SpeechAccent;
 }
 
 export const NotebookView: React.FC<NotebookViewProps> = ({
@@ -35,12 +38,15 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
   onStartWrongWordsQuiz,
   onClearAllWrongWords,
   onImportWrongWords,
+  onImportToWordList,
+  onCreateCustomList,
   onDeleteCustomList,
   onRemoveMasteredWord,
   onMoveToWrongWords,
   onStartMasteredWordsQuiz,
   onClearAllMasteredWords,
   onImportMasteredWords,
+  speechAccent = 'en-US',
 }) => (
     <div className="page-container space-y-6">
     <PageHeader
@@ -104,7 +110,10 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
             onStartWrongWordsQuiz={onStartWrongWordsQuiz}
             onClearAllWrongWords={onClearAllWrongWords}
             onImportWrongWords={onImportWrongWords}
+            onImportToWordList={onImportToWordList}
+            onCreateCustomList={onCreateCustomList}
             onDeleteCustomList={onDeleteCustomList}
+            speechAccent={speechAccent}
           />
         ) : (
           <MasteredWordsList
@@ -115,6 +124,7 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
             onStartMasteredWordsQuiz={onStartMasteredWordsQuiz}
             onClearAllMasteredWords={onClearAllMasteredWords}
             onImportMasteredWords={onImportMasteredWords}
+            speechAccent={speechAccent}
           />
         )}
       </motion.div>

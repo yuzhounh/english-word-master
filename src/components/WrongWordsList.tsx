@@ -1,17 +1,24 @@
-import React, { useState, useRef } from 'react';
-import { SpeakerIcon } from './SpeakerIcon';
+import React, { useState, useRef, useCallback } from 'react';
 import { 
   Bookmark, Search, Trash2, BookOpen, AlertTriangle, 
-  ArrowUpDown, CheckCircle2, Download, Upload, FileText, X, 
+  ArrowUpDown, CheckCircle2, Download, Upload, FileText, X, Plus,
   FileSpreadsheet, FileJson, Check, Sparkles, Loader2 
 } from 'lucide-react';
-import { WrongWordItem, WordItem, WordListGroup } from '../types';
-import { parseWordListText, enrichWordsWithAI } from '../utils/wordParser';
+import { WrongWordItem, WordItem, WordListGroup, SpeechAccent } from '../types';
+import {
+  parsePlainWordList,
+  parseExportedWordMasterJson,
+  parseExportedWordMasterCsv,
+  parsedToWordItems,
+  enrichParsedWords,
+  enrichWordsWithAI
+} from '../utils/wordParser';
 import { Pagination } from './Pagination';
 import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
 import { WordCard } from './ui/WordCard';
 import { EmptyState } from './ui/EmptyState';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 interface WrongWordsListProps {
   wrongWords: WrongWordItem[];
@@ -21,7 +28,10 @@ interface WrongWordsListProps {
   onStartWrongWordsQuiz: (words: WordItem[]) => void;
   onClearAllWrongWords?: () => void;
   onImportWrongWords?: (words: WrongWordItem[]) => void;
+  onImportToWordList?: (words: WordItem[], listName: string, listId?: string | null) => void;
   onDeleteCustomList?: (listId: string, removeWords?: boolean) => void;
+  onCreateCustomList?: (listName: string) => string | null;
+  speechAccent?: SpeechAccent;
 }
 
 export const WrongWordsList: React.FC<WrongWordsListProps> = ({
@@ -32,8 +42,28 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   onStartWrongWordsQuiz,
   onClearAllWrongWords,
   onImportWrongWords,
-  onDeleteCustomList
+  onImportToWordList,
+  onDeleteCustomList,
+  onCreateCustomList,
+  speechAccent = 'en-US',
 }) => {
+  const listCardSelectedBlue =
+    'border border-brand-200/80 dark:border-brand-700/40 !bg-brand-50/90 dark:!bg-brand-950/25 shadow-sm ring-1 ring-brand-200/60 dark:ring-brand-600/20';
+  const listCardUnselected =
+    'surface-card shadow-xs hover:border-brand-200/60 dark:hover:border-brand-700/40 hover:shadow-sm';
+  const listIconBoxLg =
+    'p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors';
+  const listIconBoxSm =
+    'p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors';
+  const listIconSelectedLg = 'p-3 rounded-xl bg-brand-600 text-white transition-colors';
+  const listIconSelectedSm = 'p-2.5 rounded-xl bg-brand-600 text-white transition-colors';
+  const listBadgeSelected = 'font-semibold bg-brand-100 dark:bg-brand-900/40 text-brand-800 dark:text-brand-300';
+  const listBadgeUnselected = 'font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400';
+  const listTitleSelected = 'text-brand-700 dark:text-brand-300';
+  const listTitleUnselected = 'text-slate-700 dark:text-slate-300 group-hover:text-brand-600 dark:group-hover:text-brand-400';
+  const listFooterSelected = 'font-semibold text-brand-600 dark:text-brand-400';
+  const listFooterUnselected = 'font-medium text-slate-500 dark:text-slate-400';
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<'errorCount' | 'recent' | 'alphabetical'>('errorCount');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -44,15 +74,42 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
   const [importText, setImportText] = useState<string>('');
+  const [importFilePayload, setImportFilePayload] = useState<{ kind: 'json' | 'csv'; content: string } | null>(null);
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+  const closeExportMenu = useCallback(() => setIsExportMenuOpen(false), []);
+  useClickOutside(exportMenuRef, closeExportMenu, isExportMenuOpen);
   const speechTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // AI enrichment state
   const [enrichingWordId, setEnrichingWordId] = useState<string | null>(null);
   const [isBulkEnriching, setIsBulkEnriching] = useState<boolean>(false);
   const [deletingListForConfirm, setDeletingListForConfirm] = useState<WordListGroup | null>(null);
+  const [isCreateListModalOpen, setIsCreateListModalOpen] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [createListError, setCreateListError] = useState<string | null>(null);
+
+  const handleConfirmCreateList = () => {
+    const name = newListName.trim();
+    if (!name) {
+      setCreateListError('请输入词本名称');
+      return;
+    }
+    if (!onCreateCustomList) return;
+    const newId = onCreateCustomList(name);
+    if (!newId) {
+      setCreateListError('该词本名称已存在，请换一个名称');
+      return;
+    }
+    setSelectedCustomListId(newId);
+    setSelectedListFilter('custom');
+    setCurrentPage(1);
+    setIsCreateListModalOpen(false);
+    setNewListName('');
+    setCreateListError(null);
+  };
 
   const handleEnrichSingleWord = async (item: WrongWordItem) => {
     setEnrichingWordId(item.id);
@@ -171,8 +228,17 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
 
   // Computed sub-lists
   const highErrorWords = wrongWords.filter(w => w.errorCount >= 2);
-  const recentWords = wrongWords.filter(w => Date.now() - (w.lastErrorAt || w.createdAt) <= 7 * 86400000);
+  const recentWords = wrongWords.filter(
+    w => (w.errorCount || 0) > 0 && Date.now() - (w.lastErrorAt || w.createdAt) <= 7 * 86400000,
+  );
   const selectedCustomList = customWordLists.find(l => l.id === selectedCustomListId);
+
+  const getSelectedGroupLabel = (): string => {
+    if (selectedListFilter === 'custom' && selectedCustomList) return selectedCustomList.name;
+    if (selectedListFilter === 'high_error') return '顽固高频难词列表';
+    if (selectedListFilter === 'recent') return '近期新增错题列表';
+    return '全量生词列表';
+  };
 
   // Active word set depending on filter selection
   let activeWordSet: WrongWordItem[] = wrongWords;
@@ -246,6 +312,20 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
     onStartWrongWordsQuiz(wordItems);
   };
 
+  const handleStartActiveListQuiz = () => {
+    const wordItems: WordItem[] = activeWordSet.map((w) => ({
+      id: w.id,
+      word: w.word,
+      phonetic: w.phonetic,
+      chinese: w.chinese,
+      exampleSentence: w.exampleSentence,
+      exampleSentenceCn: w.exampleSentenceCn
+    }));
+    if (wordItems.length > 0) {
+      onStartWrongWordsQuiz(wordItems);
+    }
+  };
+
   // Export handlers
   const handleExportJSON = () => {
     const jsonStr = JSON.stringify(wrongWords, null, 2);
@@ -284,116 +364,105 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   const [isEnriching, setIsEnriching] = useState<boolean>(false);
   const [importAutoEnrich, setImportAutoEnrich] = useState<boolean>(true);
 
-  // Helper to parse text/json string into WrongWordItem[]
-  const parseWords = (text: string): WrongWordItem[] => {
-    const rawParsed = parseWordListText(text);
-    return rawParsed.map((p) => ({
-      id: p.word.toLowerCase(),
-      word: p.word,
-      phonetic: p.phonetic || '',
-      chinese: p.chinese || p.word,
-      exampleSentence: p.exampleSentence || '',
-      exampleSentenceCn: p.exampleSentenceCn || '',
-      errorCount: 1,
-      lastErrorAt: Date.now(),
-      createdAt: Date.now()
-    }));
+  const resetImportModal = () => {
+    setImportText('');
+    setImportFilePayload(null);
+    setImportStatus(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  const parseImportFile = (content: string, kind: 'json' | 'csv') =>
+    kind === 'json' ? parseExportedWordMasterJson(content) : parseExportedWordMasterCsv(content);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const lower = file.name.toLowerCase();
+    const kind = lower.endsWith('.json') ? 'json' : lower.endsWith('.csv') ? 'csv' : null;
+    if (!kind) {
+      setImportStatus({ type: 'error', message: '仅支持 .json 或 .csv 文件（与导出格式一致）' });
+      return;
+    }
+
+    setImportText('');
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
-      if (content) {
-        setImportText(content);
-        const parsed = parseWords(content);
-        if (parsed.length > 0) {
-          setImportStatus({
-            type: 'success',
-            message: `已提取出 ${parsed.length} 个单词，可开启 AI 补全或直接导入！`
-          });
-        } else {
-          setImportStatus({
-            type: 'error',
-            message: '未能在文件内容中解析出有效英文单词，请检查文件格式。'
-          });
-        }
+      if (!content) return;
+      const parsed = parseImportFile(content, kind);
+      if (parsed.length > 0) {
+        setImportFilePayload({ kind, content });
+        setImportStatus({
+          type: 'success',
+          message: `已读取 ${parsed.length} 个单词（${kind.toUpperCase()}）`
+        });
+      } else {
+        setImportFilePayload(null);
+        setImportStatus({ type: 'error', message: '未能从文件中解析出有效单词，请检查文件格式。' });
       }
     };
     reader.readAsText(file);
   };
 
   const handleConfirmImport = async () => {
-    const rawParsed = parseWordListText(importText);
+    const rawParsed = importFilePayload
+      ? parseImportFile(importFilePayload.content, importFilePayload.kind)
+      : parsePlainWordList(importText);
+
     if (rawParsed.length === 0) {
       setImportStatus({
         type: 'error',
-        message: '未发现有效英文单词，请输入教材格式、纯词本或“单词: 释义”。'
+        message: importFilePayload
+          ? '未能从文件中解析出有效单词。'
+          : '未能解析出有效单词。请确保每行仅包含一个英文单词。'
       });
       return;
     }
 
-    let finalWords: WrongWordItem[] = [];
+    setIsEnriching(true);
+    try {
+      let wordItems: WordItem[];
 
-    if (importAutoEnrich) {
-      setIsEnriching(true);
-      setImportStatus({
-        type: 'success',
-        message: `AI 正在智能补充 ${rawParsed.length} 个单词的词性、音标与例句...`
-      });
-
-      try {
-        const enriched = await enrichWordsWithAI(rawParsed);
-        finalWords = enriched.map((item) => ({
-          id: item.word.toLowerCase(),
-          word: item.word,
-          phonetic: item.phonetic || '',
-          chinese: item.chinese || item.word,
-          exampleSentence: item.exampleSentence || '',
-          exampleSentenceCn: item.exampleSentenceCn || '',
-          errorCount: 0,
-          lastErrorAt: Date.now(),
-          createdAt: Date.now()
-        }));
-      } catch (err) {
-        console.error('Enrichment error in WrongWordsList:', err);
-        finalWords = rawParsed.map((p) => ({
-          id: p.word.toLowerCase(),
-          word: p.word,
-          phonetic: p.phonetic || '',
-          chinese: p.chinese || p.word,
-          exampleSentence: p.exampleSentence || '',
-          exampleSentenceCn: p.exampleSentenceCn || '',
-          errorCount: 0,
-          lastErrorAt: Date.now(),
-          createdAt: Date.now()
-        }));
-      } finally {
-        setIsEnriching(false);
+      if (importFilePayload && !importAutoEnrich) {
+        wordItems = parsedToWordItems(rawParsed);
+      } else if (importAutoEnrich) {
+        wordItems = await enrichParsedWords(rawParsed, (msg) => {
+          setImportStatus({ type: 'success', message: msg });
+        });
+      } else {
+        wordItems = parsedToWordItems(rawParsed);
       }
-    } else {
-      finalWords = rawParsed.map((p) => ({
-        id: p.word.toLowerCase(),
-        word: p.word,
-        phonetic: p.phonetic || '',
-        chinese: p.chinese || p.word,
-        exampleSentence: p.exampleSentence || '',
-        exampleSentenceCn: p.exampleSentenceCn || '',
-        errorCount: 0,
+
+      const importErrorCount = selectedListFilter === 'high_error' ? 2 : 0;
+
+      const finalWords: WrongWordItem[] = wordItems.map((item) => ({
+        id: item.id,
+        word: item.word,
+        phonetic: item.phonetic || '',
+        chinese: item.chinese || item.word,
+        exampleSentence: item.exampleSentence || '',
+        exampleSentenceCn: item.exampleSentenceCn || '',
+        errorCount: importErrorCount,
         lastErrorAt: Date.now(),
         createdAt: Date.now()
       }));
-    }
 
-    if (onImportWrongWords) {
-      onImportWrongWords(finalWords);
+      if (selectedListFilter === 'custom' && selectedCustomList && onImportToWordList) {
+        onImportToWordList(wordItems, selectedCustomList.name, selectedCustomList.id);
+      }
+      if (onImportWrongWords) {
+        onImportWrongWords(finalWords);
+      }
+
+      resetImportModal();
+      setIsImportModalOpen(false);
+    } catch (err) {
+      console.error('Import error:', err);
+      setImportStatus({ type: 'error', message: '导入失败，请检查网络后重试。' });
+    } finally {
+      setIsEnriching(false);
     }
-    setImportStatus(null);
-    setImportText('');
-    setIsImportModalOpen(false);
   };
 
   return (
@@ -416,23 +485,6 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
       />
       )}
 
-      {selectedListFilter !== 'all' && (
-        <div className="text-xs font-medium text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 px-3 py-2 rounded-lg border border-brand-200 dark:border-brand-800 flex items-center justify-between gap-2">
-          <span>
-            正在筛选：
-            {selectedListFilter === 'high_error' && '顽固高频难词列表'}
-            {selectedListFilter === 'recent' && '近期错题列表'}
-            {selectedListFilter === 'custom' && `自定义词表《${selectedCustomList?.name || ''}》`} 
-            ({activeWordSet.length}词)
-          </span>
-          <button 
-            onClick={() => { setSelectedListFilter('all'); setSelectedCustomListId(null); }} 
-            className="underline hover:text-brand-900 dark:hover:text-brand-200 font-bold cursor-pointer"
-          >
-            清除筛选
-          </button>
-        </div>
-      )}
 
       {/* Word List Cards Grid */}
       <div className="space-y-6">
@@ -440,7 +492,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
           {/* Smart Classification Lists */}
           <div className="space-y-3">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <span>生词本 · 系统智能分组</span>
+              <span>生词本 · 系统分组</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -448,25 +500,33 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               {/* Card 1: All Wrong Words List */}
               <div 
                 onClick={() => { setSelectedListFilter('all'); setSelectedCustomListId(null); setCurrentPage(1); }}
-                className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+                className={`rounded-2xl p-5 transition-all cursor-pointer group space-y-3 ${
+                  selectedListFilter === 'all' ? listCardSelectedBlue : listCardUnselected
+                }`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="p-3 rounded-xl surface-icon group-hover:bg-brand-600 group-hover:text-white transition-colors">
+                  <div className={selectedListFilter === 'all' ? listIconSelectedLg : listIconBoxLg}>
                     <Bookmark className="w-5 h-5" />
                   </div>
-                  <span className="px-2 py-0.5 text-xs font-bold bg-brand-100 dark:bg-brand-900/40 text-brand-800 dark:text-brand-300 rounded-full">
+                  <span className={`px-2 py-0.5 text-xs rounded-full ${
+                    selectedListFilter === 'all' ? listBadgeSelected : listBadgeUnselected
+                  }`}>
                     {wrongWords.length} 词
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-primary text-base group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
+                  <h3 className={`font-bold text-base transition-colors ${
+                    selectedListFilter === 'all' ? listTitleSelected : listTitleUnselected
+                  }`}>
                     全量生词列表
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     包含文章提取与测试答错的所有待掌握生词
                   </p>
                 </div>
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs font-bold text-brand-600 dark:text-brand-400">
+                <div className={`pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs ${
+                  selectedListFilter === 'all' ? listFooterSelected : listFooterUnselected
+                }`}>
                   <span>进入列表明细</span>
                   <span>→</span>
                 </div>
@@ -475,25 +535,45 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               {/* Card 2: High Error List */}
               <div 
                 onClick={() => { setSelectedListFilter('high_error'); setSelectedCustomListId(null); setCurrentPage(1); }}
-                className="surface-card rounded-2xl p-5 shadow-xs hover:border-red-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+                className={`rounded-2xl p-5 transition-all cursor-pointer group space-y-3 ${
+                  selectedListFilter === 'high_error'
+                    ? 'border border-rose-200 dark:border-rose-800/50 !bg-rose-50/90 dark:!bg-rose-950/25 shadow-sm ring-1 ring-rose-200/70 dark:ring-rose-700/25'
+                    : listCardUnselected
+                }`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 group-hover:bg-red-500 group-hover:text-white transition-colors">
+                  <div className={`p-3 rounded-xl transition-colors ${
+                    selectedListFilter === 'high_error'
+                      ? 'bg-rose-500 text-white'
+                      : 'bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 group-hover:text-rose-500 dark:group-hover:text-rose-400'
+                  }`}>
                     <AlertTriangle className="w-5 h-5" />
                   </div>
-                  <span className="px-2 py-0.5 text-xs font-bold bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 rounded-full">
+                  <span className={`px-2 py-0.5 text-xs rounded-full ${
+                    selectedListFilter === 'high_error'
+                      ? 'font-semibold bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-300'
+                      : 'font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                  }`}>
                     {highErrorWords.length} 词
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base group-hover:text-red-600 transition-colors">
+                  <h3 className={`font-bold text-base transition-colors ${
+                    selectedListFilter === 'high_error'
+                      ? 'text-rose-700 dark:text-rose-300'
+                      : 'text-slate-700 dark:text-slate-300 group-hover:text-rose-600/90'
+                  }`}>
                     顽固高频难词列表
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     连续错2次及以上的难记高频易错词集
                   </p>
                 </div>
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs font-bold text-red-600 dark:text-red-400">
+                <div className={`pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs ${
+                  selectedListFilter === 'high_error'
+                    ? 'font-semibold text-rose-600 dark:text-rose-400'
+                    : 'font-medium text-slate-500 dark:text-slate-400'
+                }`}>
                   <span>专项攻克难词</span>
                   <span>→</span>
                 </div>
@@ -502,25 +582,33 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               {/* Card 3: Recent List */}
               <div 
                 onClick={() => { setSelectedListFilter('recent'); setSelectedCustomListId(null); setCurrentPage(1); }}
-                className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group space-y-3"
+                className={`rounded-2xl p-5 transition-all cursor-pointer group space-y-3 ${
+                  selectedListFilter === 'recent' ? listCardSelectedBlue : listCardUnselected
+                }`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="p-3 rounded-xl surface-icon group-hover:bg-brand-600 group-hover:text-white transition-colors">
+                  <div className={selectedListFilter === 'recent' ? listIconSelectedLg : listIconBoxLg}>
                     <Sparkles className="w-5 h-5" />
                   </div>
-                  <span className="px-2 py-0.5 text-xs font-bold bg-brand-100 dark:bg-brand-900/40 text-brand-800 dark:text-brand-300 rounded-full">
+                  <span className={`px-2 py-0.5 text-xs rounded-full ${
+                    selectedListFilter === 'recent' ? listBadgeSelected : listBadgeUnselected
+                  }`}>
                     {recentWords.length} 词
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-primary text-base group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
+                  <h3 className={`font-bold text-base transition-colors ${
+                    selectedListFilter === 'recent' ? listTitleSelected : listTitleUnselected
+                  }`}>
                     近期新增错题列表
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    近 7 天内收录进入生词本的最新词汇
+                    近 7 天内测试答错收录的最新词汇
                   </p>
                 </div>
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs font-bold text-brand-600 dark:text-brand-400">
+                <div className={`pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs ${
+                  selectedListFilter === 'recent' ? listFooterSelected : listFooterUnselected
+                }`}>
                   <span>及时巩固复习</span>
                   <span>→</span>
                 </div>
@@ -529,16 +617,17 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             </div>
           </div>
 
-          {/* Custom Imported Word Lists Section */}
-          {customWordLists.length > 0 && (
-            <div className="space-y-3 pt-2">
+          {/* Custom Word Lists Section */}
+          <div className="space-y-3 pt-2">
               <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                <span>导入的自定义词本 ({customWordLists.length})</span>
-                <span className="text-xs text-slate-400 normal-case font-normal">来源于官方词库或自定义提取导入</span>
+                <span>自定义词本 ({customWordLists.length})</span>
+                <span className="text-xs text-slate-400 normal-case font-normal">来源于官方词库、导入词汇或新建空白词本</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {customWordLists.map((list) => (
+                {customWordLists.map((list) => {
+                  const isSelected = selectedListFilter === 'custom' && selectedCustomListId === list.id;
+                  return (
                   <div 
                     key={list.id}
                     onClick={() => {
@@ -546,15 +635,21 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                       setSelectedListFilter('custom');
                       setCurrentPage(1);
                     }}
-                    className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all group space-y-3 relative flex flex-col justify-between cursor-pointer"
+                    className={`rounded-2xl p-5 transition-all group space-y-3 relative flex flex-col justify-between cursor-pointer ${
+                      isSelected ? listCardSelectedBlue : listCardUnselected
+                    }`}
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <div className="p-2.5 rounded-xl surface-icon group-hover:bg-brand-600 group-hover:text-white transition-colors">
+                        <div className={isSelected ? listIconSelectedSm : listIconBoxSm}>
                           <FileSpreadsheet className="w-5 h-5" />
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="px-2.5 py-0.5 text-xs font-bold bg-brand-50 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 rounded-full border border-brand-100 dark:border-brand-800">
+                          <span className={`px-2.5 py-0.5 text-xs rounded-full border ${
+                            isSelected
+                              ? `${listBadgeSelected} border-brand-200 dark:border-brand-800`
+                              : 'font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200/60 dark:border-slate-700'
+                          }`}>
                             {list.words.length} 词
                           </span>
                           {onDeleteCustomList && (
@@ -572,7 +667,9 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                         </div>
                       </div>
 
-                      <h3 className="font-bold text-slate-800 text-base group-hover:text-brand-600 transition-colors line-clamp-1">
+                      <h3 className={`font-bold text-base transition-colors line-clamp-1 ${
+                        isSelected ? listTitleSelected : listTitleUnselected
+                      }`}>
                         {list.name}
                       </h3>
                       <p className="text-xs text-slate-400 mt-1 line-clamp-2">
@@ -580,33 +677,40 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                       </p>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedCustomListId(list.id);
-                          setSelectedListFilter('custom');
-                          setCurrentPage(1);
-                        }}
-                        className="flex-1 py-1.5 px-3 surface-muted hover:opacity-90 text-secondary text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
-                      >
-                        查看明细
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onStartWrongWordsQuiz(list.words);
-                        }}
-                        className="flex-1 py-1.5 px-3 surface-muted hover:opacity-90 text-secondary text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
-                      >
-                        测试此词表
-                      </button>
+                    <div className={`pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs ${
+                      isSelected ? listFooterSelected : listFooterUnselected
+                    }`}>
+                      <span>查看明细</span>
+                      <span>→</span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
+
+                {onCreateCustomList && (
+                  <div
+                    onClick={() => {
+                      setNewListName('');
+                      setCreateListError(null);
+                      setIsCreateListModalOpen(true);
+                    }}
+                    className="rounded-2xl p-5 border-2 border-dashed border-slate-200/80 dark:border-slate-700/50 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/40 dark:bg-slate-800/20 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-all group space-y-3 relative flex flex-col justify-between cursor-pointer min-h-[168px]"
+                  >
+                    <div className="flex flex-col items-center justify-center flex-1 text-center space-y-2 py-2">
+                      <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                        <Plus className="w-5 h-5" />
+                      </div>
+                      <h3 className="font-bold text-base text-slate-700 dark:text-slate-300">新建空白词本</h3>
+                      <p className="text-xs text-slate-400 px-2">创建后可导入或粘贴单词</p>
+                    </div>
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+                      <span>点击创建</span>
+                      <span>→</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
 
         </div>
 
@@ -653,7 +757,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             <button
               onClick={handleBulkEnrichWords}
               disabled={isBulkEnriching}
-              className="flex items-center gap-1.5 px-3 py-2 gradient-brand font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-brand-600 via-brand-700 to-brand-800 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer disabled:opacity-50"
               title="自动调用 DeepSeek AI 补全缺乏例句与音标的生词"
             >
               {isBulkEnriching ? (
@@ -680,7 +784,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
           </button>
 
           {/* Export Menu */}
-          <div className="relative">
+          <div className="relative" ref={exportMenuRef}>
             <button
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
               className="flex items-center gap-1.5 px-3 py-2 surface-muted hover:bg-brand-50 dark:hover:bg-brand-900/30 text-secondary hover:text-brand-700 dark:hover:text-brand-300 font-semibold text-xs rounded-xl border border-slate-200 dark:border-slate-600 transition-all cursor-pointer"
@@ -724,6 +828,17 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             </button>
           )}
 
+          {activeWordSet.length > 0 && (
+            <button
+              onClick={handleStartActiveListQuiz}
+              className="flex items-center gap-1.5 px-3 py-2 gradient-brand text-white font-semibold text-xs rounded-xl shadow-xs hover:opacity-95 transition-all cursor-pointer"
+              title={`对当前选中的「${getSelectedGroupLabel()}」发起测试`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>测试此词本</span>
+            </button>
+          )}
+
         </div>
       </div>
 
@@ -743,6 +858,9 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                 key={item.id}
                 word={item.word}
                 phonetic={item.phonetic}
+                phoneticUs={item.phoneticUs}
+                phoneticUk={item.phoneticUk}
+                speechAccent={speechAccent}
                 chinese={item.chinese}
                 exampleSentence={item.exampleSentence}
                 exampleSentenceCn={item.exampleSentenceCn}
@@ -760,7 +878,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                     ) : (
                       <Sparkles className="w-3.5 h-3.5" />
                     )}
-                    <span>选错 {item.errorCount || 0} 次</span>
+                    <span>{(item.errorCount || 0) > 0 ? `选错 ${item.errorCount} 次` : '新词'}</span>
                   </div>
                 }
                 footer={
@@ -770,7 +888,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                       <button
                         onClick={(e) => { e.stopPropagation(); handleEnrichSingleWord(item); }}
                         disabled={enrichingWordId === item.id}
-                        className="flex items-center gap-1.5 px-2.5 py-1 gradient-brand rounded-lg text-xs font-bold cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-2.5 py-1 gradient-brand text-white rounded-lg text-xs font-bold cursor-pointer disabled:opacity-50"
                       >
                         {enrichingWordId === item.id ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -860,14 +978,14 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2 text-brand-700 font-bold text-lg">
+              <div className="flex items-center gap-2 text-brand-700 font-bold text-xl">
                 <Upload className="w-5 h-5" />
                 <span>批量导入到生词本</span>
               </div>
               <button
                 onClick={() => {
                   setIsImportModalOpen(false);
-                  setImportStatus(null);
+                  resetImportModal();
                 }}
                 className="p-1 text-muted hover:text-primary rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
@@ -877,21 +995,21 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
 
             {/* Modal Content */}
             <div className="space-y-4 overflow-y-auto flex-1 pr-1">
-              
+
               {/* File upload prompt */}
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700">方法 1：上传 JSON / CSV / TXT 文件</label>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">方法 1：上传 JSON / CSV 文件</label>
                 <div 
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-brand-300 dark:border-brand-700 hover:border-brand-500 dark:hover:border-brand-500 bg-brand-50/40 dark:bg-brand-900/20 hover:bg-brand-50 dark:hover:bg-brand-900/40 p-4 rounded-xl text-center cursor-pointer transition-all space-y-1"
+                  className="border-2 border-dashed border-brand-300 dark:border-brand-700 hover:border-brand-500 dark:hover:border-brand-500 bg-brand-50/40 dark:bg-brand-900/20 hover:bg-brand-50 dark:hover:bg-brand-900/40 p-4 rounded-xl text-center cursor-pointer transition-all space-y-1.5"
                 >
-                  <Upload className="w-6 h-6 text-brand-600 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-700">点击上传文件 (.json, .csv, .txt)</p>
-                  <p className="text-[11px] text-slate-400">支持 WordMaster 导出的 JSON，或每行单词 CSV 格式</p>
+                  <Upload className="w-7 h-7 text-brand-600 mx-auto" />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">点击上传文件 (.json, .csv)</p>
+                  <p className="text-xs text-slate-400">与「导出词汇」格式一致：WordMaster 导出的 JSON 或 CSV</p>
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".json,.csv,.txt"
+                    accept=".json,.csv"
                     onChange={handleFileUpload}
                     className="hidden"
                   />
@@ -900,53 +1018,28 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
 
               {/* Text input prompt */}
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700">方法 2：直接粘贴文本（自动兼容教材词表与纯词表）</label>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">方法 2：粘贴纯单词列表</label>
                 <textarea
                   value={importText}
                   onChange={(e) => {
                     setImportText(e.target.value);
+                    setImportFilePayload(null);
                     if (importStatus) setImportStatus(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
                   }}
                   rows={6}
-                  placeholder={`自动支持多种常见格式：
+                  placeholder={`每行一个英文单词，例如：
 
-1. 纯词本 (可带单元标题):
-### Welcome Unit
-exchange
-lecture
-registration
-
-2. 编号释义列表 (人教版新课标/Markdown):
-1. **exchange** n. 交换；交流 vt. 交换；交流；兑换
-2. **lecture** n. 讲座；讲课 vi. 讲座 vt. 训斥
-
-3. 各种分隔符:
-abandon : 放弃；抛弃
-apple - 苹果`}
-                  className="w-full p-3 text-xs font-mono surface-input rounded-xl focus:outline-none focus:border-brand-500 transition-all"
+explore
+curious
+discover`}
+                  className="w-full p-3.5 text-sm font-mono surface-input rounded-xl focus:outline-none focus:border-brand-500 transition-all leading-relaxed"
                 />
-              </div>
-
-              {/* AI Enrich Toggle */}
-              <div className="flex items-center justify-between bg-brand-50/60 dark:bg-brand-900/30 p-3 rounded-xl border border-brand-200/60 dark:border-brand-800/60">
-                <label className="flex items-center gap-2.5 text-xs font-semibold text-brand-900 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={importAutoEnrich}
-                    onChange={(e) => setImportAutoEnrich(e.target.checked)}
-                    className="w-4 h-4 text-brand-600 rounded border-brand-300 focus:ring-brand-500 cursor-pointer"
-                  />
-                  <Sparkles className="w-4 h-4 text-brand-600 shrink-0" />
-                  <span>✨ AI 智能补全词性、音标与精美例句</span>
-                </label>
-                <span className="text-[11px] text-brand-700/80 hidden sm:inline">
-                  {importAutoEnrich ? '自动补全缺失例句与词性' : '快捷导入原数据'}
-                </span>
               </div>
 
               {/* Status Notice */}
               {importStatus && (
-                <div className={`p-3 rounded-xl text-xs flex items-center gap-2 border ${
+                <div className={`p-3.5 rounded-xl text-sm flex items-center gap-2 border ${
                   importStatus.type === 'success' 
                     ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
                     : 'bg-rose-50 text-rose-800 border-rose-200'
@@ -964,22 +1057,26 @@ apple - 苹果`}
 
             </div>
 
+            <div className="text-sm font-medium text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 px-3.5 py-2.5 rounded-lg border border-brand-100 dark:border-brand-800 shrink-0">
+              导入单词至：{getSelectedGroupLabel()}
+            </div>
+
             {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 shrink-0">
+            <div className="flex items-center gap-2 pt-3 border-t border-slate-100 shrink-0">
               <button
                 disabled={isEnriching}
                 onClick={() => {
                   setIsImportModalOpen(false);
-                  setImportStatus(null);
+                  resetImportModal();
                 }}
-                className="px-4 py-2 text-xs font-semibold text-secondary surface-muted hover:opacity-90 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                className="flex-1 px-5 py-2.5 text-sm font-semibold text-secondary surface-muted hover:opacity-90 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
               >
                 取消
               </button>
               <button
                 onClick={handleConfirmImport}
-                disabled={isEnriching || !importText.trim()}
-                className="px-5 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                disabled={isEnriching || (!importFilePayload && !importText.trim())}
+                className="flex-1 px-5 py-2.5 text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 {isEnriching ? (
                   <>
@@ -987,14 +1084,74 @@ apple - 苹果`}
                     <span>AI 正在生成与补全...</span>
                   </>
                 ) : (
-                  <>
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>{importAutoEnrich ? '确认并由 AI 智能补全导入' : '快捷直接导入生词本'}</span>
-                  </>
+                  <span>{importAutoEnrich ? '确认' : '直接导入'}</span>
                 )}
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Create Custom List Modal */}
+      {isCreateListModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="surface-card rounded-3xl p-6 max-w-md w-full shadow-elevated space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-brand-700 font-bold text-lg">
+                <Plus className="w-5 h-5" />
+                <span>新建空白词本</span>
+              </div>
+              <button
+                onClick={() => {
+                  setIsCreateListModalOpen(false);
+                  setNewListName('');
+                  setCreateListError(null);
+                }}
+                className="p-1 text-muted hover:text-primary rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">词本名称</label>
+              <input
+                type="text"
+                value={newListName}
+                onChange={(e) => {
+                  setNewListName(e.target.value);
+                  if (createListError) setCreateListError(null);
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleConfirmCreateList()}
+                placeholder="例如：七年级上册"
+                autoFocus
+                className="w-full px-3.5 py-2.5 text-sm rounded-xl surface-input focus:outline-none focus:border-brand-500 transition-all"
+              />
+              {createListError && (
+                <p className="text-sm text-rose-600">{createListError}</p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={() => {
+                  setIsCreateListModalOpen(false);
+                  setNewListName('');
+                  setCreateListError(null);
+                }}
+                className="flex-1 px-5 py-2.5 text-sm font-semibold text-secondary surface-muted hover:opacity-90 rounded-xl transition-colors cursor-pointer"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmCreateList}
+                disabled={!newListName.trim()}
+                className="flex-1 px-5 py-2.5 text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-md transition-all cursor-pointer"
+              >
+                创建
+              </button>
+            </div>
           </div>
         </div>
       )}

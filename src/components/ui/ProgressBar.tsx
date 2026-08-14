@@ -22,13 +22,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           <span>进度</span>
           <span>
             <span className="text-brand-600 dark:text-brand-400 font-bold">{value}</span> / {max}
-            <span className="text-slate-400 dark:text-slate-500 ml-1">({percent}%)</span>
           </span>
         </div>
       )}
       <div className="h-2 bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-500 ease-out bg-slate-400 dark:bg-slate-500"
+          className="h-full rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-brand-600 via-brand-500 to-accent-500 dark:from-brand-900 dark:via-brand-800 dark:to-brand-700 dark:opacity-90"
           style={{ width: `${percent}%` }}
         />
       </div>

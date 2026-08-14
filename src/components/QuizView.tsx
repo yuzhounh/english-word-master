@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { SpeakerIcon } from './SpeakerIcon';
+import { WordWithSpeaker } from './ui/WordWithSpeaker';
 import { CheckCircle, XCircle, RefreshCw, Bookmark, Award, RotateCcw, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { WordItem, QuizQuestion, SpeechAccent } from '../types';
+import { PhoneticDisplay } from './ui/PhoneticDisplay';
 import { ProgressBar } from './ui/ProgressBar';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -57,7 +59,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
   onRecordMasteredWord,
   onGoToWrongWords,
   wrongWordsCount,
-  speechAccent
+  speechAccent = 'en-US',
 }) => {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -173,6 +175,8 @@ export const QuizView: React.FC<QuizViewProps> = ({
         id: item.id || item.word.toLowerCase(),
         word: item.word,
         phonetic: item.phonetic || '',
+        phoneticUs: item.phoneticUs,
+        phoneticUk: item.phoneticUk,
         chinese: item.chinese,
         exampleSentence: item.exampleSentence || '',
         exampleSentenceCn: item.exampleSentenceCn || '',
@@ -351,7 +355,11 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   <div key={i} className="flex items-center justify-between text-xs py-1 border-b border-slate-100 dark:border-slate-700 last:border-0">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-primary">{item.word}</span>
-                      <span className="text-muted font-mono">{item.phonetic}</span>
+                      <PhoneticDisplay
+                        item={item}
+                        accent={speechAccent}
+                        className="text-muted font-mono text-xs"
+                      />
                     </div>
                     <span className="text-secondary font-medium">{item.chinese}</span>
                   </div>
@@ -425,7 +433,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             onClick={handleNext}
             className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
               isAnswered
-                ? 'gradient-brand shadow-sm'
+                ? 'gradient-brand text-white shadow-sm'
                 : 'surface-muted hover:bg-slate-200 dark:hover:bg-slate-600 text-secondary border border-slate-200 dark:border-slate-600'
             }`}
           >
@@ -439,30 +447,30 @@ export const QuizView: React.FC<QuizViewProps> = ({
         </div>
 
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center gap-3 flex-wrap">
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-primary tracking-tight">
-              {currentQ.word}
-            </h1>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isAnswered) {
-                  speakWord(currentQ.word, currentQ.exampleSentence);
-                } else {
-                  speakText(currentQ.word);
-                }
-              }}
-              title={isAnswered ? "播放发音（单词+例句）" : "播放单词发音"}
-              className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-xl transition-colors shrink-0 cursor-pointer"
-            >
-              <SpeakerIcon isSpeaking={speakingText === currentQ.word} className="w-5 h-5" />
-            </button>
-          </div>
+          <WordWithSpeaker
+            as="h1"
+            variant="centered"
+            word={currentQ.word}
+            isSpeaking={speakingText === currentQ.word}
+            onSpeak={(e) => {
+              e.stopPropagation();
+              if (isAnswered) {
+                speakWord(currentQ.word, currentQ.exampleSentence);
+              } else {
+                speakText(currentQ.word);
+              }
+            }}
+            speakTitle={isAnswered ? '播放发音（单词+例句）' : '播放单词发音'}
+            wordClassName="text-4xl sm:text-5xl font-extrabold text-primary tracking-tight leading-none"
+            iconClassName="w-5 h-5"
+          />
 
-          {currentQ.phonetic && (
-            <div className="text-sm font-mono text-slate-400 tracking-wide">
-              {currentQ.phonetic}
-            </div>
+          {(currentQ.phoneticUs || currentQ.phoneticUk || currentQ.phonetic) && (
+            <PhoneticDisplay
+              item={currentQ}
+              accent={speechAccent}
+              className="text-sm font-mono text-slate-400 tracking-wide"
+            />
           )}
         </div>
 
@@ -471,22 +479,22 @@ export const QuizView: React.FC<QuizViewProps> = ({
             const isSelected = selectedOption === idx;
             const isCorrect = idx === currentQ.correctIndex;
 
-            let btnStyle = "surface-card border border-slate-200 dark:border-slate-600 hover:border-brand-400 hover:bg-brand-50/50 dark:hover:bg-brand-900/30 text-primary";
-            let badgeStyle = "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 group-hover:bg-brand-600 group-hover:text-white";
+            let btnStyle = 'rounded-[var(--radius-card)] border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800/80 shadow-card hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-card-hover text-primary transition-all';
+            let badgeStyle = 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors';
             let icon = null;
 
             if (isAnswered) {
               if (isCorrect) {
-                btnStyle = "bg-emerald-50 text-emerald-900 border-2 border-emerald-500 font-semibold";
-                badgeStyle = "bg-emerald-500 text-white";
-                icon = <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />;
+                btnStyle = 'rounded-[var(--radius-card)] bg-emerald-50 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-100 border border-emerald-200/90 dark:border-emerald-700/60 font-semibold';
+                badgeStyle = 'bg-emerald-200/70 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-100';
+                icon = <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />;
               } else if (isSelected && !isCorrect) {
-                btnStyle = "bg-rose-50 text-rose-900 border-2 border-rose-500 font-semibold";
-                badgeStyle = "bg-rose-500 text-white";
-                icon = <XCircle className="w-4 h-4 shrink-0 text-rose-600" />;
+                btnStyle = 'rounded-[var(--radius-card)] bg-rose-50 dark:bg-rose-900/30 text-rose-900 dark:text-rose-100 border border-rose-200/90 dark:border-rose-700/60 font-semibold';
+                badgeStyle = 'bg-rose-200/70 dark:bg-rose-800/50 text-rose-800 dark:text-rose-100';
+                icon = <XCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />;
               } else {
-                btnStyle = "bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700 opacity-60";
-                badgeStyle = "bg-slate-100 dark:bg-slate-700 text-slate-400";
+                btnStyle = 'rounded-[var(--radius-card)] bg-slate-50/80 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700/50 opacity-70';
+                badgeStyle = 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500';
               }
             }
 
@@ -502,7 +510,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   e.stopPropagation();
                   handleSelectOption(idx);
                 }}
-                className={`p-4 text-left rounded-xl transition-colors cursor-pointer flex flex-col justify-between group ${btnStyle}`}
+                className={`p-4 text-left transition-all cursor-pointer flex flex-col justify-between group ${btnStyle}`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs transition-colors ${badgeStyle}`}>
@@ -520,10 +528,10 @@ export const QuizView: React.FC<QuizViewProps> = ({
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            className={`w-full p-4 rounded-xl border text-sm leading-relaxed space-y-2 ${
+            className={`w-full p-4 rounded-[var(--radius-card)] border text-sm leading-relaxed space-y-2 ${
             selectedOption === currentQ.correctIndex
-              ? 'bg-emerald-50/80 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
-              : 'bg-rose-50/80 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+              ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200/90 dark:border-emerald-700/60 text-emerald-900 dark:text-emerald-100'
+              : 'bg-rose-50 dark:bg-rose-900/30 border-rose-200/90 dark:border-rose-700/60 text-rose-900 dark:text-rose-100'
           }`}>
             <div className="font-semibold flex items-center gap-1.5">
               {selectedOption === currentQ.correctIndex ? (
@@ -551,13 +559,17 @@ export const QuizView: React.FC<QuizViewProps> = ({
             </div>
 
             {currentQ.exampleSentence && (
-              <div className="pt-3 flex items-start justify-between gap-3 border-t border-slate-200/60 dark:border-slate-600/60 mt-1 surface-muted p-3 rounded-xl">
-                <div className="space-y-1">
-                  <div className="text-sm sm:text-base font-medium italic text-primary leading-snug">
+              <div className={`pt-3 flex items-start justify-between gap-3 border-t mt-1 ${
+                selectedOption === currentQ.correctIndex
+                  ? 'border-emerald-200/70 dark:border-emerald-700/50'
+                  : 'border-rose-200/70 dark:border-rose-700/50'
+              }`}>
+                <div className="space-y-1 min-w-0">
+                  <div className="font-medium italic leading-snug">
                     "{currentQ.exampleSentence}"
                   </div>
                   {currentQ.exampleSentenceCn && (
-                    <div className="text-sm text-secondary leading-normal">
+                    <div className="text-sm leading-snug opacity-90">
                       {currentQ.exampleSentenceCn}
                     </div>
                   )}
@@ -569,7 +581,11 @@ export const QuizView: React.FC<QuizViewProps> = ({
                     speakText(currentQ.exampleSentence);
                   }}
                   title="朗读例句"
-                  className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-lg shrink-0 cursor-pointer transition-colors"
+                  className={`p-2 rounded-lg shrink-0 cursor-pointer transition-colors ${
+                    selectedOption === currentQ.correctIndex
+                      ? 'text-emerald-600/70 hover:text-emerald-700 dark:text-emerald-400/70 dark:hover:text-emerald-300'
+                      : 'text-rose-600/70 hover:text-rose-700 dark:text-rose-400/70 dark:hover:text-rose-300'
+                  }`}
                 >
                   <SpeakerIcon isSpeaking={speakingText === currentQ.exampleSentence} className="w-4 h-4" />
                 </button>

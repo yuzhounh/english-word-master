@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Navbar } from './components/Navbar';
-import { TextAnalyzer } from './components/TextAnalyzer';
 import { QuizView } from './components/QuizView';
 import { NotebookView } from './components/NotebookView';
 import { WordLibraryView } from './components/WordLibraryView';
@@ -36,7 +35,6 @@ export default function App() {
   });
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
-  const [extractedWords, setExtractedWords] = useState<WordItem[]>([]);
   const [quizPool, setQuizPool] = useState<WordItem[]>([]);
 
   const toggleSpeechAccent = () => {
@@ -86,7 +84,7 @@ export default function App() {
     const newList: WordListGroup = {
       id: 'list-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
       name: cleanName,
-      description: `从词库导入，包含 ${words.length} 个单词`,
+      description: words.length > 0 ? `从词库导入，包含 ${words.length} 个单词` : '空白词本，可通过导入词汇添加单词',
       words: words,
       wordCount: words.length,
       createdAt: Date.now(),
@@ -94,6 +92,46 @@ export default function App() {
     };
 
     setCustomWordLists((prev) => [newList, ...prev.filter((l) => l.name !== cleanName)]);
+    if (words.length > 0) {
+      handleAddWordsToNotebook(words);
+    }
+    return newList.id;
+  };
+
+  const handleCreateEmptyWordList = (listName: string): string | null => {
+    const cleanName = listName.trim();
+    if (!cleanName) return null;
+    if (customWordLists.some((l) => l.name === cleanName)) return null;
+    return handleImportCustomList([], cleanName);
+  };
+
+  const handleMergeWordsIntoWordList = (words: WordItem[], listName: string, listId?: string | null) => {
+    const cleanName = listName || '默认词本';
+    const existing = listId
+      ? customWordLists.find((l) => l.id === listId)
+      : customWordLists.find((l) => l.name === cleanName);
+
+    if (existing) {
+      const map = new Map(existing.words.map((w) => [(w.id || w.word).toLowerCase().trim(), w]));
+      words.forEach((w) => map.set((w.id || w.word).toLowerCase().trim(), w));
+      const mergedWords = Array.from(map.values());
+      setCustomWordLists((prev) =>
+        prev.map((l) =>
+          l.id === existing.id
+            ? {
+                ...l,
+                words: mergedWords,
+                wordCount: mergedWords.length,
+                description: `包含 ${mergedWords.length} 个单词`
+              }
+            : l
+        )
+      );
+    } else {
+      handleImportCustomList(words, cleanName);
+      return;
+    }
+
     handleAddWordsToNotebook(words);
   };
 
@@ -334,8 +372,8 @@ export default function App() {
         masteredAt: Date.now()
       };
     } else {
-      // Find from quizPool or extractedWords
-      const foundPool = [...quizPool, ...extractedWords].find(w => (w.id || w.word).toLowerCase().trim() === cleanId);
+      // Find from quizPool
+      const foundPool = quizPool.find(w => (w.id || w.word).toLowerCase().trim() === cleanId);
       if (foundPool) {
         wordItemToMaster = {
           id: cleanId,
@@ -530,9 +568,6 @@ export default function App() {
         user={user}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
-        wrongWordsCount={wrongWords.length}
-        masteredWordsCount={masteredWords.length}
-        extractedWordsCount={extractedWords.length}
         speechAccent={speechAccent}
         onToggleSpeechAccent={toggleSpeechAccent}
         isDark={resolved === 'dark'}
@@ -569,7 +604,7 @@ export default function App() {
           >
             {activeTab === 'quiz' && (
               <QuizView
-                wordPool={quizPool.length > 0 ? quizPool : extractedWords}
+                wordPool={quizPool}
                 onRecordWrongWord={handleRecordWrongWord}
                 onRecordMasteredWord={handleRecordMasteredWord}
                 onGoToWrongWords={() => {
@@ -578,26 +613,6 @@ export default function App() {
                 }}
                 wrongWordsCount={wrongWords.length}
                 speechAccent={speechAccent}
-              />
-            )}
-
-            {activeTab === 'extract' && (
-              <TextAnalyzer
-                onWordsExtracted={(words, listName) => {
-                  setExtractedWords(words);
-                  setQuizPool(words);
-                  if (listName) {
-                    handleImportCustomList(words, listName);
-                  } else {
-                    handleAddWordsToNotebook(words);
-                  }
-                }}
-                onStartQuiz={(words) => {
-                  setQuizPool(words);
-                  setActiveTab('quiz');
-                }}
-                extractedWords={extractedWords}
-                customWordLists={customWordLists}
               />
             )}
 
@@ -615,6 +630,8 @@ export default function App() {
                 }}
                 onClearAllWrongWords={handleClearAllWrongWords}
                 onImportWrongWords={handleImportWrongWords}
+                onImportToWordList={handleMergeWordsIntoWordList}
+                onCreateCustomList={handleCreateEmptyWordList}
                 onDeleteCustomList={handleDeleteCustomList}
                 onRemoveMasteredWord={handleRemoveMasteredWord}
                 onMoveToWrongWords={handleMoveMasteredToWrongWords}
@@ -624,6 +641,7 @@ export default function App() {
                 }}
                 onClearAllMasteredWords={handleClearAllMasteredWords}
                 onImportMasteredWords={handleImportMasteredWords}
+                speechAccent={speechAccent}
               />
             )}
 
@@ -632,22 +650,11 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      <footer className="border-t border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm py-8 text-center">
-        <div className="page-container flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            <span className="font-semibold gradient-brand-text">WordMaster AI</span>
-            <span className="text-slate-400 mx-1.5">·</span>
-            <span className="text-slate-500">智能英文文本提取、900+ 权威词库与词汇记忆平台</span>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap justify-center text-xs text-slate-400">
-            <span>智能分词还原</span>
-            <span className="text-slate-300">·</span>
-            <span>900+ 内置词书</span>
-            <span className="text-slate-300">·</span>
-            <span>四选一强化测试</span>
-            <span className="text-slate-300">·</span>
-            <span>生词熟词云端同步</span>
-          </div>
+      <footer className="border-t border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm py-6">
+        <div className="page-container text-center">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            四选一测验 · 900+ 内置词书 · 生词熟词同步
+          </p>
         </div>
       </footer>
 

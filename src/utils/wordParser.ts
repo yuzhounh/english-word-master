@@ -41,6 +41,125 @@ export function parsePlainWordList(rawText: string): ParsedWord[] {
   return result;
 }
 
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      fields.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  fields.push(current);
+  return fields;
+}
+
+/** Parse WordMaster exported JSON (生词本/熟词本导出格式). */
+export function parseExportedWordMasterJson(rawText: string): ParsedWord[] {
+  try {
+    const parsed = JSON.parse(rawText.trim());
+    const arr = Array.isArray(parsed) ? parsed : [parsed];
+    const result: ParsedWord[] = [];
+    const seen = new Set<string>();
+
+    for (const item of arr) {
+      if (!item) continue;
+      const word = (item.word || item.id || '').toString().trim();
+      if (!word) continue;
+      const key = word.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push({
+        word,
+        chinese: item.chinese || item.definition || item.meaning || '',
+        phonetic: item.phonetic || '',
+        exampleSentence: item.exampleSentence || item.example || '',
+        exampleSentenceCn: item.exampleSentenceCn || item.exampleCn || ''
+      });
+    }
+    return result;
+  } catch {
+    return [];
+  }
+}
+
+/** Parse WordMaster exported CSV (与导出列一致). */
+export function parseExportedWordMasterCsv(rawText: string): ParsedWord[] {
+  const lines = rawText.replace(/^\uFEFF/, '').split(/[\r\n]+/).filter(Boolean);
+  if (lines.length === 0) return [];
+
+  const result: ParsedWord[] = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    if (i === 0 && (line.startsWith('单词,') || line.toLowerCase().startsWith('word,'))) continue;
+
+    const cols = parseCsvLine(line);
+    const word = (cols[0] || '').trim();
+    if (!word) continue;
+    const key = word.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    result.push({
+      word,
+      phonetic: cols[1]?.trim() || '',
+      chinese: cols[2]?.trim() || '',
+      exampleSentence: cols[3]?.trim() || '',
+      exampleSentenceCn: cols[4]?.trim() || ''
+    });
+  }
+
+  return result;
+}
+
+export function parsedToWordItems(parsed: ParsedWord[]): WordItem[] {
+  return parsed.map((p) => ({
+    id: p.word.toLowerCase().trim(),
+    word: p.word,
+    phonetic: p.phonetic || '',
+    chinese: p.chinese || p.word,
+    exampleSentence: p.exampleSentence || '',
+    exampleSentenceCn: p.exampleSentenceCn || ''
+  }));
+}
+
+/** Dictionary lookup first, then AI for missing entries. */
+export async function enrichParsedWords(
+  words: ParsedWord[],
+  onProgress?: (message: string) => void
+): Promise<WordItem[]> {
+  if (!words.length) return [];
+
+  onProgress?.(`正在查询词库… (${words.length} 个单词)`);
+  const { resolved, needsAi } = await resolveWordsWithDictionary(words);
+
+  if (needsAi.length === 0) {
+    return resolved;
+  }
+
+  onProgress?.(`词库已匹配 ${resolved.length} 个，AI 补全中…`);
+  const aiEnriched = await enrichWordsWithAI(needsAi, (processed, total) => {
+    onProgress?.(`AI 补全中… ${processed} / ${total}`);
+  });
+
+  return [...resolved, ...aiEnriched];
+}
+
 /**
  * Smart multi-format parser for English vocabulary lists.
  * Supports:

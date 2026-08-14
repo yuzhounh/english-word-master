@@ -1,11 +1,14 @@
 import React from 'react';
-import { SpeakerIcon } from '../SpeakerIcon';
+import { SpeechAccent } from '../../types';
+import { WordWithSpeaker } from './WordWithSpeaker';
+import { PhoneticDisplay } from './PhoneticDisplay';
 
 interface WordCardProps {
   word: string;
   phonetic?: string;
   phoneticUk?: string;
   phoneticUs?: string;
+  speechAccent?: SpeechAccent;
   chinese: string;
   exampleSentence?: string;
   exampleSentenceCn?: string;
@@ -17,6 +20,9 @@ interface WordCardProps {
   indexLabel?: string | number;
   className?: string;
   actions?: React.ReactNode;
+  /** brand: 生词本默认；emerald: 熟词本 */
+  variant?: 'brand' | 'emerald';
+  actionsClassName?: string;
 }
 
 export const WordCard: React.FC<WordCardProps> = ({
@@ -24,6 +30,7 @@ export const WordCard: React.FC<WordCardProps> = ({
   phonetic,
   phoneticUk,
   phoneticUs,
+  speechAccent = 'en-US',
   chinese,
   exampleSentence,
   exampleSentenceCn,
@@ -35,36 +42,36 @@ export const WordCard: React.FC<WordCardProps> = ({
   indexLabel,
   className = '',
   actions,
-}) => (
+  variant = 'brand',
+  actionsClassName = 'flex items-center justify-end',
+}) => {
+  const isEmerald = variant === 'emerald';
+  const cardHover = isEmerald
+    ? 'hover:border-emerald-400 dark:hover:border-emerald-600'
+    : 'hover:border-brand-200 dark:hover:border-brand-700';
+  const chineseBox = isEmerald
+    ? 'text-emerald-800 dark:text-emerald-200 bg-emerald-50/60 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800'
+    : 'text-brand-900 dark:text-brand-200 bg-brand-50/80 dark:bg-brand-900/20 border-brand-100/80 dark:border-brand-800/50';
+
+  return (
   <div
     onClick={onClick}
-    className={`rounded-[var(--radius-card)] border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800/80 p-4 shadow-card hover:shadow-card-hover hover:border-brand-200 dark:hover:border-brand-700 transition-all space-y-3 relative group cursor-pointer active:scale-[0.99] ${className}`}
+    className={`rounded-[var(--radius-card)] border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800/80 p-4 shadow-card hover:shadow-card-hover ${cardHover} transition-all space-y-3 relative group cursor-pointer active:scale-[0.99] ${className}`}
   >
     <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-none">
-            {word}
-          </span>
-          {onSpeak && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSpeak(e);
-              }}
-              className="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-lg transition-colors cursor-pointer shrink-0"
-              title="播放发音"
-            >
-              <SpeakerIcon isSpeaking={isSpeaking} className="w-5 h-5" />
-            </button>
-          )}
-        </div>
+      <div className="min-w-0 flex flex-col">
+        <WordWithSpeaker
+          word={word}
+          isSpeaking={isSpeaking}
+          onSpeak={onSpeak ? (e) => onSpeak(e) : undefined}
+          wordClassName="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-none"
+        />
         {(phoneticUs || phoneticUk || phonetic) && (
-          <div className="text-sm font-mono text-slate-500 dark:text-slate-400 font-medium mt-1 space-x-2">
-            {phoneticUs && <span><span className="text-slate-400 text-xs">美</span> {phoneticUs}</span>}
-            {phoneticUk && <span><span className="text-slate-400 text-xs">英</span> {phoneticUk}</span>}
-            {!phoneticUs && !phoneticUk && phonetic && <span>{phonetic}</span>}
-          </div>
+          <PhoneticDisplay
+            item={{ phonetic, phoneticUs, phoneticUk }}
+            accent={speechAccent}
+            className="block text-sm font-mono text-slate-500 dark:text-slate-400 font-medium mt-1"
+          />
         )}
       </div>
       <div className="flex items-start gap-2 shrink-0">
@@ -77,7 +84,7 @@ export const WordCard: React.FC<WordCardProps> = ({
       </div>
     </div>
 
-    <div className="text-base font-bold text-brand-900 dark:text-brand-200 bg-brand-50/80 dark:bg-brand-900/20 py-2.5 px-3 rounded-xl border border-brand-100/80 dark:border-brand-800/50 leading-snug">
+    <div className={`text-base font-bold py-2.5 px-3 rounded-xl border leading-snug ${chineseBox}`}>
       {chinese}
     </div>
 
@@ -93,9 +100,10 @@ export const WordCard: React.FC<WordCardProps> = ({
     ) : null}
 
     {actions && (
-      <div className="flex items-center justify-end pt-1 border-t border-slate-100 dark:border-slate-700/50">
+      <div className={`pt-1 border-t border-slate-100 dark:border-slate-700/50 ${actionsClassName}`}>
         {actions}
       </div>
     )}
   </div>
-);
+  );
+};

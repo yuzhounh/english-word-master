@@ -1,2 +1,2 @@
-export type AppTab = 'quiz' | 'extract' | 'library' | 'notebook';
+export type AppTab = 'quiz' | 'library' | 'notebook';
 export type NotebookSubTab = 'wrong' | 'mastered';
