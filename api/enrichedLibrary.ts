@@ -6,6 +6,7 @@ import {
   isDictionaryEntryComplete,
   loadWordDictionary,
   lookupWord,
+  mergeWordWithDictionary,
   setDictionaryCache
 } from "./wordDictionary";
 
