@@ -1,11 +1,19 @@
-# English Word Master (智能英文背单词 & 词库管理)
+<p align="center">
+  <img src="public/logo.svg" width="112" alt="English Word Master 图标" />
+</p>
 
-[![React](https://img.shields.io/badge/React-19.0-blue.svg)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-6.2-646CFF.svg)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.1-38B2AC.svg)](https://tailwindcss.com/)
-[![DeepSeek API](https://img.shields.io/badge/DeepSeek-API-4D6BFE.svg)](https://platform.deepseek.com/)
-[![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%26%20Auth-FFCA28.svg)](https://firebase.google.com/)
+<h1 align="center">English Word Master</h1>
+
+<p align="center"><strong>智能英文背单词与个人词库管理平台</strong></p>
+
+<p align="center">
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.0-blue.svg" alt="React 19.0" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.8-blue.svg" alt="TypeScript 5.8" /></a>
+  <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-6.2-646CFF.svg" alt="Vite 6.2" /></a>
+  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind-4.1-38B2AC.svg" alt="Tailwind CSS 4.1" /></a>
+  <a href="https://platform.deepseek.com/"><img src="https://img.shields.io/badge/DeepSeek-API-4D6BFE.svg" alt="DeepSeek API" /></a>
+  <a href="https://firebase.google.com/"><img src="https://img.shields.io/badge/Firebase-Firestore%20%26%20Auth-FFCA28.svg" alt="Firebase Firestore and Auth" /></a>
+</p>
 
 **English Word Master** 是一款基于 AI 驱动的高效英文单词学习与综合词库管理平台。集成了文本智能分析、词干还原（Lemmatization）、四选一互动测验、错题本复习系统以及 Firebase 云端同步功能，帮助用户从阅读中积累词汇，高效巩固与高效复习。
 
