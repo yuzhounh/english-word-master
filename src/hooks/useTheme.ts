@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -13,6 +14,11 @@ function resolveTheme(mode: ThemeMode): 'light' | 'dark' {
 
 function applyTheme(resolved: 'light' | 'dark') {
   document.documentElement.classList.toggle('dark', resolved === 'dark');
+  if (Capacitor.isNativePlatform()) {
+    void SystemBars.setStyle({
+      style: resolved === 'dark' ? SystemBarsStyle.Dark : SystemBarsStyle.Light,
+    }).catch(() => undefined);
+  }
 }
 
 export function useTheme() {

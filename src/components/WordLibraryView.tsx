@@ -7,11 +7,13 @@ import {
 } from 'lucide-react';
 import { WordItem, LibraryCategoryNode, SpeechAccent } from '../types';
 import { enrichWordsWithAI, enrichWordsWithDictionaryFallback } from '../utils/wordParser';
+import { getApiUrl } from '../lib/apiConfig';
 import { Pagination } from './Pagination';
 import { LibraryTreeSkeleton, WordGridSkeleton } from './ui/Skeleton';
 import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { speakEnglish } from '../lib/speech';
 
 interface WordLibraryViewProps {
   onStartQuizWithWords: (words: WordItem[], bookName: string) => void;
@@ -158,7 +160,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
     setLoadingTree(true);
     setTreeError(null);
     try {
-      const res = await fetch('/api/wordlibrary/tree');
+      const res = await fetch(getApiUrl('/api/wordlibrary/tree'));
       const data = await res.json();
       if (data.success && Array.isArray(data.tree)) {
         setTree(data.tree);
@@ -212,7 +214,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
     setCurrentPage(1);
 
     try {
-      const res = await fetch(`/api/wordlibrary/book?path=${encodeURIComponent(book.path)}`);
+      const res = await fetch(getApiUrl(`/api/wordlibrary/book?path=${encodeURIComponent(book.path)}`));
       const data = await res.json();
       if (data.success && Array.isArray(data.words)) {
         setBookWords(data.words);
@@ -226,52 +228,17 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
     }
   };
 
-  // Pronounce word with timeout ref to avoid audio clipping / stalling
-  const speechTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  // Pronounce with Android native TTS in the APK and browser TTS on the web.
   const [speakingWord, setSpeakingWord] = useState<string | null>(null);
 
   const speakWord = (word: string, exampleSentence?: string) => {
-    if ('speechSynthesis' in window && word) {
-      if (speechTimeoutRef.current) {
-        clearTimeout(speechTimeoutRef.current);
-        speechTimeoutRef.current = null;
-      }
-      window.speechSynthesis.cancel();
-      
-      speechTimeoutRef.current = setTimeout(() => {
-        window.speechSynthesis.cancel();
-        
-        const targetLang = speechAccent || 'en-US';
-        const voices = window.speechSynthesis.getVoices();
-        const enVoice = voices.find(v => 
-          v.lang.toLowerCase().replace('_', '-').startsWith(targetLang.toLowerCase().slice(0, 2)) && 
-          (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Daniel') || v.name.includes('Karen') || v.name.includes('Alex'))
-        ) || voices.find(v => v.lang.toLowerCase().startsWith('en'));
-
-        // Speak word first as primary utterance so word is never skipped/cut off
-        const wordUtterance = new SpeechSynthesisUtterance(word);
-        wordUtterance.lang = targetLang;
-        wordUtterance.rate = 0.9;
-        if (enVoice) wordUtterance.voice = enVoice;
-        
-        wordUtterance.onstart = () => setSpeakingWord(word);
-        wordUtterance.onend = () => setSpeakingWord(null);
-        wordUtterance.onerror = () => setSpeakingWord(null);
-
-        window.speechSynthesis.speak(wordUtterance);
-
-        // Queue example sentence if present
-        if (exampleSentence && exampleSentence.trim()) {
-          const sentenceUtterance = new SpeechSynthesisUtterance(exampleSentence.trim());
-          sentenceUtterance.lang = targetLang;
-          sentenceUtterance.rate = 0.9;
-          if (enVoice) sentenceUtterance.voice = enVoice;
-          sentenceUtterance.onend = () => setSpeakingWord(null);
-          sentenceUtterance.onerror = () => setSpeakingWord(null);
-          window.speechSynthesis.speak(sentenceUtterance);
-        }
-      }, 80);
-    }
+    void speakEnglish([word, exampleSentence], {
+      language: speechAccent,
+      delayMs: 80,
+      onTextStart: () => setSpeakingWord(word),
+      onEnd: () => setSpeakingWord(null),
+      onError: () => setSpeakingWord(null),
+    });
   };
 
   // Flatten all books in tree for global search
@@ -337,34 +304,34 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
       {/* Breadcrumbs — folders + open book name */}
       {!globalSearch.trim() && (
-        <div className="flex items-center gap-2.5 text-sm font-medium text-secondary overflow-x-auto pb-1">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm font-medium text-secondary pb-1">
           <button
             onClick={navigateToRoot}
-            className={`text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1.5 shrink-0 transition-colors ${navPath.length === 0 && !selectedBook ? 'text-brand-600 dark:text-brand-400 font-bold' : ''}`}
+            className={`text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1.5 transition-colors ${navPath.length === 0 && !selectedBook ? 'text-brand-600 dark:text-brand-400 font-bold' : ''}`}
           >
             <span aria-hidden="true"><Folder className={breadcrumbIconClass} /></span>
             <span>根目录</span>
           </button>
           {navPath.map((node, index) => (
-            <React.Fragment key={node.path}>
+            <span key={node.path} className="inline-flex max-w-full min-w-0 items-center gap-2.5">
               <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
               <button
                 onClick={() => navigateToFolder(index)}
-                className={`text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1.5 shrink-0 transition-colors ${!selectedBook && index === navPath.length - 1 ? 'text-brand-600 dark:text-brand-400 font-bold' : ''}`}
+                className={`min-w-0 text-left text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-start gap-1.5 transition-colors ${!selectedBook && index === navPath.length - 1 ? 'text-brand-600 dark:text-brand-400 font-bold' : ''}`}
               >
                 <span aria-hidden="true"><Folder className={breadcrumbIconClass} /></span>
-                <span>{node.name}</span>
+                <span className="break-words">{node.name}</span>
               </button>
-            </React.Fragment>
+            </span>
           ))}
           {selectedBook && (
-            <>
+            <span className="inline-flex max-w-full min-w-0 items-center gap-2.5">
               <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="text-brand-600 dark:text-brand-400 font-bold shrink-0 flex items-center gap-1.5">
+              <span className="min-w-0 text-brand-600 dark:text-brand-400 font-bold flex items-start gap-1.5">
                 <BookOpen className={breadcrumbIconClass} aria-hidden="true" />
-                <span>{selectedBook.name}</span>
+                <span className="break-words">{selectedBook.name}</span>
               </span>
-            </>
+            </span>
           )}
         </div>
       )}

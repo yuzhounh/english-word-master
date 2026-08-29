@@ -1,9 +1,9 @@
 import React from 'react';
-import { BookOpen, Layers, Notebook } from 'lucide-react';
+import { BookOpen, Layers, Notebook, LogIn, LogOut, Volume2, Menu, X, Moon, Sun } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { LogIn, LogOut, Volume2, Menu, X, Moon, Sun } from 'lucide-react';
 import { UserProfile, SpeechAccent } from '../types';
 import { AppTab } from '../types/navigation';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -35,6 +35,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleTheme,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState<boolean>(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = React.useState<boolean>(false);
+  const userMenuRef = React.useRef<HTMLDivElement>(null);
+
+  useClickOutside(userMenuRef, () => setIsUserMenuOpen(false), isUserMenuOpen);
 
   const handleTabClick = (tab: AppTab) => {
     setActiveTab(tab);
@@ -72,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80">
+    <header className="app-navbar-safe-area sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80">
       <div className="page-container h-14 sm:h-16 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <button
@@ -114,22 +118,68 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {user && !user.isGuest ? (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 px-2.5 py-1 rounded-full">
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                className="flex items-center justify-center p-0.5 rounded-full hover:ring-2 hover:ring-brand-500/50 dark:hover:ring-brand-400/50 focus-ring transition-all cursor-pointer"
+                title={user.displayName || user.email || '用户菜单'}
+                aria-label="用户菜单"
+                aria-expanded={isUserMenuOpen}
+              >
                 {user.photoURL ? (
-                  <img src={user.photoURL} alt={user.displayName || 'User'} className="w-6 h-6 rounded-full" />
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName || 'User'}
+                    className="w-8 h-8 rounded-full object-cover border border-slate-200/80 dark:border-slate-700 shadow-xs"
+                  />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-600 flex items-center justify-center font-bold text-xs">
+                  <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 flex items-center justify-center font-bold text-xs border border-brand-200/80 dark:border-brand-700 shadow-xs">
                     {(user.displayName || user.email || 'U')[0].toUpperCase()}
                   </div>
                 )}
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-200 max-w-[100px] truncate">
-                  {user.displayName || user.email?.split('@')[0]}
-                </span>
-              </div>
-              <button onClick={onLogout} title="退出登录" className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-full transition-colors">
-                <LogOut className="w-4 h-4" />
               </button>
+
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white dark:bg-slate-800 shadow-elevated border border-slate-200/80 dark:border-slate-700 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-700/60 flex items-center gap-3">
+                    {user.photoURL ? (
+                      <img
+                        src={user.photoURL}
+                        alt={user.displayName || 'User'}
+                        className="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200/80 dark:border-slate-700"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 flex items-center justify-center font-bold text-xs shrink-0 border border-brand-200 dark:border-brand-700">
+                        {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                        {user.displayName || '用户'}
+                      </p>
+                      {user.email && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={user.email}>
+                          {user.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-1">
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        onLogout();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4 shrink-0" />
+                      <span>退出登录</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <button
@@ -146,7 +196,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {isMobileMenuOpen && createPortal(
         <div className="lg:hidden fixed inset-0 z-[100] flex">
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="relative w-72 max-w-[80vw] bg-white dark:bg-slate-900 h-screen shadow-elevated z-10 flex flex-col justify-between p-5 overflow-y-auto">
+          <div className="app-panel-safe-area relative w-72 max-w-[80vw] bg-white dark:bg-slate-900 h-screen shadow-elevated z-10 flex flex-col justify-between p-5 overflow-y-auto">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
                 <span className="font-bold text-slate-900 dark:text-slate-100">WordMaster</span>
@@ -177,9 +227,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>{speechAccent === 'en-US' ? '美' : '英'}</span>
               </button>
               {user && !user.isGuest ? (
-                <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl">
-                  <span className="text-xs font-medium truncate">{user.displayName || user.email?.split('@')[0]}</span>
-                  <button onClick={onLogout} className="p-1 text-slate-400 hover:text-rose-600"><LogOut className="w-4 h-4" /></button>
+                <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-xl space-y-3">
+                  <div className="flex items-center gap-3">
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt={user.displayName || 'User'} className="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-slate-700" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-300 flex items-center justify-center font-bold text-xs">
+                        {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{user.displayName || '用户'}</p>
+                      {user.email && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</p>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>退出登录</span>
+                  </button>
                 </div>
               ) : (
                 <button onClick={() => { setIsMobileMenuOpen(false); onOpenAuthModal(); }} className="w-full py-2.5 gradient-brand text-white rounded-xl text-xs font-bold cursor-pointer">

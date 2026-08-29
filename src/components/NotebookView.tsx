@@ -60,16 +60,16 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
       <button
         type="button"
         onClick={() => onSubTabChange('wrong')}
-        className={`flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl text-base font-bold transition-all cursor-pointer ${
+        className={`min-w-0 flex items-center justify-center gap-1.5 sm:gap-2.5 px-2 sm:px-5 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer ${
           subTab === 'wrong'
             ? 'surface-tab-active text-brand-600 dark:text-brand-300'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
         }`}
       >
-        <Bookmark className="w-5 h-5" />
-        <span>生词本</span>
+        <Bookmark className="w-4.5 h-4.5 sm:w-5 sm:h-5 shrink-0" />
+        <span className="whitespace-nowrap">生词本</span>
         {wrongWords.length > 0 && (
-          <span className="px-2 py-0.5 text-sm bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 rounded-full font-bold">
+          <span className="shrink-0 px-1.5 sm:px-2 py-0.5 text-xs sm:text-sm bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 rounded-full font-bold">
             {wrongWords.length}
           </span>
         )}
@@ -77,16 +77,16 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
       <button
         type="button"
         onClick={() => onSubTabChange('mastered')}
-        className={`flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl text-base font-bold transition-all cursor-pointer ${
+        className={`min-w-0 flex items-center justify-center gap-1.5 sm:gap-2.5 px-2 sm:px-5 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer ${
           subTab === 'mastered'
             ? 'surface-tab-active text-emerald-600 dark:text-emerald-400'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
         }`}
       >
-        <Award className="w-5 h-5" />
-        <span>熟词本</span>
+        <Award className="w-4.5 h-4.5 sm:w-5 sm:h-5 shrink-0" />
+        <span className="whitespace-nowrap">熟词本</span>
         {masteredWords.length > 0 && (
-          <span className="px-2 py-0.5 text-sm bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full font-bold">
+          <span className="shrink-0 px-1.5 sm:px-2 py-0.5 text-xs sm:text-sm bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full font-bold">
             {masteredWords.length}
           </span>
         )}

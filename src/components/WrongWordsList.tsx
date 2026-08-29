@@ -18,6 +18,7 @@ import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
 import { WordCard } from './ui/WordCard';
 import { EmptyState } from './ui/EmptyState';
+import { speakEnglish } from '../lib/speech';
 import { useClickOutside } from '../hooks/useClickOutside';
 
 interface WrongWordsListProps {
@@ -81,7 +82,6 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const closeExportMenu = useCallback(() => setIsExportMenuOpen(false), []);
   useClickOutside(exportMenuRef, closeExportMenu, isExportMenuOpen);
-  const speechTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // AI enrichment state
   const [enrichingWordId, setEnrichingWordId] = useState<string | null>(null);
@@ -180,47 +180,17 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
     }
   };
 
-  // Pronounce word and example sentence with micro-delay to prevent audio clipping
+  // Pronounce with Android native TTS in the APK and browser TTS on the web.
   const [speakingWord, setSpeakingWord] = useState<string | null>(null);
 
   const speakWord = (word: string, exampleSentence?: string) => {
-    if ('speechSynthesis' in window && word) {
-      if (speechTimeoutRef.current) {
-        clearTimeout(speechTimeoutRef.current);
-        speechTimeoutRef.current = null;
-      }
-      window.speechSynthesis.cancel();
-      speechTimeoutRef.current = setTimeout(() => {
-        window.speechSynthesis.cancel();
-        
-        const voices = window.speechSynthesis.getVoices();
-        const enVoice = voices.find(v => 
-          v.lang.toLowerCase().replace('_', '-').startsWith('en') && 
-          (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Daniel') || v.name.includes('Karen') || v.name.includes('Alex'))
-        ) || voices.find(v => v.lang.toLowerCase().startsWith('en'));
-
-        const wordUtterance = new SpeechSynthesisUtterance(word);
-        wordUtterance.lang = 'en-US';
-        wordUtterance.rate = 0.9;
-        if (enVoice) wordUtterance.voice = enVoice;
-        
-        wordUtterance.onstart = () => setSpeakingWord(word);
-        wordUtterance.onend = () => setSpeakingWord(null);
-        wordUtterance.onerror = () => setSpeakingWord(null);
-
-        window.speechSynthesis.speak(wordUtterance);
-
-        if (exampleSentence && exampleSentence.trim()) {
-          const sentenceUtterance = new SpeechSynthesisUtterance(exampleSentence.trim());
-          sentenceUtterance.lang = 'en-US';
-          sentenceUtterance.rate = 0.9;
-          if (enVoice) sentenceUtterance.voice = enVoice;
-          sentenceUtterance.onend = () => setSpeakingWord(null);
-          sentenceUtterance.onerror = () => setSpeakingWord(null);
-          window.speechSynthesis.speak(sentenceUtterance);
-        }
-      }, 80);
-    }
+    void speakEnglish([word, exampleSentence], {
+      language: speechAccent,
+      delayMs: 80,
+      onTextStart: () => setSpeakingWord(word),
+      onEnd: () => setSpeakingWord(null),
+      onError: () => setSpeakingWord(null),
+    });
   };
 
   const [selectedListFilter, setSelectedListFilter] = useState<'all' | 'high_error' | 'recent' | 'custom'>('all');

@@ -58,13 +58,13 @@ export const WordCard: React.FC<WordCardProps> = ({
     onClick={onClick}
     className={`rounded-[var(--radius-card)] border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800/80 p-4 shadow-card hover:shadow-card-hover ${cardHover} transition-all space-y-3 relative group cursor-pointer active:scale-[0.99] ${className}`}
   >
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex flex-col">
+    <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+      <div className="min-w-0 max-w-full flex flex-col">
         <WordWithSpeaker
           word={word}
           isSpeaking={isSpeaking}
           onSpeak={onSpeak ? (e) => onSpeak(e) : undefined}
-          wordClassName="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-none"
+          wordClassName="min-w-0 text-[1.65rem] sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight [overflow-wrap:anywhere]"
         />
         {(phoneticUs || phoneticUk || phonetic) && (
           <PhoneticDisplay
@@ -74,7 +74,7 @@ export const WordCard: React.FC<WordCardProps> = ({
           />
         )}
       </div>
-      <div className="flex items-start gap-2 shrink-0">
+      <div className="ml-auto flex items-start gap-2 shrink-0">
         {badge}
         {indexLabel !== undefined && (
           <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-mono font-bold rounded-lg">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { SpeakerIcon } from './SpeakerIcon';
 import { WordWithSpeaker } from './ui/WordWithSpeaker';
@@ -9,6 +9,7 @@ import { ProgressBar } from './ui/ProgressBar';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { PageHeader } from './ui/PageHeader';
+import { speakEnglish, stopSpeech } from '../lib/speech';
 
 interface QuizViewProps {
   wordPool: WordItem[];
@@ -91,53 +92,29 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const isAnswered = selectedOption !== null;
 
   const [speakingText, setSpeakingText] = useState<string | null>(null);
-  const speechTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Pronounce word or text with a small delay to prevent browser TTS audio clipping
+  // Uses native Android TTS in the APK and browser speech synthesis on the web.
   const speakText = (text: string, delayMs = 80, onEndCallback?: () => void) => {
-    if ('speechSynthesis' in window && text) {
-      if (speechTimeoutRef.current) {
-        clearTimeout(speechTimeoutRef.current);
-        speechTimeoutRef.current = null;
-      }
-      window.speechSynthesis.cancel();
-
-      speechTimeoutRef.current = setTimeout(() => {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = speechAccent || 'en-US';
-        utterance.rate = 0.9;
-        
-        utterance.onstart = () => setSpeakingText(text);
-        utterance.onend = () => {
-          setSpeakingText(null);
-          if (onEndCallback) {
-            onEndCallback();
-          }
-        };
-        utterance.onerror = () => setSpeakingText(null);
-
-        // Pick an English voice if available for smoother pronunciation
-        const voices = window.speechSynthesis.getVoices();
-        const targetLang = speechAccent || 'en-US';
-        const enVoice = voices.find(v => v.lang === targetLang || v.lang.startsWith(targetLang.split('-')[0]));
-        if (enVoice) {
-          utterance.voice = enVoice;
-        }
-
-        window.speechSynthesis.speak(utterance);
-      }, delayMs);
-    }
+    void speakEnglish([text], {
+      language: speechAccent,
+      delayMs,
+      onTextStart: setSpeakingText,
+      onEnd: () => {
+        setSpeakingText(null);
+        onEndCallback?.();
+      },
+      onError: () => setSpeakingText(null),
+    });
   };
 
   const speakWord = (word: string, exampleSentence?: string, delayMs = 80) => {
-    if (!exampleSentence || !exampleSentence.trim()) {
-      speakText(word, delayMs);
-    } else {
-      speakText(word, delayMs, () => {
-        speakText(exampleSentence.trim(), 120);
-      });
-    }
+    void speakEnglish([word, exampleSentence], {
+      language: speechAccent,
+      delayMs,
+      onTextStart: setSpeakingText,
+      onEnd: () => setSpeakingText(null),
+      onError: () => setSpeakingText(null),
+    });
   };
 
   // Initialize or Restart Quiz (Randomly select 30 words)
@@ -201,12 +178,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
   useEffect(() => {
     initQuiz();
     return () => {
-      if (speechTimeoutRef.current) {
-        clearTimeout(speechTimeoutRef.current);
-      }
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      void stopSpeech();
     };
   }, [wordPool]);
 

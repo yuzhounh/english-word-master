@@ -1,4 +1,5 @@
 import { WordItem, WrongWordItem, MasteredWordItem } from '../types';
+import { getApiUrl } from '../lib/apiConfig';
 
 export interface ParsedWord {
   word: string;
@@ -345,7 +346,7 @@ async function enrichWordsBatch(
   light: boolean
 ): Promise<EnrichBatchResult> {
   try {
-    const response = await fetch('/api/enrich-words', {
+    const response = await fetch(getApiUrl('/api/enrich-words'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ words, light })
@@ -419,7 +420,7 @@ export async function resolveWordsWithDictionary(
   if (!words.length) return { resolved: [], needsAi: [] };
 
   try {
-    const response = await fetch('/api/word-dictionary/lookup', {
+    const response = await fetch(getApiUrl('/api/word-dictionary/lookup'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ words })

@@ -48,7 +48,7 @@ export const WordWithSpeaker: React.FC<WordWithSpeakerProps> = ({
   }
 
   return (
-    <span className="inline-flex items-center max-w-full">
+    <span className="flex min-w-0 max-w-full items-center">
       <WordTag className={wordClassName}>{word}</WordTag>
       {speakButton && <span className="ml-1.5 inline-flex items-center shrink-0">{speakButton}</span>}
     </span>

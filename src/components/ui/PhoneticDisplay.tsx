@@ -11,7 +11,7 @@ interface PhoneticDisplayProps {
 
 export const PhoneticDisplay: React.FC<PhoneticDisplayProps> = ({
   item,
-  accent = 'en-US',
+  accent = 'en-US' as SpeechAccent,
   className = 'text-sm font-mono text-slate-500 dark:text-slate-400 font-medium',
   labelClassName = 'text-slate-400 dark:text-slate-500 text-xs',
 }) => {

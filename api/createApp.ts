@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import path from "path";
 import { existsSync, statSync } from "fs";
 import dotenv from "dotenv";
@@ -292,6 +292,18 @@ function normalizeWordItem(item: any, includeOptions = true): any {
 
 export function createApp(options: { production?: boolean } = {}) {
   const app = express();
+
+  // Enable CORS for all origins (supports mobile clients & web frontends)
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   app.use(express.json({ limit: "10mb" }));
 
   // API: Analyze English text, perform lemmatization (restore base form), extract vocabulary, generate Chinese definition, example sentence, and 4 multiple-choice options.

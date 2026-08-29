@@ -15,3 +15,10 @@ data/english-word-enriched/
 api/handler.cjs
 api/_bundle_test.cjs
 english-word-master-v*-dist.zip
+*.apk
+*.idsig
+android/local.properties
+android/.gradle/
+android/app/build/
+android/build/
+android/capacitor-cordova-android-plugins/build/

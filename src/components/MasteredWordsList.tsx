@@ -18,6 +18,7 @@ import { Pagination } from './Pagination';
 import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
+import { speakEnglish } from '../lib/speech';
 import { useClickOutside } from '../hooks/useClickOutside';
 
 interface MasteredWordsListProps {
@@ -72,7 +73,6 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const closeExportMenu = useCallback(() => setIsExportMenuOpen(false), []);
   useClickOutside(exportMenuRef, closeExportMenu, isExportMenuOpen);
-  const speechTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // AI enrichment state
   const [enrichingWordId, setEnrichingWordId] = useState<string | null>(null);
@@ -149,33 +149,15 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
   const [speakingWord, setSpeakingWord] = useState<string | null>(null);
 
-  // Pronounce word and example sentence with micro-delay to prevent audio clipping
+  // Pronounce with Android native TTS in the APK and browser TTS on the web.
   const speakWord = (word: string, exampleSentence?: string) => {
-    if ('speechSynthesis' in window && word) {
-      if (speechTimeoutRef.current) {
-        clearTimeout(speechTimeoutRef.current);
-        speechTimeoutRef.current = null;
-      }
-      window.speechSynthesis.cancel();
-      const textToSpeak = exampleSentence ? `${word}. ... ${exampleSentence}` : word;
-      speechTimeoutRef.current = setTimeout(() => {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = 'en-US';
-        utterance.rate = 0.9;
-
-        utterance.onstart = () => setSpeakingWord(word);
-        utterance.onend = () => setSpeakingWord(null);
-        utterance.onerror = () => setSpeakingWord(null);
-
-        const voices = window.speechSynthesis.getVoices();
-        const enVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Daniel')));
-        if (enVoice) {
-          utterance.voice = enVoice;
-        }
-        window.speechSynthesis.speak(utterance);
-      }, 80);
-    }
+    void speakEnglish([word, exampleSentence], {
+      language: speechAccent,
+      delayMs: 80,
+      onTextStart: () => setSpeakingWord(word),
+      onEnd: () => setSpeakingWord(null),
+      onError: () => setSpeakingWord(null),
+    });
   };
 
   const [selectedListFilter, setSelectedListFilter] = useState<'all' | 'recent'>('all');
