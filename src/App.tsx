@@ -238,6 +238,7 @@ export default function App() {
       await signInWithGoogle();
     } catch (err) {
       console.error('Google Sign In failed:', err);
+      throw err;
     }
   };
 

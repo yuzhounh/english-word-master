@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, User } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithCredential, signInWithPopup, signOut, User } from 'firebase/auth';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import {
   getFirestore,
   doc,
@@ -23,12 +24,26 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
+interface NativeGoogleAuthPlugin {
+  signIn(): Promise<{ idToken: string }>;
+  clearCredentialState(): Promise<void>;
+}
+
+const nativeGoogleAuth = registerPlugin<NativeGoogleAuthPlugin>('NativeGoogleAuth');
+
 // Initialize Firestore with the default (default) database
 export const db = getFirestore(app);
 
 // Sign in with Google
 export const signInWithGoogle = async () => {
   try {
+    if (Capacitor.isNativePlatform()) {
+      const { idToken } = await nativeGoogleAuth.signIn();
+      const credential = GoogleAuthProvider.credential(idToken);
+      const result = await signInWithCredential(auth, credential);
+      return result.user;
+    }
+
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error: any) {
@@ -41,6 +56,11 @@ export const signInWithGoogle = async () => {
 export const logOut = async () => {
   try {
     await signOut(auth);
+    if (Capacitor.isNativePlatform()) {
+      await nativeGoogleAuth.clearCredentialState().catch((error) => {
+        console.warn('Failed to clear native Google credential state:', error);
+      });
+    }
   } catch (error) {
     console.error('Error signing out:', error);
     throw error;

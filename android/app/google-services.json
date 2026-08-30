@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "948375764269",
+    "project_id": "english-word-master-app",
+    "storage_bucket": "english-word-master-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:948375764269:android:c4de741c7873fa22eea7a4",
+        "android_client_info": {
+          "package_name": "com.wordmaster.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "948375764269-ofof5400na6sp1gi1v1h12vmjts8aluu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.wordmaster.app",
+            "certificate_hash": "03fb84b35c6ec809ea847001d3afa58e720d4b80"
+          }
+        },
+        {
+          "client_id": "948375764269-enjq13cebfg0eqlenbaofapdoo46n64s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_SwnO2VVO1ooWMr1N9sJjT3vhJz2GFJs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "948375764269-enjq13cebfg0eqlenbaofapdoo46n64s.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
