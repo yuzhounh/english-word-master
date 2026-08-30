@@ -1,0 +1,15 @@
+{
+  "name": "english-word-enriched",
+  "version": 1,
+  "generatedAt": "2026-08-14T08:31:21.250Z",
+  "sourceRepo": "lilinji/English",
+  "description": "Pre-enriched English word library for WordMaster (dictionary + book manifests)",
+  "format": "wordmaster-enriched-v1",
+  "stats": {
+    "uniqueWords": 80470,
+    "enrichedWords": 80470,
+    "bookCount": 949,
+    "dictionaryBytes": 15875140,
+    "dictionaryGzipBytes": 7162900
+  }
+}

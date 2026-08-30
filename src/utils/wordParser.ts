@@ -158,7 +158,14 @@ export async function enrichParsedWords(
     onProgress?.(`AI 补全中… ${processed} / ${total}`);
   });
 
-  return [...resolved, ...aiEnriched];
+  return restoreSourceOrder(words, [...resolved, ...aiEnriched]);
+}
+
+function restoreSourceOrder(source: ParsedWord[], enriched: WordItem[]): WordItem[] {
+  const byWord = new Map(enriched.map(item => [item.word.toLowerCase().trim(), item]));
+  return source
+    .map(item => byWord.get(item.word.toLowerCase().trim()))
+    .filter((item): item is WordItem => !!item);
 }
 
 /**
@@ -476,7 +483,7 @@ export async function enrichWordsWithDictionaryFallback(
     onProgress?.(resolved.length + processed, words.length);
   });
 
-  return [...resolved, ...aiEnriched];
+  return restoreSourceOrder(words, [...resolved, ...aiEnriched]);
 }
 
 /**

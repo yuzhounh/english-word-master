@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { WordCard } from './ui/WordCard';
 import { 
   Folder, BookOpen, Search, Download, Play, 
-  Sparkles, RefreshCw, ChevronRight, Check, FileSpreadsheet, Layers, Loader2, ListPlus,
+  RefreshCw, ChevronRight, Check, FileSpreadsheet, Layers, Loader2, ListPlus,
   Github, ExternalLink
 } from 'lucide-react';
 import { WordItem, LibraryCategoryNode, SpeechAccent } from '../types';
-import { enrichWordsWithAI, enrichWordsWithDictionaryFallback } from '../utils/wordParser';
 import { getApiUrl } from '../lib/apiConfig';
 import { Pagination } from './Pagination';
 import { LibraryTreeSkeleton, WordGridSkeleton } from './ui/Skeleton';
@@ -54,101 +53,10 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(30);
 
-  // AI enrichment state
-  const [isEnrichingBook, setIsEnrichingBook] = useState<boolean>(false);
-  const [enrichProgress, setEnrichProgress] = useState<string>('');
-  const [enrichingWordId, setEnrichingWordId] = useState<string | null>(null);
-
-  const handleEnrichSingleWord = async (item: WordItem, index: number) => {
-    setEnrichingWordId(item.word);
-    try {
-      const enriched = await enrichWordsWithAI([{
-        word: item.word,
-        chinese: item.chinese,
-        phonetic: item.phonetic || item.phoneticUs || item.phoneticUk
-      }]);
-      if (enriched && enriched.length > 0) {
-        const enrichedWord = enriched[0];
-        setBookWords(prev => prev.map((w, i) => {
-          if (i === index || w.word.toLowerCase() === item.word.toLowerCase()) {
-            return {
-              ...w,
-              phonetic: enrichedWord.phonetic || w.phonetic,
-              phoneticUs: enrichedWord.phoneticUs || w.phoneticUs,
-              phoneticUk: enrichedWord.phoneticUk || w.phoneticUk,
-              chinese: enrichedWord.chinese || w.chinese,
-              exampleSentence: enrichedWord.exampleSentence || w.exampleSentence,
-              exampleSentenceCn: enrichedWord.exampleSentenceCn || w.exampleSentenceCn
-            };
-          }
-          return w;
-        }));
-      }
-    } catch (err) {
-      console.error('Enrich single word failed:', err);
-    } finally {
-      setEnrichingWordId(null);
-    }
-  };
-
-  const isWordEnriched = (w: WordItem) =>
-    !!(w.phonetic || w.phoneticUs || w.phoneticUk) && !!w.chinese && !!w.exampleSentence;
-
-  const isBookFullyEnriched = bookWords.length > 0 && bookWords.every(isWordEnriched);
-
-  const importBookToList = async (words: WordItem[]) => {
+  const importBookToList = (words: WordItem[]) => {
     if (!selectedBook || words.length === 0) return;
-    setIsEnrichingBook(true);
-    setEnrichProgress('正在从词库词典补全...');
-    try {
-      const parsed = words.map((w) => ({
-        word: w.word,
-        chinese: w.chinese,
-        phonetic: w.phonetic || w.phoneticUs || w.phoneticUk,
-        exampleSentence: w.exampleSentence,
-        exampleSentenceCn: w.exampleSentenceCn
-      }));
-      const enriched = await enrichWordsWithDictionaryFallback(parsed, (processed, total) => {
-        setEnrichProgress(`词典补全中... ${processed}/${total}`);
-      });
-      onImportCustomList(enriched, selectedBook.name);
-      setBookWords(enriched);
-      setImportSuccess(true);
-    } finally {
-      setIsEnrichingBook(false);
-      setEnrichProgress('');
-    }
-  };
-
-  const enrichCurrentBookWithAI = async (autoImportAfterEnrich = true) => {
-    if (!bookWords || bookWords.length === 0 || isEnrichingBook) return;
-    setIsEnrichingBook(true);
-    setEnrichProgress(`AI 正在智能生成中英双语例句与音标... (0/${bookWords.length})`);
-    try {
-      const parsed = bookWords.map((w) => ({
-        word: w.word,
-        chinese: w.chinese,
-        phonetic: w.phonetic || w.phoneticUs || w.phoneticUk,
-        exampleSentence: w.exampleSentence,
-        exampleSentenceCn: w.exampleSentenceCn
-      }));
-      const enriched = await enrichWordsWithDictionaryFallback(parsed, (processed, total) => {
-        const percent = Math.round((processed / total) * 100);
-        setEnrichProgress(`AI 正在智能生成例句与音标... 已完成 ${processed} / ${total} 词 (${percent}%)`);
-      });
-      if (enriched && enriched.length > 0) {
-        setBookWords(enriched);
-        if (autoImportAfterEnrich && selectedBook) {
-          onImportCustomList(enriched, selectedBook.name);
-          setImportSuccess(true);
-        }
-      }
-    } catch (err) {
-      console.error('Enrich book failed:', err);
-    } finally {
-      setIsEnrichingBook(false);
-      setEnrichProgress('');
-    }
+    onImportCustomList(words, selectedBook.name);
+    setImportSuccess(true);
   };
 
   // Load Word Library Tree on mount
@@ -276,7 +184,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
     <div className="page-container space-y-6">
       
       <PageHeader
-        badge="全量内置词库 · 900+ 权威词书"
+        badge="80,470 完整词条 · 949 本权威词书"
         badgeIcon={Layers}
         title="官方权威词库 (Word Library)"
         description="内置全国各大教材同步词汇、高考、四六级、考研英语、雅思托福及专业词汇词书。支持分类多级检索、词书在线预览、一键专项背诵与自定义导入。"
@@ -353,7 +261,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
               type="text"
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
-              placeholder="搜索所有 900+ 词书名称（如：人教版、高考、考研英语一、雅思核心、四级...）"
+              placeholder="搜索全部 949 本词书（如：人教版、高考、考研英语一、雅思核心、四级...）"
               className="w-full bg-transparent text-sm text-primary placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
             />
             {globalSearch && (
@@ -503,7 +411,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                     onStartQuizWithWords(bookWords, selectedBook.name);
                   }
                 }}
-                disabled={loadingBook || isEnrichingBook || bookWords.length === 0}
+                disabled={loadingBook || bookWords.length === 0}
                 className="flex items-center gap-2 px-4 py-2 surface-muted border border-slate-200 dark:border-slate-600 text-secondary rounded-xl text-xs font-bold hover:opacity-95 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
               >
                 <Play className="w-4 h-4 text-slate-500 dark:text-slate-400" />
@@ -512,42 +420,15 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
               <button
                 onClick={() => importBookToList(bookWords)}
-                disabled={loadingBook || isEnrichingBook || bookWords.length === 0}
+                disabled={loadingBook || bookWords.length === 0}
                 className="flex items-center gap-2 px-4 py-2 gradient-brand text-white rounded-xl text-xs font-bold hover:opacity-95 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                title={isBookFullyEnriched ? '词书已含完整释义与例句，直接加入词本' : '加入词本（缺失词条将尝试从词库词典补全）'}
+                title="将词书中的完整词条直接加入生词本"
               >
                 <ListPlus className="w-4 h-4" />
-                <span>{isBookFullyEnriched ? '加入词本' : '加入词本（词典补全）'}</span>
+                <span>加入词本</span>
               </button>
-
-              {!isBookFullyEnriched && (
-                <button
-                  onClick={() => enrichCurrentBookWithAI(true)}
-                  disabled={loadingBook || isEnrichingBook || bookWords.length === 0}
-                  className="flex items-center gap-2 px-4 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
-                  title="对词典中未收录的单词调用 DeepSeek AI 补全"
-                >
-                  {isEnrichingBook ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  ) : (
-                    <Sparkles className="w-4 h-4 text-brand-200 animate-pulse" />
-                  )}
-                  <span>{isEnrichingBook ? '正在生成例句...' : 'AI 补全并导入'}</span>
-                </button>
-              )}
             </div>
           </div>
-
-          {/* AI Enriching Loading Banner */}
-          {isEnrichingBook && (
-            <div className="bg-brand-50 dark:bg-brand-900/30 border border-brand-200 dark:border-brand-800 rounded-xl p-4 flex items-center gap-3 shadow-card animate-pulse">
-              <Loader2 className="w-5 h-5 text-brand-600 animate-spin shrink-0" />
-              <div>
-                <div className="font-bold text-brand-900 text-sm">{enrichProgress || 'AI 正在处理中...'}</div>
-                <div className="text-xs text-brand-700 mt-0.5">DeepSeek AI 正在智能生成中英双语表达例句、标准音标及词性说明，生成完毕后将自动保存并导入至生词本！</div>
-              </div>
-            </div>
-          )}
 
           {/* Import Success Banner */}
           {importSuccess && (

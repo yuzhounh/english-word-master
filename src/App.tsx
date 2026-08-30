@@ -654,7 +654,7 @@ export default function App() {
       <footer className="border-t border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm py-6">
         <div className="page-container text-center">
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-            四选一测验 · 900+ 内置词书 · 生词熟词同步
+            四选一测验 · 80,470 完整词条 · 949 本内置词书
           </p>
         </div>
       </footer>

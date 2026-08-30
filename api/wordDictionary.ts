@@ -27,8 +27,9 @@ export function setDictionaryCache(map: Map<string, DictionaryEntry>): void {
 export function loadWordDictionary(): Map<string, DictionaryEntry> {
   const filePath = dictPath();
   if (!existsSync(filePath)) {
-    cachedDict = new Map();
-    return cachedDict;
+    // The bundled/remote enriched dictionary is installed through setDictionaryCache().
+    // Keep that cache when the legacy uncompressed dictionary file is absent (for example on Vercel).
+    return cachedDict || new Map();
   }
 
   try {

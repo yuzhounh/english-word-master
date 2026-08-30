@@ -11,7 +11,7 @@ import {
   parseExportedWordMasterCsv,
   parsedToWordItems,
   enrichParsedWords,
-  enrichWordsWithAI
+  enrichWordsWithDictionaryFallback
 } from '../utils/wordParser';
 import { Pagination } from './Pagination';
 import { PageHeader } from './ui/PageHeader';
@@ -83,7 +83,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   const closeExportMenu = useCallback(() => setIsExportMenuOpen(false), []);
   useClickOutside(exportMenuRef, closeExportMenu, isExportMenuOpen);
 
-  // AI enrichment state
+  // Dictionary-first enrichment state; AI is used by the fallback only for unknown words.
   const [enrichingWordId, setEnrichingWordId] = useState<string | null>(null);
   const [isBulkEnriching, setIsBulkEnriching] = useState<boolean>(false);
   const [deletingListForConfirm, setDeletingListForConfirm] = useState<WordListGroup | null>(null);
@@ -114,7 +114,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   const handleEnrichSingleWord = async (item: WrongWordItem) => {
     setEnrichingWordId(item.id);
     try {
-      const enriched = await enrichWordsWithAI([{
+      const enriched = await enrichWordsWithDictionaryFallback([{
         word: item.word,
         chinese: item.chinese,
         phonetic: item.phonetic
@@ -149,7 +149,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
     if (missingWords.length === 0 || isBulkEnriching) return;
     setIsBulkEnriching(true);
     try {
-      const enriched = await enrichWordsWithAI(missingWords.map(w => ({
+      const enriched = await enrichWordsWithDictionaryFallback(missingWords.map(w => ({
         word: w.word,
         chinese: w.chinese,
         phonetic: w.phonetic
@@ -722,13 +722,13 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
             </select>
           </div>
 
-          {/* Bulk AI Enrich Button */}
+          {/* Bulk dictionary-first enrichment button */}
           {activeWordSet.some(w => !w.exampleSentence || !w.exampleSentence.trim()) && (
             <button
               onClick={handleBulkEnrichWords}
               disabled={isBulkEnriching}
               className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-brand-600 via-brand-700 to-brand-800 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer disabled:opacity-50"
-              title="自动调用 DeepSeek AI 补全缺乏例句与音标的生词"
+              title="优先使用内置词库补全，仅对未收录单词使用智能托底"
             >
               {isBulkEnriching ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
@@ -865,7 +865,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                         ) : (
                           <Sparkles className="w-3.5 h-3.5" />
                         )}
-                        <span>AI 补全</span>
+                        <span>补全信息</span>
                       </button>
                     </div>
                   ) : undefined
@@ -1051,7 +1051,7 @@ discover`}
                 {isEnriching ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>AI 正在生成与补全...</span>
+                    <span>正在查询并补全...</span>
                   </>
                 ) : (
                   <span>{importAutoEnrich ? '确认' : '直接导入'}</span>
