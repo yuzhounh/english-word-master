@@ -49,7 +49,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   speechAccent = 'en-US',
 }) => {
   const listCardSelectedBlue =
-    'border border-brand-200/80 dark:border-brand-700/40 !bg-brand-50/90 dark:!bg-brand-950/25 shadow-sm ring-1 ring-brand-200/60 dark:ring-brand-600/20';
+    'border border-brand-200/80 dark:border-brand-700/40 !bg-brand-50/90 dark:!bg-brand-900/30 shadow-sm ring-1 ring-brand-200/60 dark:ring-brand-600/20';
   const listCardUnselected =
     'surface-card shadow-xs hover:border-brand-200/60 dark:hover:border-brand-700/40 hover:shadow-sm';
   const listIconBoxLg =
@@ -589,7 +589,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
 
           {/* Custom Word Lists Section */}
           <div className="space-y-3 pt-2">
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex flex-col items-start gap-1">
                 <span>自定义词本 ({customWordLists.length})</span>
                 <span className="text-xs text-slate-400 normal-case font-normal">来源于官方词库、导入词汇或新建空白词本</span>
               </div>

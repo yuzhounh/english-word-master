@@ -330,7 +330,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                       <PhoneticDisplay
                         item={item}
                         accent={speechAccent}
-                        className="text-muted font-mono text-xs"
+                        className="text-muted font-sans text-xs"
                       />
                     </div>
                     <span className="text-secondary font-medium">{item.chinese}</span>
@@ -441,7 +441,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             <PhoneticDisplay
               item={currentQ}
               accent={speechAccent}
-              className="text-sm font-mono text-slate-400 tracking-wide"
+              className="text-sm font-sans text-slate-400 tracking-wide"
             />
           )}
         </div>
@@ -482,15 +482,13 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   e.stopPropagation();
                   handleSelectOption(idx);
                 }}
-                className={`p-4 text-left transition-all cursor-pointer flex flex-col justify-between group ${btnStyle}`}
+                className={`p-4 text-left transition-all cursor-pointer flex items-center gap-3 group ${btnStyle}`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs transition-colors ${badgeStyle}`}>
-                    {String.fromCharCode(65 + idx)}
-                  </span>
-                  {icon}
-                </div>
-                <p className="text-sm sm:text-base font-medium leading-snug">{option}</p>
+                <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs transition-colors shrink-0 ${badgeStyle}`}>
+                  {String.fromCharCode(65 + idx)}
+                </span>
+                <p className="min-w-0 flex-1 text-sm sm:text-base font-medium leading-snug whitespace-pre-line">{option}</p>
+                {icon && <span className="shrink-0">{icon}</span>}
               </motion.button>
             );
           })}

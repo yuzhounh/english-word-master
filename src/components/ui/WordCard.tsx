@@ -70,7 +70,7 @@ export const WordCard: React.FC<WordCardProps> = ({
           <PhoneticDisplay
             item={{ phonetic, phoneticUs, phoneticUk }}
             accent={speechAccent}
-            className="block text-sm font-mono text-slate-500 dark:text-slate-400 font-medium mt-1"
+            className="block text-sm font-sans text-slate-500 dark:text-slate-400 font-medium mt-1"
           />
         )}
       </div>

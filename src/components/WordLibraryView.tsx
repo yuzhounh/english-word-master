@@ -304,7 +304,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
       {/* Breadcrumbs — folders + open book name */}
       {!globalSearch.trim() && (
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm font-medium text-secondary pb-1">
+        <div className="flex flex-col items-start gap-y-2 text-sm font-medium text-secondary pb-1">
           <button
             onClick={navigateToRoot}
             className={`text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1.5 transition-colors ${navPath.length === 0 && !selectedBook ? 'text-brand-600 dark:text-brand-400 font-bold' : ''}`}
@@ -313,7 +313,11 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
             <span>根目录</span>
           </button>
           {navPath.map((node, index) => (
-            <span key={node.path} className="inline-flex max-w-full min-w-0 items-center gap-2.5">
+            <span
+              key={node.path}
+              className="flex w-full max-w-full min-w-0 items-center gap-2.5"
+              style={{ paddingLeft: `${Math.min((index + 1) * 1.25, 5)}rem` }}
+            >
               <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
               <button
                 onClick={() => navigateToFolder(index)}
@@ -325,7 +329,10 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
             </span>
           ))}
           {selectedBook && (
-            <span className="inline-flex max-w-full min-w-0 items-center gap-2.5">
+            <span
+              className="flex w-full max-w-full min-w-0 items-center gap-2.5"
+              style={{ paddingLeft: `${Math.min((navPath.length + 1) * 1.25, 5)}rem` }}
+            >
               <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
               <span className="min-w-0 text-brand-600 dark:text-brand-400 font-bold flex items-start gap-1.5">
                 <BookOpen className={breadcrumbIconClass} aria-hidden="true" />
