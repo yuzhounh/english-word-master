@@ -101,6 +101,26 @@
     padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
   }
 
+  .quiz-progress-sticky {
+    position: relative;
+  }
+
+  @media (max-width: 639px) {
+    .quiz-progress-sticky {
+      position: sticky;
+      top: calc(3.5rem + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+      z-index: 30;
+      margin-inline: -0.25rem;
+      padding: 0.5rem 0.25rem 0.75rem;
+      @apply bg-surface/95 backdrop-blur-md;
+    }
+
+    .quiz-mobile-stage {
+      min-height: calc(100dvh - 3.5rem - var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) - 4.5rem);
+      padding-bottom: max(1rem, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+    }
+  }
+
   .app-panel-safe-area {
     padding-top: calc(1.25rem + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
     padding-bottom: calc(1.25rem + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));

@@ -54,6 +54,7 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
       badgeIcon={BookOpen}
       title="生词本 · 熟词本"
       description="生词本收录待掌握词汇，熟词本记录已攻克单词。测试中连续答对 3 次自动移入熟词本。"
+      compactOnMobile
     />
 
     <div className="grid grid-cols-2 gap-2 bg-slate-100/80 dark:bg-slate-800/60 p-1.5 rounded-2xl w-full">

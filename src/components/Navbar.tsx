@@ -76,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="app-navbar-safe-area sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80">
+    <header data-app-navbar className="app-navbar-safe-area sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80">
       <div className="page-container h-14 sm:h-16 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <button

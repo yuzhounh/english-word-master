@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { SpeakerIcon } from './SpeakerIcon';
 import { WordWithSpeaker } from './ui/WordWithSpeaker';
@@ -68,6 +68,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const [score, setScore] = useState<number>(0);
   const [wrongInRound, setWrongInRound] = useState<WordItem[]>([]);
   const [isFinished, setIsFinished] = useState<boolean>(false);
+  const progressAnchorRef = useRef<HTMLDivElement>(null);
 
   // Correct answer count map (persisted in localStorage)
   const [correctCounts, setCorrectCounts] = useState<Record<string, number>>(() => {
@@ -287,6 +288,21 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
   const currentQ = questions[currentIndex];
 
+  useLayoutEffect(() => {
+    if (isFinished || questions.length === 0 || !window.matchMedia('(max-width: 639px)').matches) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const anchor = progressAnchorRef.current;
+      const navbar = document.querySelector<HTMLElement>('[data-app-navbar]');
+      if (!anchor || !navbar) return;
+
+      const targetTop = window.scrollY + anchor.getBoundingClientRect().top - navbar.getBoundingClientRect().height;
+      window.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [currentIndex, questions.length, isFinished]);
+
   if (isFinished) {
     const accuracy = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
     return (
@@ -370,10 +386,14 @@ export const QuizView: React.FC<QuizViewProps> = ({
         badgeIcon={BookOpen}
         title="四选一单词测验"
         description="听音辨义，连续答对 3 次自动标记为已掌握"
+        compactOnMobile
       />
 
-      <ProgressBar value={currentIndex + 1} max={questions.length} showLabel />
+      <div ref={progressAnchorRef} className="quiz-progress-sticky">
+        <ProgressBar value={currentIndex + 1} max={questions.length} showLabel />
+      </div>
 
+      <div className="quiz-mobile-stage space-y-5">
       <Card
         padding="lg"
         className="space-y-6 hover:border-brand-200 transition-colors cursor-pointer"
@@ -578,6 +598,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
         >
           <RefreshCw className="w-4 h-4" />
         </button>
+      </div>
       </div>
     </div>
   );

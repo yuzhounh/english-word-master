@@ -8,6 +8,7 @@ interface PageHeaderProps {
   description?: React.ReactNode;
   action?: React.ReactNode;
   stats?: React.ReactNode;
+  compactOnMobile?: boolean;
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
@@ -17,12 +18,13 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   description,
   action,
   stats,
+  compactOnMobile = false,
 }) => (
   <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800/80 shadow-card">
     <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-slate-100/40 dark:bg-slate-700/20 blur-3xl pointer-events-none" />
 
-    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-8">
-      <div className="space-y-3 min-w-0">
+    <div className={`relative z-10 flex flex-col md:flex-row md:items-center justify-between ${compactOnMobile ? 'gap-4 px-5 py-5 sm:gap-6 sm:p-8' : 'gap-6 p-6 sm:p-8'}`}>
+      <div className={`${compactOnMobile ? 'space-y-2.5 sm:space-y-3' : 'space-y-3'} min-w-0`}>
         {badge && (
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-xs font-semibold border border-brand-100 dark:border-brand-800">
             {BadgeIcon && <BadgeIcon className="w-3.5 h-3.5" />}
