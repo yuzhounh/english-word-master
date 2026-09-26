@@ -13,6 +13,7 @@
   <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind-4.1-38B2AC.svg" alt="Tailwind CSS 4.1" /></a>
   <a href="https://platform.deepseek.com/"><img src="https://img.shields.io/badge/DeepSeek-API-4D6BFE.svg" alt="DeepSeek API" /></a>
   <a href="https://firebase.google.com/"><img src="https://img.shields.io/badge/Firebase-Firestore%20%26%20Auth-FFCA28.svg" alt="Firebase Firestore and Auth" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-D4A017.svg" alt="MIT License" /></a>
 </p>
 
 **English Word Master** 是一款基于 AI 驱动的高效英文单词学习与综合词库管理平台。集成了文本智能分析、词干还原（Lemmatization）、四选一互动测验、错题本复习系统以及 Firebase 云端同步功能，帮助用户从阅读中积累词汇，高效巩固与高效复习。
@@ -65,14 +66,14 @@
 ### 1. 克隆项目 (Clone Repository)
 
 ```bash
-git clone https://github.com/your-username/english-word-master.git
+git clone https://github.com/yuzhounh/english-word-master.git
 cd english-word-master
 ```
 
 ### 2. 安装依赖 (Install Dependencies)
 
 ```bash
-npm install
+npm ci
 ```
 
 ### 3. 配置环境变量 (Environment Variables)
@@ -82,6 +83,8 @@ npm install
 ```env
 # DeepSeek API Key
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
+WORD_LIBRARY_REPO=yuzhounh/english-word-enriched
+WORD_LIBRARY_FORMAT=enriched
 ```
 
 ### 4. 启动开发服务器 (Development Server)
@@ -100,11 +103,19 @@ npm run dev
 # 编译前端静态资源与服务端代码
 npm run build
 
-# 启动生产环境服务器
+# 启动生产环境服务器（PowerShell）
+$env:NODE_ENV = "production"
 npm start
+
+# macOS / Linux
+NODE_ENV=production npm start
 ```
 
 ---
+
+## 相关项目
+
+- [english-word-enriched](https://github.com/yuzhounh/english-word-enriched)：本项目使用的预处理词库；`.env.example` 的上游 `lilinji/English` 仍可作为原始 XLSX 数据源。
 
 ## 📄 开源协议 (License)
 
