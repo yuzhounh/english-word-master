@@ -7,6 +7,7 @@
 <p align="center"><strong>智能英文背单词与个人词库管理平台</strong></p>
 
 <p align="center">
+  <a href="https://english-word-master.pages.dev/"><img src="https://img.shields.io/badge/Online-Cloudflare_Pages-F38020?logo=cloudflare" alt="Cloudflare Pages online" /></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.0-blue.svg" alt="React 19.0" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.8-blue.svg" alt="TypeScript 5.8" /></a>
   <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-6.2-646CFF.svg" alt="Vite 6.2" /></a>
@@ -18,7 +19,7 @@
 
 **English Word Master** 是一款基于 AI 驱动的高效英文单词学习与综合词库管理平台。集成了文本智能分析、词干还原（Lemmatization）、四选一互动测验、错题本复习系统以及 Firebase 云端同步功能，帮助用户从阅读中积累词汇，高效巩固与高效复习。
 
-🌐 **在线体验：[https://english-word-master.vercel.app/](https://english-word-master.vercel.app/)**
+🌐 **在线体验：[https://english-word-master.pages.dev/](https://english-word-master.pages.dev/)**
 
 ---
 
