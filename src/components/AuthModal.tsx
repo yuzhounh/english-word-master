@@ -4,12 +4,14 @@ import { Button } from './ui/Button';
 
 interface AuthModalProps {
   isOpen: boolean;
+  initialErrorMessage?: string;
   onClose: () => void;
   onGoogleSignIn: () => Promise<void>;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
+  initialErrorMessage = '',
   onClose,
   onGoogleSignIn
 }) => {
@@ -17,8 +19,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (isOpen) setErrorMessage('');
-  }, [isOpen]);
+    if (isOpen) setErrorMessage(initialErrorMessage);
+  }, [isOpen, initialErrorMessage]);
 
   if (!isOpen) return null;
 
