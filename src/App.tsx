@@ -11,6 +11,7 @@ import { AppTab, NotebookSubTab } from './types/navigation';
 import { useTheme } from './hooks/useTheme';
 import {
   auth,
+  completeGoogleRedirectSignIn,
   signInWithGoogle,
   logOut,
   syncWrongWordToFirestore,
@@ -35,6 +36,7 @@ export default function App() {
   });
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authRedirectError, setAuthRedirectError] = useState('');
   const [quizPool, setQuizPool] = useState<WordItem[]>([]);
 
   const toggleSpeechAccent = () => {
@@ -166,6 +168,12 @@ export default function App() {
 
   // Auth Listener
   useEffect(() => {
+    let cancelled = false;
+    completeGoogleRedirectSignIn().catch((error) => {
+      if (cancelled) return;
+      setAuthRedirectError(error?.message || 'Google 登录未完成，请重新尝试。');
+      setIsAuthModalOpen(true);
+    });
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const uProfile: UserProfile = {
@@ -229,7 +237,7 @@ export default function App() {
       }
     });
 
-    return () => unsubscribe();
+    return () => { cancelled = true; unsubscribe(); };
   }, []);
 
   // Google Sign In
@@ -662,7 +670,8 @@ export default function App() {
       {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        initialErrorMessage={authRedirectError}
+        onClose={() => { setIsAuthModalOpen(false); setAuthRedirectError(''); }}
         onGoogleSignIn={handleGoogleSignIn}
       />
     </div>

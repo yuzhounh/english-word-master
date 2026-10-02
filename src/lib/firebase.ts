@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithCredential, signInWithPopup, signOut, User } from 'firebase/auth';
+import { getAuth, getRedirectResult, GoogleAuthProvider, signInWithCredential, signInWithPopup, signInWithRedirect, signOut, User } from 'firebase/auth';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import {
   getFirestore,
@@ -17,9 +17,14 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { WrongWordItem, MasteredWordItem } from '../types';
+import { signInWithPopupFallback, webAuthDomain } from './googleSignIn';
 
 // Initialize Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const app = getApps().length === 0 ? initializeApp({
+  ...firebaseConfig,
+  authDomain: webAuthDomain(typeof window === 'undefined' ? undefined : window.location.hostname,
+    Capacitor.isNativePlatform(), firebaseConfig.authDomain)
+}) : getApp();
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
@@ -34,6 +39,12 @@ const nativeGoogleAuth = registerPlugin<NativeGoogleAuthPlugin>('NativeGoogleAut
 // Initialize Firestore with the default (default) database
 export const db = getFirestore(app);
 
+let redirectResult: ReturnType<typeof getRedirectResult> | undefined;
+export const completeGoogleRedirectSignIn = () => {
+  if (typeof window === 'undefined' || Capacitor.isNativePlatform()) return Promise.resolve(null);
+  return redirectResult ??= getRedirectResult(auth);
+};
+
 // Sign in with Google
 export const signInWithGoogle = async () => {
   try {
@@ -44,7 +55,10 @@ export const signInWithGoogle = async () => {
       return result.user;
     }
 
-    const result = await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopupFallback(
+      () => signInWithPopup(auth, googleProvider),
+      () => signInWithRedirect(auth, googleProvider)
+    );
     return result.user;
   } catch (error: any) {
     console.error('Error signing in with Google:', error);

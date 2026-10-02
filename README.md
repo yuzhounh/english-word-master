@@ -95,6 +95,12 @@ npm run dev
 
 打开浏览器访问 `http://localhost:3000` 即可体验应用。
 
+### Google 网页登录
+
+生产站点使用同域 Firebase 登录助手，Vercel 将 `/__/auth/*` 反向代理到项目的 Firebase Auth 域名。Google 登录弹窗被拦截时自动改为当前页面跳转登录；返回网站后接收登录结果并显示回调错误。Android 保留原生 Google 登录，开发与预览域名保留默认 Firebase Auth 域名。
+
+上线前，在现有 Google OAuth 网页客户端的授权重定向 URI 中添加 `https://english-word-master.vercel.app/__/auth/handler`，并在 Firebase Authentication 的授权域名中保留 `english-word-master.vercel.app`。保留已有回调地址和客户端凭据。新增回调配置生效后再部署前端与 `vercel.json`。配置方式见 [Firebase 跳转登录说明](https://firebase.google.com/docs/auth/web/redirect-best-practices#option-3-proxy-auth-requests-to-firebaseappcom)。
+
 ### AI 身份与费用控制
 
 服务端需要 Node.js 22 或更新版本。AI 文本分析与单词补全必须携带当前 Firebase 用户的 ID token；网页和 APK 会自动发送并刷新令牌。未登录、匿名、失效或撤销的身份不能调用 AI；词库浏览、词典查询和本地学习仍可使用。

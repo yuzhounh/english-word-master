@@ -9,6 +9,10 @@
   },
   "rewrites": [
     {
+      "source": "/__/auth/:path*",
+      "destination": "https://english-word-master-app.firebaseapp.com/__/auth/:path*"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api"
     },
