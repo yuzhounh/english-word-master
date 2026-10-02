@@ -132,6 +132,8 @@ NODE_ENV=production npm start
 
 ## 相关项目
 
+部署入口：Vercel 承载完整应用和 API；Cloudflare Pages 使用 `npm run pack:pages` 生成 `.pages` 网关并转发到 Vercel；GitHub Pages 使用 `npm run build:landing` 生成 `dist_pages` 跳转入口。单独上传普通 `dist` 只提供前端，不能提供相对路径下的 `/api`。GitHub 入口保留路径、查询参数和片段。
+
 - [english-word-enriched](https://github.com/yuzhounh/english-word-enriched)：本项目使用的预处理词库；`.env.example` 的上游 `lilinji/English` 仍可作为原始 XLSX 数据源。
 
 ## 📄 开源协议 (License)

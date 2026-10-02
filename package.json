@@ -6,6 +6,8 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "dev": "tsx server.ts",
+    "build:landing": "node scripts/build-landing.mjs",
+    "pack:pages": "node scripts/pack-pages.mjs",
     "build": "vite build && esbuild api/createApp.ts --bundle --platform=node --format=cjs --packages=external --outfile=api/handler.cjs && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && npm run test:runtime",
     "build:apk": "vite build && npx cap sync android && cd android && .\\gradlew.bat assembleDebug",
     "start": "node dist/server.cjs",

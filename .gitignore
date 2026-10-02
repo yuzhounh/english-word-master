@@ -22,3 +22,6 @@ android/.gradle/
 android/app/build/
 android/build/
 android/capacitor-cordova-android-plugins/build/
+# Platform entry bundles
+dist_pages/
+.pages/
