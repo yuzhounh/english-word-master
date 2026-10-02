@@ -196,11 +196,11 @@ export const Navbar: React.FC<NavbarProps> = ({
       {isMobileMenuOpen && createPortal(
         <div className="lg:hidden fixed inset-0 z-[100] flex">
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="app-panel-safe-area relative w-72 max-w-[80vw] bg-white dark:bg-slate-900 h-screen shadow-elevated z-10 flex flex-col justify-between p-5 overflow-y-auto">
+          <div role="dialog" aria-modal="true" aria-label="导航菜单" className="app-panel-safe-area relative w-72 max-w-[80vw] bg-white dark:bg-slate-900 h-dvh shadow-elevated z-10 flex flex-col justify-between p-5 overflow-y-auto">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
                 <span className="font-bold text-slate-900 dark:text-slate-100">WordMaster</span>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                <button aria-label="关闭导航菜单" onClick={() => setIsMobileMenuOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>

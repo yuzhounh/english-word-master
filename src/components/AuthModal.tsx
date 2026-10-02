@@ -47,11 +47,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
-        className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-elevated relative border border-slate-200/80 dark:border-slate-700 space-y-6"
+        className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain p-6 sm:p-8 shadow-elevated relative border border-slate-200/80 dark:border-slate-700 space-y-6"
+        role="dialog"
+        aria-modal="true"
+        aria-label="登录账号"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
+          aria-label="关闭登录窗口"
           disabled={isSigningIn}
           className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
         >
