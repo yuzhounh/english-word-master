@@ -6,12 +6,13 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild api/createApp.ts --bundle --platform=node --format=cjs --packages=external --outfile=api/handler.cjs && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "vite build && esbuild api/createApp.ts --bundle --platform=node --format=cjs --packages=external --outfile=api/handler.cjs && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && npm run test:runtime",
     "build:apk": "vite build && npx cap sync android && cd android && .\\gradlew.bat assembleDebug",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "test:runtime": "node --no-experimental-require-module -e \"const handler = require('./api/handler.cjs'); const app = handler.default ?? handler; if (typeof app !== 'function') throw new Error('Invalid API export');\""
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
@@ -21,7 +22,7 @@
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "firebase": "^12.17.0",
-    "firebase-admin": "^14.5.0",
+    "firebase-admin": "~13.10.0",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.1",

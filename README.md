@@ -110,7 +110,7 @@ npm run dev
 - 每次文本请求最多 30000 字符，单段最多 1500 字符；每次补全最多 200 个单词，并限制单词字段长度。续传请求重新校验输入、身份与配额；客户端自动串行分批。
 - 分块最多 15 个词（完整模式）或 35 个词（轻量模式），单请求模型并发最多 3。`ENRICH_*` 服务端配置只能在硬上限内调整；所有客户端 `_bench*` 参数均被拒绝，包括开发环境。
 
-部署前运行 `npm test`、`npm run lint` 和 `npm run build`。测试使用模拟身份、事务存储与模型，不产生 DeepSeek 费用。远程 benchmark 参数接口已关闭，性能试验请使用 `scripts/benchmark-enrich-sim.ts`，或在服务端硬上限内修改配置。
+部署前运行 `npm test`、`npm run lint` 和 `npm run build`。构建会自动运行 `test:runtime`，以禁用 CommonJS 加载 ESM 的环境检查实际 API bundle，提前拦截 Vercel 模块加载不兼容。Firebase Admin 固定在兼容此部署方式的 13.10.x；升级时需通过该运行检查。测试使用模拟身份、事务存储与模型，不产生 DeepSeek 费用。远程 benchmark 参数接口已关闭，性能试验请使用 `scripts/benchmark-enrich-sim.ts`，或在服务端硬上限内修改配置。
 
 ---
 
