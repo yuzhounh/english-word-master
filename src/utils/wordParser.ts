@@ -1,5 +1,7 @@
 import { WordItem, WrongWordItem, MasteredWordItem } from '../types';
 import { getApiUrl } from '../lib/apiConfig';
+import { AiClientError, postAiJson } from '../lib/aiApi';
+import { AI_MAX_WORDS } from '../../shared/aiLimits';
 
 export interface ParsedWord {
   word: string;
@@ -353,12 +355,7 @@ async function enrichWordsBatch(
   light: boolean
 ): Promise<EnrichBatchResult> {
   try {
-    const response = await fetch(getApiUrl('/api/enrich-words'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ words, light })
-    });
-    const data = await response.json();
+    const data = await postAiJson('/api/enrich-words', { words, light });
     if (data?.success && Array.isArray(data.words)) {
       return {
         words: data.words,
@@ -369,6 +366,7 @@ async function enrichWordsBatch(
     }
     return { words: [], pending: words, done: false, success: false };
   } catch (err) {
+    if (err instanceof AiClientError) throw err;
     console.error('Enrich words batch failed:', err);
     return { words: [], pending: words, done: false, success: false };
   }
@@ -399,14 +397,17 @@ async function enrichWordsStream(
 
   while (pending.length > 0 && guard < 500) {
     guard++;
-    const data = await enrichWordsBatch(pending, light);
+    const batch = pending.slice(0, AI_MAX_WORDS);
+    const rest = pending.slice(AI_MAX_WORDS);
+    const data = await enrichWordsBatch(batch, light);
 
     if (data.success) {
       results.push(...data.words);
       onSliceProgress?.(data.words.length);
-      if (data.done) break;
-      if (data.pending.length > 0) {
-        pending = data.pending;
+      if (data.done) {
+        pending = rest;
+      } else if (data.pending.length > 0) {
+        pending = [...data.pending, ...rest];
       } else {
         break;
       }
@@ -500,7 +501,6 @@ export async function enrichWordsWithAI(
 
   const total = words.length;
   const light = words.length > 5;
-  const parallelStreams = words.length >= 120 ? 2 : 1;
   let processedCount = 0;
 
   const reportProgress = (delta: number) => {
@@ -508,19 +508,6 @@ export async function enrichWordsWithAI(
     onProgress?.(processedCount, total);
   };
 
-  if (parallelStreams === 1) {
-    return enrichWordsStream(words, light, reportProgress);
-  }
-
-  const sliceSize = Math.ceil(words.length / parallelStreams);
-  const slices: ParsedWord[][] = [];
-  for (let i = 0; i < words.length; i += sliceSize) {
-    slices.push(words.slice(i, i + sliceSize));
-  }
-
-  const sliceResults = await Promise.all(
-    slices.map(slice => enrichWordsStream(slice, light, reportProgress))
-  );
-
-  return sliceResults.flat();
+  // One active AI request per user; the server controls parallel model calls.
+  return enrichWordsStream(words, light, reportProgress);
 }

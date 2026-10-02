@@ -96,6 +96,22 @@ npm run dev
 
 打开浏览器访问 `http://localhost:3000` 即可体验应用。
 
+### AI 身份与费用控制
+
+服务端需要 Node.js 22 或更新版本。AI 文本分析与单词补全必须携带当前 Firebase 用户的 ID token；网页和 APK 会自动发送并刷新令牌。未登录、匿名、失效或撤销的身份不能调用 AI；词库浏览、词典查询和本地学习仍可使用。
+
+在 Vercel 等环境中，设置服务端 `FIREBASE_SERVICE_ACCOUNT_JSON`（项目 `english-word-master-app` 的服务账号 JSON），或配置 Application Default Credentials。该账号需要 Firebase Authentication 用户读取与 Firestore 读写权限。部署仓库中的 `firestore.rules`，确保客户端无法读写 `/aiUsage` 的配额数据。密钥与服务账号凭据只能存放在服务端，不能放入 `VITE_*` 变量。配置、身份服务或配额存储不可用时，AI 请求返回 503，不调用付费模型。
+
+两个 AI 路由共享以下服务端限制：
+
+- 默认每用户每日 50 次、全站每日 1000 次模型调用额度，可用 `AI_USER_DAILY_CALLS` / `AI_GLOBAL_DAILY_CALLS` 调整；设为 0 可关闭付费调用。配额按 UTC 零点重置，通过 Firestore 事务在所有实例间共享。
+- 每次请求先预留最多 6 次模型调用容量；失败、取消、超时与未使用的预留容量不退回。此配额按调用次数计量，不代表精确金额预算；每次模型输出最多 4096 tokens。
+- 每用户每分钟最多 10 个已接纳请求、全站每分钟最多 60 个；每用户同时最多 1 个 AI 请求、全站最多 2 个。超限返回 429 和 `Retry-After`；崩溃遗留的并发占位在 70 秒后过期。
+- 每次文本请求最多 30000 字符，单段最多 1500 字符；每次补全最多 200 个单词，并限制单词字段长度。续传请求重新校验输入、身份与配额；客户端自动串行分批。
+- 分块最多 15 个词（完整模式）或 35 个词（轻量模式），单请求模型并发最多 3。`ENRICH_*` 服务端配置只能在硬上限内调整；所有客户端 `_bench*` 参数均被拒绝，包括开发环境。
+
+部署前运行 `npm test`、`npm run lint` 和 `npm run build`。测试使用模拟身份、事务存储与模型，不产生 DeepSeek 费用。远程 benchmark 参数接口已关闭，性能试验请使用 `scripts/benchmark-enrich-sim.ts`，或在服务端硬上限内修改配置。
+
 ---
 
 ## 📦 生产构建与部署 (Build & Deployment)

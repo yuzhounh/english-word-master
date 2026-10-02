@@ -3,6 +3,8 @@ import path from "path";
 import { existsSync, statSync } from "fs";
 import dotenv from "dotenv";
 import * as XLSX from "xlsx";
+import { createAiAccess, AiAccessError, sendAiError, type AiAccess } from "./aiAccess";
+import { AI_MAX_WORDS, AI_MAX_TEXT_CHARS, AI_SEGMENT_CHARS, AI_MAX_CALLS_PER_REQUEST, AI_MAX_OUTPUT_TOKENS } from "../shared/aiLimits";
 import {
   getDictionaryStats,
   mergeWordWithDictionary,
@@ -64,6 +66,7 @@ async function deepseekChatJson(
       model,
       messages,
       temperature,
+      max_tokens: AI_MAX_OUTPUT_TOKENS,
       response_format: { type: "json_object" },
       stream: false
     }),
@@ -103,7 +106,7 @@ const NEW_CALL_CUTOFF_MS = 40000;
 
 function timeBudgetRemaining(elapsedMs: number): number {
   // Leave enough headroom to write the response before the hard limit.
-  return Math.max(12000, FUNCTION_HARD_LIMIT_MS - elapsedMs - 5000);
+  return Math.max(0, FUNCTION_HARD_LIMIT_MS - elapsedMs - 5000);
 }
 
 function encodeResume(data: any): string {
@@ -111,7 +114,7 @@ function encodeResume(data: any): string {
 }
 
 function decodeResume<T>(token: any): T | null {
-  if (typeof token !== "string" || !token) return null;
+  if (typeof token !== "string" || !token || token.length > 60000) return null;
   try {
     return JSON.parse(Buffer.from(token, "base64").toString("utf8")) as T;
   } catch {
@@ -120,7 +123,7 @@ function decodeResume<T>(token: any): T | null {
 }
 
 // Splits a long text into reasonably sized segments at sentence boundaries.
-function splitTextSegments(text: string, maxChars = 1500): string[] {
+function splitTextSegments(text: string, maxChars = AI_SEGMENT_CHARS): string[] {
   const trimmed = text.trim();
   if (trimmed.length <= maxChars) return [trimmed];
   const sentences = trimmed.match(/[^.!?πÇé∩╝ü∩╝ƒ]+[.!?πÇé∩╝ü∩╝ƒ]*\s*/g) || [trimmed];
@@ -135,7 +138,12 @@ function splitTextSegments(text: string, maxChars = 1500): string[] {
     }
   }
   if (current.trim()) segments.push(current.trim());
-  return segments.length > 0 ? segments : [trimmed];
+  // A sentence without punctuation must still obey the per-call input bound.
+  return (segments.length > 0 ? segments : [trimmed]).flatMap(segment => {
+    const parts: string[] = [];
+    for (let i = 0; i < segment.length; i += maxChars) parts.push(segment.slice(i, i + maxChars));
+    return parts;
+  });
 }
 
 function buildAnalyzePrompt(text: string, limitNum: number): string {
@@ -181,9 +189,35 @@ ${text.slice(0, 30000)}
 """`;
 }
 
-function parseEnrichIntEnv(name: string, fallback: number): number {
-  const v = parseInt(process.env[name] || "", 10);
-  return Number.isFinite(v) && v > 0 ? v : fallback;
+function parseEnrichIntEnv(name: string, fallback: number, maximum: number): number {
+  const v = Number(process.env[name]);
+  return Number.isSafeInteger(v) && v > 0 ? Math.min(v, maximum) : fallback;
+}
+
+function validSegments(segments: unknown): segments is string[] {
+  return Array.isArray(segments) && segments.length > 0 && segments.length <= 40 &&
+    segments.every(segment => typeof segment === "string" && segment.trim().length > 0 && segment.length <= AI_SEGMENT_CHARS) &&
+    segments.reduce((total, segment) => total + segment.length, 0) <= AI_MAX_TEXT_CHARS;
+}
+
+function boundedWords(input: unknown): any[] {
+  if (!Array.isArray(input) || !input.length || input.length > AI_MAX_WORDS) {
+    throw new AiAccessError(400, "INVALID_INPUT", `每次 AI 请求需包含 1–${AI_MAX_WORDS} 个单词。`);
+  }
+  const limits: Record<string, number> = { word: 80, chinese: 300, phonetic: 150, exampleSentence: 300, exampleSentenceCn: 300 };
+  return input.map(item => {
+    if (!item || typeof item !== "object" || typeof item.word !== "string" || !item.word.trim()) {
+      throw new AiAccessError(400, "INVALID_INPUT", "单词格式无效。");
+    }
+    const word: Record<string, string> = {};
+    for (const [field, limit] of Object.entries(limits)) {
+      if (item[field] !== undefined && (typeof item[field] !== "string" || item[field].length > limit)) {
+        throw new AiAccessError(400, "INVALID_INPUT", `单词字段 ${field} 超出限制或格式无效。`);
+      }
+      word[field] = item[field] || "";
+    }
+    return word;
+  });
 }
 
 function needsEnrichment(w: any): boolean {
@@ -290,8 +324,9 @@ function normalizeWordItem(item: any, includeOptions = true): any {
   return base;
 }
 
-export function createApp(options: { production?: boolean } = {}) {
+export function createApp(options: { production?: boolean; aiAccess?: AiAccess } = {}) {
   const app = express();
+  const aiAccess = options.aiAccess || createAiAccess();
 
   // Enable CORS for all origins (supports mobile clients & web frontends)
   app.use((req, res, next) => {
@@ -304,15 +339,25 @@ export function createApp(options: { production?: boolean } = {}) {
     next();
   });
 
+  app.use(["/api/analyze-text", "/api/enrich-words"], aiAccess.authenticate, express.json({ limit: "256kb" }), (req, res, next) => {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      return sendAiError(res, new AiAccessError(400, "INVALID_INPUT", "请提供有效的 JSON 请求。"));
+    }
+    if (Object.keys(req.body).some(key => key.startsWith("_bench"))) {
+      return sendAiError(res, new AiAccessError(400, "BENCHMARK_DISABLED", "AI 接口不接受客户端 benchmark 参数。"));
+    }
+    next();
+  });
   app.use(express.json({ limit: "10mb" }));
 
   // API: Analyze English text, perform lemmatization (restore base form), extract vocabulary, generate Chinese definition, example sentence, and 4 multiple-choice options.
   // Supports resumable processing: long texts are split into segments that are processed across
   // multiple function invocations before the Vercel timeout, each returning partial results.
   app.post("/api/analyze-text", async (req, res) => {
+    let release: (() => Promise<void>) | undefined;
     try {
       if (!process.env.DEEPSEEK_API_KEY) {
-        return res.status(500).json({ success: false, error: "DEEPSEEK_API_KEY is not configured in environment." });
+        throw new AiAccessError(503, "AI_UNAVAILABLE", "AI 服务尚未配置。");
       }
       const { text, maxWords = 30, resume } = req.body;
 
@@ -321,7 +366,8 @@ export function createApp(options: { production?: boolean } = {}) {
 
       if (resume) {
         const state = decodeResume<{ segments: string[]; limitPerSegment: number }>(resume);
-        if (!state || !Array.isArray(state.segments) || state.segments.length === 0) {
+        if (!state || !validSegments(state.segments) || !Number.isInteger(state.limitPerSegment) ||
+            state.limitPerSegment < 5 || state.limitPerSegment > 50) {
           return res.status(400).json({ success: false, error: "Invalid resume token." });
         }
         segments = state.segments;
@@ -330,10 +376,15 @@ export function createApp(options: { production?: boolean } = {}) {
         if (!text || typeof text !== "string" || text.trim().length === 0) {
           return res.status(400).json({ success: false, error: "Please provide valid text content." });
         }
-        const limitNum = typeof maxWords === "number" ? Math.min(Math.max(maxWords, 5), 50) : 30;
+        if (text.length > AI_MAX_TEXT_CHARS || !Number.isInteger(maxWords) || maxWords < 5 || maxWords > 50) {
+          throw new AiAccessError(400, "INVALID_INPUT", `文本不得超过 ${AI_MAX_TEXT_CHARS} 字符，提取词数需为 5–50。`);
+        }
+        const limitNum = maxWords;
         segments = splitTextSegments(text);
         limitPerSegment = Math.max(5, Math.ceil(limitNum / Math.max(segments.length, 1)));
       }
+
+      release = await aiAccess.reserve(res.locals.aiUid, Math.min(segments.length, AI_MAX_CALLS_PER_REQUEST));
 
       const startTime = Date.now();
       const cleanedWords: any[] = [];
@@ -341,7 +392,7 @@ export function createApp(options: { production?: boolean } = {}) {
       let totalWordsCount = 0;
       let index = 0;
 
-      while (index < segments.length) {
+      while (index < segments.length && index < AI_MAX_CALLS_PER_REQUEST) {
         const elapsed = Date.now() - startTime;
         if (index > 0 && elapsed >= NEW_CALL_CUTOFF_MS) break;
         const budget = timeBudgetRemaining(elapsed);
@@ -390,21 +441,23 @@ export function createApp(options: { production?: boolean } = {}) {
       const pendingSegments = segments.slice(index);
       const done = pendingSegments.length === 0;
 
+      await release();
+      release = undefined;
+
       return res.json({
         success: true,
         done,
         resume: done ? null : encodeResume({ segments: pendingSegments, limitPerSegment }),
-        totalWordsCount: totalWordsCount || (text ? text.trim().split(/\s+/).length : 0),
+        totalWordsCount: totalWordsCount || (typeof text === "string" ? text.trim().split(/\s+/).length : 0),
         extractedWordsCount: cleanedWords.length,
         words: cleanedWords
       });
 
     } catch (error: any) {
-      console.error("Error analyzing text:", error);
-      return res.status(500).json({
-        success: false,
-        error: error.message || "Failed to analyze text with AI."
-      });
+      if (!(error instanceof AiAccessError)) console.error("Error analyzing text:", error);
+      return sendAiError(res, error);
+    } finally {
+      await release?.();
     }
   });
 
@@ -413,34 +466,30 @@ export function createApp(options: { production?: boolean } = {}) {
   // then returns partial results + the remaining words so the client can continue in the next invocation.
   // light=true skips quiz options (QuizView builds distractors locally) and uses larger parallel chunks.
   app.post("/api/enrich-words", async (req, res) => {
+    let release: (() => Promise<void>) | undefined;
     try {
       if (!process.env.DEEPSEEK_API_KEY) {
-        return res.status(500).json({ success: false, error: "DEEPSEEK_API_KEY is not configured in environment." });
+        throw new AiAccessError(503, "AI_UNAVAILABLE", "AI 服务尚未配置。");
       }
-      const { words, light: lightRequested } = req.body;
-      if (!Array.isArray(words) || words.length === 0) {
-        return res.status(400).json({ success: false, error: "Please provide a valid list of words to enrich." });
-      }
+      const words = boundedWords(req.body.words);
+      const lightRequested = req.body.light;
 
       const light = lightRequested === true || words.length > 20;
       const includeOptions = !light;
-      const benchChunk = typeof req.body._benchChunkSize === "number" ? req.body._benchChunkSize : null;
-      const benchConc = typeof req.body._benchConcurrency === "number" ? req.body._benchConcurrency : null;
-      const CHUNK_SIZE = benchChunk && benchChunk > 0
-        ? benchChunk
-        : light
-          ? parseEnrichIntEnv("ENRICH_CHUNK_SIZE_LIGHT", 35)
-          : parseEnrichIntEnv("ENRICH_CHUNK_SIZE", 15);
-      const CONCURRENCY = benchConc && benchConc > 0
-        ? benchConc
-        : parseEnrichIntEnv("ENRICH_CONCURRENCY", 3);
+      const CHUNK_SIZE = light
+        ? parseEnrichIntEnv("ENRICH_CHUNK_SIZE_LIGHT", 35, 35)
+        : parseEnrichIntEnv("ENRICH_CHUNK_SIZE", 15, 15);
+      const CONCURRENCY = parseEnrichIntEnv("ENRICH_CONCURRENCY", 3, 3);
+      const plannedCalls = Math.ceil(words.filter(needsEnrichment).length / CHUNK_SIZE);
+      release = await aiAccess.reserve(res.locals.aiUid, Math.min(plannedCalls, AI_MAX_CALLS_PER_REQUEST));
 
       const startTime = Date.now();
       const enrichedResults: any[] = [];
       let index = 0;
       let didAiWork = false;
+      let callsStarted = 0;
 
-      while (index < words.length) {
+      while (index < words.length && callsStarted < AI_MAX_CALLS_PER_REQUEST) {
         while (index < words.length && !needsEnrichment(words[index])) {
           index += 1;
         }
@@ -453,7 +502,7 @@ export function createApp(options: { production?: boolean } = {}) {
 
         const batchChunks: any[][] = [];
         let scanIdx = index;
-        while (batchChunks.length < CONCURRENCY && scanIdx < words.length) {
+        while (batchChunks.length < Math.min(CONCURRENCY, AI_MAX_CALLS_PER_REQUEST - callsStarted) && scanIdx < words.length) {
           const chunk: any[] = [];
           while (chunk.length < CHUNK_SIZE && scanIdx < words.length) {
             const w = words[scanIdx];
@@ -469,6 +518,7 @@ export function createApp(options: { production?: boolean } = {}) {
         }
 
         didAiWork = true;
+        callsStarted += batchChunks.length;
         const batchResults = await Promise.all(
           batchChunks.map((chunk) => enrichOneChunk(chunk, includeOptions, budget))
         );
@@ -497,6 +547,8 @@ export function createApp(options: { production?: boolean } = {}) {
         };
       });
 
+      await release();
+      release = undefined;
       return res.json({
         success: true,
         done,
@@ -505,11 +557,10 @@ export function createApp(options: { production?: boolean } = {}) {
       });
 
     } catch (error: any) {
-      console.error("Error enriching words:", error);
-      return res.status(500).json({
-        success: false,
-        error: error.message || "Failed to enrich words."
-      });
+      if (!(error instanceof AiAccessError)) console.error("Error enriching words:", error);
+      return sendAiError(res, error);
+    } finally {
+      await release?.();
     }
   });
 
@@ -742,6 +793,12 @@ export function createApp(options: { production?: boolean } = {}) {
     }
   }
 
+  app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (error?.type === "entity.too.large" || error?.type === "entity.parse.failed") {
+      return sendAiError(res, new AiAccessError(error.status, "INVALID_INPUT", "请求过大或 JSON 格式无效。"));
+    }
+    next(error);
+  });
   return app;
 }
 
