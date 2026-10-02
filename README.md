@@ -1,20 +1,19 @@
 <p align="center">
-  <img src="public/logo.svg" width="112" alt="English Word Master 图标" />
+  <img src="public/logo.svg" width="112" alt="English Word Master logo">
 </p>
 
 <h1 align="center">English Word Master</h1>
 
-<p align="center"><strong>智能英文背单词与个人词库管理平台</strong></p>
+<p align="center"><strong>从阅读中积累词汇，用互动测验与错题复习巩固记忆。</strong></p>
 
 <p align="center">
-  <a href="https://english-word-master.pages.dev/"><img src="https://img.shields.io/badge/Online-Cloudflare_Pages-F38020?logo=cloudflare" alt="Cloudflare Pages online" /></a>
-  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.0-blue.svg" alt="React 19.0" /></a>
-  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.8-blue.svg" alt="TypeScript 5.8" /></a>
-  <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-6.2-646CFF.svg" alt="Vite 6.2" /></a>
-  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind-4.1-38B2AC.svg" alt="Tailwind CSS 4.1" /></a>
-  <a href="https://platform.deepseek.com/"><img src="https://img.shields.io/badge/DeepSeek-API-4D6BFE.svg" alt="DeepSeek API" /></a>
-  <a href="https://firebase.google.com/"><img src="https://img.shields.io/badge/Firebase-Firestore%20%26%20Auth-FFCA28.svg" alt="Firebase Firestore and Auth" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-D4A017.svg" alt="MIT License" /></a>
+  <a href="https://english-word-master.pages.dev/"><img src="https://img.shields.io/badge/Website-Cloudflare%20Pages-f38020?style=flat&amp;logo=cloudflare&amp;logoColor=white" alt="Website: Cloudflare Pages"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-f59e0b?style=flat" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/React-19-61dafb?style=flat&amp;logo=react&amp;logoColor=white" alt="React: 19">
+</p>
+
+<p align="center">
+  <a href="https://english-word-master.pages.dev/">在线体验</a> · <a href="https://github.com/yuzhounh/english-word-master/releases/latest">发布版本</a> · <a href="#快速开始">快速开始</a> · <a href="LICENSE">开源协议</a>
 </p>
 
 **English Word Master** 是一款基于 AI 驱动的高效英文单词学习与综合词库管理平台。集成了文本智能分析、词干还原（Lemmatization）、四选一互动测验、错题本复习系统以及 Firebase 云端同步功能，帮助用户从阅读中积累词汇，高效巩固与高效复习。
@@ -23,7 +22,7 @@
 
 ---
 
-## ✨ 核心功能亮点 (Features)
+## 功能特点
 
 - 🤖 **AI 文本分析与原型提取 (Text Analysis & Lemmatization)**
   - 自由粘贴英文文章、新闻或段落，AI 自动提取生词并还原至词干原型（Lemmatization）。
@@ -62,7 +61,7 @@
 
 ---
 
-## 🚀 快速开始 (Quick Start)
+## 快速开始
 
 ### 1. 克隆项目 (Clone Repository)
 
@@ -136,6 +135,6 @@ NODE_ENV=production npm start
 
 - [english-word-enriched](https://github.com/yuzhounh/english-word-enriched)：本项目使用的预处理词库；`.env.example` 的上游 `lilinji/English` 仍可作为原始 XLSX 数据源。
 
-## 📄 开源协议 (License)
+## 开源协议
 
 本项目遵循 [MIT License](LICENSE) 开源协议。
