@@ -146,4 +146,6 @@ async function main() {
   console.log(`  ~${pick.r.enriched} words per request, ${pick.r.ms}ms wall time`);
 }
 
-main().catch(console.error);
+// Public AI routes reject client benchmark parameters in every environment.
+console.error("Remote benchmark is disabled. Use scripts/benchmark-enrich-sim.ts or adjust server configuration within its hard limits.");
+process.exitCode = 1;

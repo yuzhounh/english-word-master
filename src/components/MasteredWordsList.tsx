@@ -19,6 +19,7 @@ import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
 import { speakEnglish } from '../lib/speech';
+import { AiClientError } from '../lib/aiApi';
 import { useClickOutside } from '../hooks/useClickOutside';
 
 interface MasteredWordsListProps {
@@ -77,8 +78,10 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   // Dictionary-first enrichment state; AI is used by the fallback only for unknown words.
   const [enrichingWordId, setEnrichingWordId] = useState<string | null>(null);
   const [isBulkEnriching, setIsBulkEnriching] = useState<boolean>(false);
+  const [enrichError, setEnrichError] = useState<string | null>(null);
 
   const handleEnrichSingleWord = async (item: MasteredWordItem) => {
+    setEnrichError(null);
     setEnrichingWordId(item.id);
     try {
       const enriched = await enrichWordsWithDictionaryFallback([{
@@ -106,6 +109,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       }
     } catch (err) {
       console.error('Enrich single word failed:', err);
+      setEnrichError(err instanceof AiClientError ? err.message : 'AI 补全失败，请稍后重试。');
     } finally {
       setEnrichingWordId(null);
     }
@@ -114,6 +118,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   const handleBulkEnrichWords = async () => {
     const missingWords = activeWordSet.filter(w => !w.exampleSentence || !w.exampleSentence.trim());
     if (missingWords.length === 0 || isBulkEnriching) return;
+    setEnrichError(null);
     setIsBulkEnriching(true);
     try {
       const enriched = await enrichWordsWithDictionaryFallback(missingWords.map(w => ({
@@ -142,6 +147,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       }
     } catch (err) {
       console.error('Bulk enrich failed:', err);
+      setEnrichError(err instanceof AiClientError ? err.message : 'AI 补全失败，请稍后重试。');
     } finally {
       setIsBulkEnriching(false);
     }
@@ -342,7 +348,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       setIsImportModalOpen(false);
     } catch (err) {
       console.error('Import error:', err);
-      setImportStatus({ type: 'error', message: '导入失败，请检查网络后重试。' });
+      setImportStatus({ type: 'error', message: err instanceof AiClientError ? err.message : '导入失败，请检查网络后重试。' });
     } finally {
       setIsEnriching(false);
     }
@@ -350,6 +356,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
   return (
     <div className={hideHeader ? 'space-y-6' : 'page-container space-y-6'}>
+      {enrichError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{enrichError}</p>}
       
       {!hideHeader && (
       <PageHeader
