@@ -181,3 +181,9 @@
   input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: 16px; }
   .app-panel-safe-area { overflow-y: auto; overscroll-behavior: contain; }
 }
+
+@media (min-width: 744px) and (min-height: 600px) and (pointer: coarse) {
+  button { min-height: 44px; min-width: 44px; }
+  input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: 16px; }
+  .app-panel-safe-area { overflow-y: auto; overscroll-behavior: contain; }
+}
