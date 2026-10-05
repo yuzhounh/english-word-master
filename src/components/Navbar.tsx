@@ -236,26 +236,26 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Drawer Footer (Unified rows for Theme, Speech, Account) */}
             <div className="px-4 py-3 border-t border-slate-200/80 dark:border-slate-800 flex flex-col gap-2 shrink-0 bg-white dark:bg-slate-900">
               {/* 外观主题 */}
-              <div className="flex items-center justify-between px-3 h-[38px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
+              <div className="flex items-center justify-between px-3.5 h-[44px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-300">外观主题</span>
                 <button
                   type="button"
                   onClick={onToggleTheme}
-                  className="w-[30px] h-[30px] min-w-[30px] min-h-[30px] rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-brand-600 transition-colors cursor-pointer"
+                  className="w-[34px] h-[34px] min-w-[34px] min-h-[34px] rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-brand-600 transition-colors cursor-pointer shadow-2xs"
                   title={isDark ? '切换浅色模式' : '切换深色模式'}
                   aria-label={isDark ? '切换浅色模式' : '切换深色模式'}
                 >
-                  {isDark ? <Moon className="w-[17px] h-[17px]" /> : <Sun className="w-[18px] h-[18px]" />}
+                  {isDark ? <Moon className="w-[18px] h-[18px]" /> : <Sun className="w-5 h-5" />}
                 </button>
               </div>
 
               {/* 朗读发音 */}
-              <div className="flex items-center justify-between px-3 h-[38px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
+              <div className="flex items-center justify-between px-3.5 h-[44px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-300">朗读发音</span>
                 <button
                   type="button"
                   onClick={onToggleSpeechAccent}
-                  className="w-[30px] h-[30px] min-w-[30px] min-h-[30px] rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-[13px] font-bold leading-none text-slate-800 dark:text-slate-200 hover:text-brand-600 transition-colors cursor-pointer"
+                  className="w-[34px] h-[34px] min-w-[34px] min-h-[34px] rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-[14px] font-bold leading-none text-slate-800 dark:text-slate-200 hover:text-brand-600 transition-colors cursor-pointer shadow-2xs"
                   title={speechAccent === 'en-US' ? '当前美音，点击切换英音' : '当前英音，点击切换美音'}
                   aria-label={speechAccent === 'en-US' ? '当前美音' : '当前英音'}
                 >
@@ -264,7 +264,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               {/* 账户与同步 */}
-              <div className="flex items-center justify-between px-3 h-[38px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
+              <div className="flex items-center justify-between px-3.5 h-[44px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-300">账户状态</span>
                 {user && !user.isGuest ? (
                   <div className="flex items-center gap-2">
@@ -289,7 +289,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setIsMobileMenuOpen(false);
                       onOpenAuthModal();
                     }}
-                    className="h-[30px] px-4 text-xs font-semibold text-white gradient-brand rounded-full shadow-xs cursor-pointer inline-flex items-center justify-center transition-opacity hover:opacity-95"
+                    className="h-[34px] px-4 text-xs font-semibold text-white gradient-brand rounded-full shadow-xs cursor-pointer inline-flex items-center justify-center transition-opacity hover:opacity-95"
                   >
                     登录
                   </button>
