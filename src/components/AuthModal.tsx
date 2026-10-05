@@ -59,7 +59,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           onClick={onClose}
           aria-label="关闭登录窗口"
           disabled={isSigningIn}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
+          className="absolute top-4 right-4 w-9 h-9 rounded-full border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 shadow-xs hover:border-brand-500 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>

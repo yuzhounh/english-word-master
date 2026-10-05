@@ -742,7 +742,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                   setIsImportModalOpen(false);
                   resetImportModal();
                 }}
-                className="p-1 text-muted hover:text-primary rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                className="w-9 h-9 rounded-full border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 shadow-xs hover:border-brand-500 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
