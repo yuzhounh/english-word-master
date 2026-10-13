@@ -20,7 +20,7 @@
 
 🌐 **在线体验：[https://english-word-master.pages.dev/](https://english-word-master.pages.dev/)**
 
-当前版本 **2.0.20**：Web 与 Android 使用同一修复后的源码。APK 默认连接现有 Vercel API，AI 请求携带 Firebase 身份令牌；网页保留 Google 弹窗受阻后的整页登录回退。各平台验收范围见 [Release](https://github.com/yuzhounh/english-word-master/releases/tag/v2.0.20)。
+当前版本 **2.0.21**：Web 与 Android 使用同一修复后的源码。学习记录同步失败时保留按账户保存的待同步操作，并支持联网恢复和手动重试；错词与熟词移动原子提交，重试不重复计数。APK 默认连接现有 Vercel API，AI 请求携带 Firebase 身份令牌；网页保留 Google 弹窗受阻后的整页登录回退。各平台验收范围见 [Release](https://github.com/yuzhounh/english-word-master/releases/tag/v2.0.21)。
 
 ---
 
