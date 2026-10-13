@@ -9,6 +9,10 @@ import { AuthModal } from './components/AuthModal';
 import { WordItem, WrongWordItem, MasteredWordItem, UserProfile, SpeechAccent, WordListGroup } from './types';
 import { AppTab, NotebookSubTab } from './types/navigation';
 import { useTheme } from './hooks/useTheme';
+import { useCompactLayout } from './hooks/useCompactLayout';
+import { loadOfflineVocabulary } from './lib/offlineVocabulary';
+import { exclusiveDeletedWordIds } from './lib/notebookDeletion';
+import { useBackHandler } from './hooks/useBackHandler';
 import {
   auth,
   completeGoogleRedirectSignIn,
@@ -26,8 +30,11 @@ const LOCAL_STORAGE_WRONG_WORDS_KEY = 'wordmaster_wrong_words_v1';
 const LOCAL_STORAGE_MASTERED_WORDS_KEY = 'wordmaster_mastered_words_v1';
 const LOCAL_STORAGE_SPEECH_ACCENT_KEY = 'wordmaster_speech_accent_v1';
 const LOCAL_STORAGE_CUSTOM_LISTS_KEY = 'wordmaster_custom_lists_v1';
+const DELETED_LISTS_KEY = 'wordmaster_deleted_lists_v1';
 
 export default function App() {
+  const compactLayout = useCompactLayout();
+  React.useLayoutEffect(() => { document.documentElement.classList.toggle('compact-layout', compactLayout); }, [compactLayout]);
   const { resolved, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<AppTab>('quiz');
   const [notebookSubTab, setNotebookSubTab] = useState<NotebookSubTab>('wrong');
@@ -36,8 +43,28 @@ export default function App() {
   });
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  useBackHandler(() => { if (!isAuthModalOpen) return false; setIsAuthModalOpen(false); return true; }, 30);
+  useBackHandler(() => { if (activeTab === 'quiz') return false; setActiveTab('quiz'); return true; }, -10);
   const [authRedirectError, setAuthRedirectError] = useState('');
   const [quizPool, setQuizPool] = useState<WordItem[]>([]);
+  const [quizPoolName, setQuizPoolName] = useState('大学四级');
+  const [defaultQuizWords, setDefaultQuizWords] = useState<WordItem[]>([]);
+  const [builtInLists, setBuiltInLists] = useState<WordListGroup[]>([]);
+  const [offlineStatus, setOfflineStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const loadBuiltIns = async () => {
+    setOfflineStatus('loading');
+    try {
+      const { lists, defaultWords } = await loadOfflineVocabulary();
+      setBuiltInLists(lists);
+      setDefaultQuizWords(defaultWords);
+      setQuizPool(current => current.length ? current : defaultWords);
+      setOfflineStatus('ready');
+    } catch (error) {
+      console.error('内置词集读取失败', error);
+      setOfflineStatus('error');
+    }
+  };
+  useEffect(() => { void loadBuiltIns(); }, []);
 
   const toggleSpeechAccent = () => {
     const next = speechAccent === 'en-US' ? 'en-GB' : 'en-US';
@@ -72,7 +99,24 @@ export default function App() {
     }
   });
 
-  // Save custom word lists to LocalStorage whenever modified
+  const [deletedBuiltInIds, setDeletedBuiltInIds] = useState<string[]>(() => {
+    try { const saved = JSON.parse(localStorage.getItem(DELETED_LISTS_KEY) || '[]'); return Array.isArray(saved) ? saved.filter(id => typeof id === 'string') : []; }
+    catch { return []; }
+  });
+  useEffect(() => { localStorage.setItem(DELETED_LISTS_KEY, JSON.stringify(deletedBuiltInIds)); }, [deletedBuiltInIds]);
+
+  const availableWordLists = React.useMemo(() => {
+    const builtInIds = new Set(builtInLists.map(list => list.id));
+    return builtInLists.filter(list => !deletedBuiltInIds.includes(list.id)).map(list => {
+      const extra = customWordLists.find(custom => custom.id === list.id);
+      if (!extra) return list;
+      const merged = new Map(list.words.map(word => [word.id, word]));
+      extra.words.forEach(word => merged.set(word.id, word));
+      return { ...list, words: [...merged.values()], wordCount: merged.size };
+    }).concat(customWordLists.filter(list => !builtInIds.has(list.id)));
+  }, [builtInLists, customWordLists, deletedBuiltInIds]);
+
+  // Store only user additions; bundled vocabulary stays in the packaged asset.
   useEffect(() => {
     try {
       localStorage.setItem(LOCAL_STORAGE_CUSTOM_LISTS_KEY, JSON.stringify(customWordLists));
@@ -103,12 +147,22 @@ export default function App() {
   const handleCreateEmptyWordList = (listName: string): string | null => {
     const cleanName = listName.trim();
     if (!cleanName) return null;
-    if (customWordLists.some((l) => l.name === cleanName)) return null;
+    if (availableWordLists.some((l) => l.name === cleanName)) return null;
     return handleImportCustomList([], cleanName);
   };
 
   const handleMergeWordsIntoWordList = (words: WordItem[], listName: string, listId?: string | null) => {
     const cleanName = listName || '默认词本';
+    const builtIn = builtInLists.find(list => !deletedBuiltInIds.includes(list.id) && (listId ? list.id === listId : list.name === cleanName));
+    if (builtIn) {
+      const extra = customWordLists.find(list => list.id === builtIn.id);
+      const merged = new Map((extra?.words || []).map(word => [word.id, word]));
+      words.forEach(word => merged.set(word.id, word));
+      const additions = { ...builtIn, sourceType: 'custom' as const, words: [...merged.values()], wordCount: merged.size };
+      setCustomWordLists(previous => [...previous.filter(list => list.id !== builtIn.id), additions]);
+      handleAddWordsToNotebook(words);
+      return;
+    }
     const existing = listId
       ? customWordLists.find((l) => l.id === listId)
       : customWordLists.find((l) => l.name === cleanName);
@@ -137,13 +191,20 @@ export default function App() {
     handleAddWordsToNotebook(words);
   };
 
-  const handleDeleteCustomList = (listId: string, removeWordsFromWrongWords: boolean = false) => {
-    if (removeWordsFromWrongWords) {
-      const targetList = customWordLists.find((l) => l.id === listId);
-      if (targetList) {
-        const listWordIds = new Set(targetList.words.map((w) => (w.id || w.word).toLowerCase().trim()));
-        setWrongWords((prev) => prev.filter((w) => !listWordIds.has(w.id.toLowerCase().trim())));
-      }
+  const handleDeleteCustomList = (listId: string) => {
+    const removed = exclusiveDeletedWordIds(availableWordLists, listId);
+    setWrongWords(previous => previous.filter(word => !removed.has(word.id.toLowerCase().trim())));
+    setMasteredWords(previous => previous.filter(word => !removed.has(word.id.toLowerCase().trim())));
+    if (builtInLists.some(list => list.id === listId)) {
+      setDeletedBuiltInIds(previous => [...new Set([...previous, listId])]);
+    }
+    if (user?.uid) {
+      wrongWords.filter(word => removed.has(word.id.toLowerCase().trim())).forEach(word => {
+        void removeWrongWordFromFirestore(user.uid, word.id).catch(console.error);
+      });
+      masteredWords.filter(word => removed.has(word.id.toLowerCase().trim())).forEach(word => {
+        void removeMasteredWordFromFirestore(user.uid, word.id).catch(console.error);
+      });
     }
     setCustomWordLists((prev) => prev.filter((l) => l.id !== listId));
   };
@@ -382,7 +443,8 @@ export default function App() {
       };
     } else {
       // Find from quizPool
-      const foundPool = quizPool.find(w => (w.id || w.word).toLowerCase().trim() === cleanId);
+      const foundPool = quizPool.find(w => (w.id || w.word).toLowerCase().trim() === cleanId)
+        || availableWordLists.flatMap(list => list.words).find(w => w.id.toLowerCase() === cleanId);
       if (foundPool) {
         wordItemToMaster = {
           id: cleanId,
@@ -470,28 +532,6 @@ export default function App() {
         console.error('Error deleting mastered word from Firestore:', err);
       });
     }
-  };
-
-  // Clear all wrong words
-  const handleClearAllWrongWords = () => {
-    if (user && user.uid) {
-      wrongWords.forEach((w) => {
-        removeWrongWordFromFirestore(user.uid, w.id).catch(err => console.error(err));
-      });
-    }
-    setWrongWords([]);
-    localStorage.removeItem(LOCAL_STORAGE_WRONG_WORDS_KEY);
-  };
-
-  // Clear all mastered words
-  const handleClearAllMasteredWords = () => {
-    if (user && user.uid) {
-      masteredWords.forEach((w) => {
-        removeMasteredWordFromFirestore(user.uid, w.id).catch(err => console.error(err));
-      });
-    }
-    setMasteredWords([]);
-    localStorage.removeItem(LOCAL_STORAGE_MASTERED_WORDS_KEY);
   };
 
   // Import wrong words
@@ -588,8 +628,9 @@ export default function App() {
         <div className={activeTab === 'library' ? undefined : 'hidden'} aria-hidden={activeTab !== 'library'}>
           <WordLibraryView
             speechAccent={speechAccent}
-            onStartQuizWithWords={(words) => {
+            onStartQuizWithWords={(words, bookName) => {
               setQuizPool(words);
+              setQuizPoolName(bookName);
               setActiveTab('quiz');
             }}
             onImportCustomList={(words, bookName) => {
@@ -611,9 +652,11 @@ export default function App() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === 'quiz' && (
+            {activeTab === 'quiz' && (offlineStatus === 'ready' ?
               <QuizView
                 wordPool={quizPool}
+                wordPoolName={quizPoolName}
+                fallbackWordPool={defaultQuizWords}
                 onRecordWrongWord={handleRecordWrongWord}
                 onRecordMasteredWord={handleRecordMasteredWord}
                 onGoToWrongWords={() => {
@@ -623,6 +666,9 @@ export default function App() {
                 wrongWordsCount={wrongWords.length}
                 speechAccent={speechAccent}
               />
+              : <div className="quiz-container"><div className="surface-card p-6 rounded-2xl text-center text-sm text-secondary">
+                {offlineStatus === 'error' ? <><p>内置词集加载失败。</p><button type="button" onClick={() => void loadBuiltIns()} className="mt-3 px-4 py-2 gradient-brand text-white rounded-xl">重试</button></> : '正在读取内置词集…'}
+              </div></div>
             )}
 
             {activeTab === 'notebook' && (
@@ -631,24 +677,24 @@ export default function App() {
                 onSubTabChange={setNotebookSubTab}
                 wrongWords={wrongWords}
                 masteredWords={masteredWords}
-                customWordLists={customWordLists}
+                customWordLists={availableWordLists}
                 onRemoveWrongWord={handleRemoveWrongWord}
-                onStartWrongWordsQuiz={(words) => {
+                onStartWrongWordsQuiz={(words, bookName) => {
                   setQuizPool(words);
+                  setQuizPoolName(bookName || '生词本');
                   setActiveTab('quiz');
                 }}
-                onClearAllWrongWords={handleClearAllWrongWords}
                 onImportWrongWords={handleImportWrongWords}
                 onImportToWordList={handleMergeWordsIntoWordList}
                 onCreateCustomList={handleCreateEmptyWordList}
                 onDeleteCustomList={handleDeleteCustomList}
                 onRemoveMasteredWord={handleRemoveMasteredWord}
                 onMoveToWrongWords={handleMoveMasteredToWrongWords}
-                onStartMasteredWordsQuiz={(words) => {
+                onStartMasteredWordsQuiz={(words, bookName) => {
                   setQuizPool(words);
+                  setQuizPoolName(bookName || '熟词本');
                   setActiveTab('quiz');
                 }}
-                onClearAllMasteredWords={handleClearAllMasteredWords}
                 onImportMasteredWords={handleImportMasteredWords}
                 speechAccent={speechAccent}
               />

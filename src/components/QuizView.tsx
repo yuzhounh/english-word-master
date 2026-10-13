@@ -10,9 +10,12 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { PageHeader } from './ui/PageHeader';
 import { speakEnglish, stopSpeech } from '../lib/speech';
+import { useCompactLayout } from '../hooks/useCompactLayout';
 
 interface QuizViewProps {
   wordPool: WordItem[];
+  wordPoolName?: string;
+  fallbackWordPool?: WordItem[];
   onRecordWrongWord: (word: WordItem) => void;
   onRecordMasteredWord?: (wordId: string) => void;
   onGoToWrongWords: () => void;
@@ -56,12 +59,15 @@ const DEFAULT_VOCABULARY: WordItem[] = [
 
 export const QuizView: React.FC<QuizViewProps> = ({
   wordPool,
+  wordPoolName = '词汇测试',
+  fallbackWordPool = DEFAULT_VOCABULARY,
   onRecordWrongWord,
   onRecordMasteredWord,
   onGoToWrongWords,
   wrongWordsCount,
   speechAccent = 'en-US',
 }) => {
+  const compactLayout = useCompactLayout();
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
@@ -132,7 +138,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
       
       if (options.length < 4) {
         // Collect distractors from other words
-        const distractors = activePool
+        const distractors = (activePool.length >= 4 ? activePool : fallbackWordPool)
           .filter(w => w.word !== item.word)
           .map(w => w.chinese)
           .sort(() => Math.random() - 0.5);
@@ -284,24 +290,29 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, questions.length, isFinished]);
+  }, [currentIndex, questions.length, isFinished, compactLayout]);
 
   const currentQ = questions[currentIndex];
 
   useLayoutEffect(() => {
-    if (isFinished || questions.length === 0 || !window.matchMedia('(max-width: 639px)').matches) return;
+    if (isFinished || questions.length === 0 || (!compactLayout && !window.matchMedia('(max-width: 639px)').matches)) return;
 
     const frame = window.requestAnimationFrame(() => {
+      if (compactLayout) {
+        window.dispatchEvent(new Event('wordmaster:focus-quiz'));
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        return;
+      }
       const anchor = progressAnchorRef.current;
       const navbar = document.querySelector<HTMLElement>('[data-app-navbar]');
       if (!anchor || !navbar) return;
 
       const targetTop = window.scrollY + anchor.getBoundingClientRect().top - navbar.getBoundingClientRect().height;
-      window.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
+      window.scrollTo({ top: Math.max(0, targetTop), behavior: 'instant' });
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [currentIndex, questions.length, isFinished]);
+  }, [currentIndex, questions.length, isFinished, compactLayout]);
 
   if (isFinished) {
     const accuracy = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
@@ -381,22 +392,24 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
   return (
     <div className="quiz-container space-y-5">
+      <div className="quiz-intro">
       <PageHeader
-        badge="词汇测试"
+        badge={wordPoolName}
         badgeIcon={BookOpen}
         title="四选一单词测验"
         description="听音辨义，连续答对 3 次自动标记为已掌握"
         compactOnMobile
       />
-
-      <div ref={progressAnchorRef} className="quiz-progress-sticky">
-        <ProgressBar value={currentIndex + 1} max={questions.length} showLabel />
       </div>
+
+      {!compactLayout && <div ref={progressAnchorRef} className="quiz-progress-sticky">
+        <ProgressBar value={currentIndex + 1} max={questions.length} showLabel />
+      </div>}
 
       <div className="quiz-mobile-stage space-y-5">
       <Card
         padding="lg"
-        className="space-y-6 hover:border-brand-200 transition-colors cursor-pointer"
+        className="quiz-question-card space-y-6 hover:border-brand-200 transition-colors cursor-pointer"
         onClick={() => {
           if (isAnswered) {
             speakWord(currentQ.word, currentQ.exampleSentence);
@@ -405,7 +418,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
           }
         }}
       >
-        <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-between w-full pb-4 border-b border-slate-100">
+        <div onClick={(e) => e.stopPropagation()} className="quiz-card-navigation flex items-center justify-between w-full pb-4 border-b border-slate-100">
           <button
             type="button"
             onClick={handlePrev}
@@ -453,7 +466,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
               }
             }}
             speakTitle={isAnswered ? '播放发音（单词+例句）' : '播放单词发音'}
-            wordClassName="text-4xl sm:text-5xl font-extrabold text-primary tracking-tight leading-none"
+            wordClassName="quiz-word text-4xl sm:text-5xl font-extrabold text-primary tracking-tight leading-none"
             iconClassName="w-5 h-5"
           />
 
@@ -461,12 +474,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
             <PhoneticDisplay
               item={currentQ}
               accent={speechAccent}
-              className="text-sm font-sans text-slate-400 tracking-wide"
+              className="quiz-phonetic text-sm font-sans text-slate-400 tracking-wide"
             />
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+        <div className="quiz-options grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
           {currentQ.options.map((option, idx) => {
             const isSelected = selectedOption === idx;
             const isCorrect = idx === currentQ.correctIndex;
@@ -502,7 +515,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   e.stopPropagation();
                   handleSelectOption(idx);
                 }}
-                className={`p-4 text-left transition-all cursor-pointer flex items-center gap-3 group ${btnStyle}`}
+                className={`quiz-option p-4 text-left transition-all cursor-pointer flex items-center gap-3 group ${btnStyle}`}
               >
                 <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs transition-colors shrink-0 ${badgeStyle}`}>
                   {String.fromCharCode(65 + idx)}
@@ -518,27 +531,17 @@ export const QuizView: React.FC<QuizViewProps> = ({
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            className={`w-full p-4 rounded-[var(--radius-card)] border text-sm leading-relaxed space-y-2 ${
+            className={`quiz-feedback w-full p-4 rounded-[var(--radius-card)] border text-sm leading-relaxed space-y-2 ${
             selectedOption === currentQ.correctIndex
               ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200/90 dark:border-emerald-700/60 text-emerald-900 dark:text-emerald-100'
               : 'bg-rose-50 dark:bg-rose-900/30 border-rose-200/90 dark:border-rose-700/60 text-rose-900 dark:text-rose-100'
           }`}>
-            <div className="font-semibold flex items-center gap-1.5">
+            <div className="quiz-feedback-heading font-semibold flex items-center gap-1.5">
+              <div className="min-w-0 flex-1 flex items-center gap-1.5">
               {selectedOption === currentQ.correctIndex ? (
                 <>
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                  {(() => {
-                    const wordId = (currentQ.id || currentQ.word).toLowerCase().trim();
-                    const currentCount = correctCounts[wordId] || 0;
-                    if (currentCount >= 3) {
-                      return <span>回答正确！已累计答对 3 次，已标记【已掌握】</span>;
-                    }
-                    return (
-                      <span>
-                        回答正确！进度 <b className="text-emerald-700">{currentCount}/3</b>（还需 {3 - currentCount} 次）
-                      </span>
-                    );
-                  })()}
+                  <span>回答正确</span>
                 </>
               ) : (
                 <>
@@ -546,25 +549,37 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   <span>回答错误，已记入生词本</span>
                 </>
               )}
+              </div>
+              {compactLayout && currentQ.exampleSentence && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); speakText(currentQ.exampleSentence); }}
+                  title="朗读例句"
+                  aria-label="朗读例句"
+                  className="quiz-example-speaker shrink-0 rounded-lg cursor-pointer hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  <SpeakerIcon isSpeaking={speakingText === currentQ.exampleSentence} className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {currentQ.exampleSentence && (
-              <div className={`pt-3 flex items-start justify-between gap-3 border-t mt-1 ${
+              <div className={`quiz-example pt-3 flex items-start justify-between gap-3 border-t mt-1 ${
                 selectedOption === currentQ.correctIndex
                   ? 'border-emerald-200/70 dark:border-emerald-700/50'
                   : 'border-rose-200/70 dark:border-rose-700/50'
               }`}>
                 <div className="space-y-1 min-w-0">
                   <div className="font-medium italic leading-snug">
-                    "{currentQ.exampleSentence}"
+                    {compactLayout ? currentQ.exampleSentence : `"${currentQ.exampleSentence}"`}
                   </div>
                   {currentQ.exampleSentenceCn && (
-                    <div className="text-sm leading-snug opacity-90">
+                    <div className="quiz-example-translation text-sm leading-snug opacity-90">
                       {currentQ.exampleSentenceCn}
                     </div>
                   )}
                 </div>
-                <button
+                {!compactLayout && <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -578,7 +593,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   }`}
                 >
                   <SpeakerIcon isSpeaking={speakingText === currentQ.exampleSentence} className="w-4 h-4" />
-                </button>
+                </button>}
               </div>
             )}
           </motion.div>

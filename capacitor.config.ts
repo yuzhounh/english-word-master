@@ -8,6 +8,9 @@ const config: CapacitorConfig = {
     androidScheme: 'https'
   },
   plugins: {
+    SystemBars: {
+      insetsHandling: 'disable'
+    },
     CapacitorHttp: {
       enabled: true
     }

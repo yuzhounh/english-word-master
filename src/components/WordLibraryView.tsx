@@ -13,6 +13,7 @@ import { PageHeader } from './ui/PageHeader';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { speakEnglish } from '../lib/speech';
+import { withLibraryWordCounts } from '../lib/libraryMetadata';
 
 interface WordLibraryViewProps {
   onStartQuizWithWords: (words: WordItem[], bookName: string) => void;
@@ -71,7 +72,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
       const res = await fetch(getApiUrl('/api/wordlibrary/tree'));
       const data = await res.json();
       if (data.success && Array.isArray(data.tree)) {
-        setTree(data.tree);
+        setTree(withLibraryWordCounts(data.tree, data.format === 'enriched'));
       } else {
         setTreeError(data.error || '无法加载词库树结构');
       }
@@ -150,11 +151,11 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
   };
 
   // Flatten all books in tree for global search
-  const getAllBooks = (nodes: LibraryCategoryNode[]): { name: string; path: string; category: string }[] => {
-    let result: { name: string; path: string; category: string }[] = [];
+  const getAllBooks = (nodes: LibraryCategoryNode[]): { name: string; path: string; category: string; wordCount?: number }[] => {
+    let result: { name: string; path: string; category: string; wordCount?: number }[] = [];
     nodes.forEach(node => {
       if (node.type === 'book') {
-        result.push({ name: node.name, path: node.path, category: node.path.split('/')[0] || '' });
+        result.push({ name: node.name, path: node.path, category: node.path.split('/')[0] || '', wordCount: node.wordCount });
       } else if (node.children) {
         result = result.concat(getAllBooks(node.children));
       }
@@ -203,7 +204,8 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
               title="前往 GitHub 查看词库开源来源"
             >
               <Github className="w-3.5 h-3.5" />
-              <span>数据来源：yuzhounh/english-word-enriched</span>
+              <span className="library-source-label">数据来源：yuzhounh/english-word-enriched</span>
+              <span className="library-source-label-compact hidden">词库来源</span>
               <ExternalLink className="w-3 h-3 opacity-60" />
             </a>
           </div>
@@ -212,12 +214,12 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
       {/* Breadcrumbs — folders + open book name */}
       {!globalSearch.trim() && (
-        <div className="flex flex-col items-start gap-y-2 text-sm font-medium text-secondary pb-1">
+        <div data-library-breadcrumbs className="flex flex-col items-start gap-y-2 text-sm font-medium text-secondary pb-1">
           <button
             onClick={navigateToRoot}
             className={`text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1.5 transition-colors ${navPath.length === 0 && !selectedBook ? 'text-brand-600 dark:text-brand-400 font-bold' : ''}`}
           >
-            <span aria-hidden="true"><Folder className={breadcrumbIconClass} /></span>
+            <span aria-hidden="true" className="inline-flex items-center justify-center shrink-0 leading-none"><Folder className={breadcrumbIconClass} /></span>
             <span>根目录</span>
           </button>
           {navPath.map((node, index) => (
@@ -229,10 +231,10 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
               <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
               <button
                 onClick={() => navigateToFolder(index)}
-                className={`min-w-0 text-left text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-start gap-1.5 transition-colors ${!selectedBook && index === navPath.length - 1 ? 'text-brand-600 dark:text-brand-400 font-bold' : ''}`}
+                className={`min-w-0 text-left text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1.5 transition-colors ${!selectedBook && index === navPath.length - 1 ? 'text-brand-600 dark:text-brand-400 font-bold' : ''}`}
               >
-                <span aria-hidden="true"><Folder className={breadcrumbIconClass} /></span>
-                <span className="break-words">{node.name}</span>
+                <span aria-hidden="true" className="inline-flex items-center justify-center shrink-0 leading-none"><Folder className={breadcrumbIconClass} /></span>
+                <span className="min-w-0 break-words leading-snug">{node.name}</span>
               </button>
             </span>
           ))}
@@ -242,9 +244,9 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
               style={{ paddingLeft: `${Math.min((navPath.length + 1) * 1.25, 5)}rem` }}
             >
               <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="min-w-0 text-brand-600 dark:text-brand-400 font-bold flex items-start gap-1.5">
+              <span className="min-w-0 text-brand-600 dark:text-brand-400 font-bold flex items-center gap-1.5">
                 <BookOpen className={breadcrumbIconClass} aria-hidden="true" />
-                <span className="break-words">{selectedBook.name}</span>
+                <span className="min-w-0 break-words leading-snug">{selectedBook.name}</span>
               </span>
             </span>
           )}
@@ -255,7 +257,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
         <div className="space-y-6">
           
           {/* Global Search Bar */}
-          <div className="surface-card rounded-2xl p-4 shadow-xs flex items-center gap-3">
+          <div className="library-global-search surface-card rounded-2xl p-4 shadow-xs flex items-center gap-3">
             <Search className="w-5 h-5 text-slate-400 shrink-0" />
             <input 
               type="text"
@@ -301,7 +303,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                   未找到包含 "{globalSearch}" 的词书
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="library-books-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredGlobalBooks.map((book) => (
                     <div
                       key={book.path}
@@ -311,12 +313,12 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       <div className={libraryNodeIconSmClass}>
                         <BookOpen className="w-5 h-5" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-bold text-primary text-sm truncate group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
+                      <div className="library-node-copy min-w-0 flex-1">
+                        <div className="library-node-title font-bold text-primary text-sm truncate group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
                           {book.name}
                         </div>
-                        <div className="text-xs text-slate-400 truncate mt-0.5">
-                          {book.category}
+                        <div className="library-node-count text-xs text-slate-400 mt-0.5">
+                          {book.wordCount === undefined ? '词数未知' : `${book.wordCount} 词`}
                         </div>
                       </div>
                     </div>
@@ -328,7 +330,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
           {/* Normal Folder Grid View */}
           {!loadingTree && !globalSearch.trim() && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="library-books-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {currentNodes.map((node) => {
                 if (node.type === 'folder') {
                   return (
@@ -337,16 +339,16 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       onClick={() => setNavPath([...navPath, node])}
                       className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="library-node-heading flex items-center gap-3 min-w-0">
                         <div className={libraryNodeIconClass}>
                           <Folder className="w-5 h-5" />
                         </div>
-                        <div className="min-w-0">
-                          <div className="font-bold text-primary text-sm truncate group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
+                        <div className="library-node-copy min-w-0">
+                          <div className="library-node-title font-bold text-primary text-sm truncate group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
                             {node.name}
                           </div>
-                          <div className="text-xs text-slate-400 mt-0.5">
-                            {node.bookCount} 本词书
+                          <div className="library-node-count text-xs text-slate-400 mt-0.5">
+                            {node.bookCount} 本
                           </div>
                         </div>
                       </div>
@@ -360,13 +362,16 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                       onClick={() => handleSelectBook({ name: node.name, path: node.path })}
                       className="surface-card rounded-2xl p-5 shadow-xs hover:border-brand-400 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="library-node-heading flex items-center gap-3 min-w-0">
                         <div className={libraryNodeIconClass}>
                           <BookOpen className="w-5 h-5" />
                         </div>
-                        <div className="min-w-0">
-                          <div className="font-bold text-primary text-sm truncate group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
+                        <div className="library-node-copy min-w-0">
+                          <div className="library-node-title font-bold text-primary text-sm truncate group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
                             {node.name}
+                          </div>
+                          <div className="library-node-count text-xs text-slate-400 mt-0.5">
+                            {node.wordCount === undefined ? '词数未知' : `${node.wordCount} 词`}
                           </div>
                         </div>
                       </div>
@@ -384,7 +389,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
         <div className="space-y-6">
 
           {/* Search + actions toolbar */}
-          <div className="surface-card rounded-2xl p-4 shadow-xs flex flex-col lg:flex-row lg:items-center gap-3">
+          <div className="library-book-toolbar surface-card rounded-2xl p-4 shadow-xs flex flex-col lg:flex-row lg:items-center gap-3">
             <div className="relative flex-1 min-w-0">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input

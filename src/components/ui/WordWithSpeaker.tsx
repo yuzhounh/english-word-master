@@ -34,7 +34,7 @@ export const WordWithSpeaker: React.FC<WordWithSpeakerProps> = ({
 
   if (variant === 'centered') {
     return (
-      <div className="flex justify-center w-full">
+      <div className="word-with-speaker-centered flex justify-center w-full">
         <div className="relative inline-block max-w-full">
           <WordTag className={wordClassName}>{word}</WordTag>
           {speakButton && (

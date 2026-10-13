@@ -14,16 +14,14 @@ interface NotebookViewProps {
   masteredWords: MasteredWordItem[];
   customWordLists?: WordListGroup[];
   onRemoveWrongWord: (wordId: string) => void;
-  onStartWrongWordsQuiz: (words: WordItem[]) => void;
-  onClearAllWrongWords?: () => void;
+  onStartWrongWordsQuiz: (words: WordItem[], bookName?: string) => void;
   onImportWrongWords?: (words: WrongWordItem[]) => void;
   onImportToWordList?: (words: WordItem[], listName: string, listId?: string | null) => void;
   onCreateCustomList?: (listName: string) => string | null;
-  onDeleteCustomList?: (listId: string, removeWords?: boolean) => void;
+  onDeleteCustomList?: (listId: string) => void;
   onRemoveMasteredWord: (wordId: string) => void;
   onMoveToWrongWords: (word: MasteredWordItem) => void;
-  onStartMasteredWordsQuiz: (words: WordItem[]) => void;
-  onClearAllMasteredWords?: () => void;
+  onStartMasteredWordsQuiz: (words: WordItem[], bookName?: string) => void;
   onImportMasteredWords?: (words: MasteredWordItem[]) => void;
   speechAccent?: SpeechAccent;
 }
@@ -36,7 +34,6 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
   customWordLists,
   onRemoveWrongWord,
   onStartWrongWordsQuiz,
-  onClearAllWrongWords,
   onImportWrongWords,
   onImportToWordList,
   onCreateCustomList,
@@ -44,11 +41,10 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
   onRemoveMasteredWord,
   onMoveToWrongWords,
   onStartMasteredWordsQuiz,
-  onClearAllMasteredWords,
   onImportMasteredWords,
   speechAccent = 'en-US',
 }) => (
-    <div className="page-container space-y-6">
+    <div className="notebook-view page-container space-y-6">
     <PageHeader
       badge="我的词本"
       badgeIcon={BookOpen}
@@ -106,10 +102,10 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
           <WrongWordsList
             hideHeader
             wrongWords={wrongWords}
+            masteredWordIds={masteredWords.map(word => word.id)}
             customWordLists={customWordLists}
             onRemoveWrongWord={onRemoveWrongWord}
             onStartWrongWordsQuiz={onStartWrongWordsQuiz}
-            onClearAllWrongWords={onClearAllWrongWords}
             onImportWrongWords={onImportWrongWords}
             onImportToWordList={onImportToWordList}
             onCreateCustomList={onCreateCustomList}
@@ -123,7 +119,6 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
             onRemoveMasteredWord={onRemoveMasteredWord}
             onMoveToWrongWords={onMoveToWrongWords}
             onStartMasteredWordsQuiz={onStartMasteredWordsQuiz}
-            onClearAllMasteredWords={onClearAllMasteredWords}
             onImportMasteredWords={onImportMasteredWords}
             speechAccent={speechAccent}
           />

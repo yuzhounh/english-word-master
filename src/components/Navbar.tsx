@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom';
 import { UserProfile, SpeechAccent } from '../types';
 import { AppTab } from '../types/navigation';
 import { useClickOutside } from '../hooks/useClickOutside';
+import { useCompactLayout } from '../hooks/useCompactLayout';
+import { useBackHandler } from '../hooks/useBackHandler';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -34,9 +36,108 @@ export const Navbar: React.FC<NavbarProps> = ({
   isDark,
   onToggleTheme,
 }) => {
+  const compactLayout = useCompactLayout();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState<boolean>(false);
   const userMenuRef = React.useRef<HTMLDivElement>(null);
+  const [isToolbarVisible, setIsToolbarVisible] = React.useState(false);
+  useBackHandler(() => {
+    if (isMobileMenuOpen) { setIsMobileMenuOpen(false); return true; }
+    if (isUserMenuOpen) { setIsUserMenuOpen(false); return true; }
+    return false;
+  }, 10);
+
+  React.useLayoutEffect(() => {
+    if (!compactLayout) return;
+    document.documentElement.dataset.toolbarVisible = String(isToolbarVisible || isMobileMenuOpen);
+    return () => { delete document.documentElement.dataset.toolbarVisible; };
+  }, [isToolbarVisible, isMobileMenuOpen, activeTab, compactLayout]);
+
+  React.useEffect(() => {
+    if (!compactLayout) return;
+    setIsToolbarVisible(false);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeTab, compactLayout]);
+
+  React.useEffect(() => {
+    if (!compactLayout || !isMobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isMobileMenuOpen, compactLayout]);
+
+  React.useEffect(() => {
+    if (!compactLayout || isMobileMenuOpen) return;
+    let touchStart: { x: number; y: number } | null = null;
+    let gestureHandled = false;
+    let revealUntil = 0;
+    const isContent = (target: EventTarget | null) => target instanceof Element &&
+      !target.closest('[data-app-navbar], [role="dialog"], [role="menu"], input, textarea, select');
+    const onTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      touchStart = touch && isContent(event.target) ? { x: touch.clientX, y: touch.clientY } : null;
+      gestureHandled = false;
+      revealUntil = 0;
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch || !touchStart || gestureHandled) return;
+      const dy = touch.clientY - touchStart.y;
+      if (Math.abs(dy) > 20 && Math.abs(dy) > Math.abs(touch.clientX - touchStart.x)) {
+        if (dy < 0) {
+          setIsToolbarVisible(false);
+          revealUntil = 0;
+          gestureHandled = true;
+        } else {
+          // Show only when a downward content gesture has reached the page top.
+          revealUntil = performance.now() + 800;
+          if (window.scrollY <= 1) {
+            setIsToolbarVisible(true);
+            gestureHandled = true;
+            revealUntil = 0;
+          }
+        }
+      }
+    };
+    const onWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0 || !isContent(event.target)) return;
+      revealUntil = event.deltaY < 0 ? performance.now() + 800 : 0;
+      if (event.deltaY > 0) setIsToolbarVisible(false);
+      else if (window.scrollY <= 1) { setIsToolbarVisible(true); revealUntil = 0; }
+    };
+    const onScroll = () => {
+      if (revealUntil > performance.now() && window.scrollY <= 1) {
+        setIsToolbarVisible(true);
+        revealUntil = 0;
+        gestureHandled = true;
+      }
+    };
+    const onTouchEnd = () => { touchStart = null; };
+    const onFocusQuiz = () => { revealUntil = 0; setIsToolbarVisible(false); };
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('wordmaster:focus-quiz', onFocusQuiz);
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchcancel', onTouchEnd);
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('wordmaster:focus-quiz', onFocusQuiz);
+    };
+  }, [isMobileMenuOpen, compactLayout]);
 
   useClickOutside(userMenuRef, () => setIsUserMenuOpen(false), isUserMenuOpen);
 
@@ -76,7 +177,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header data-app-navbar className="app-navbar-safe-area sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80">
+    <header data-app-navbar
+      data-toolbar-visible={!compactLayout || isToolbarVisible || isMobileMenuOpen}
+      inert={compactLayout && !isToolbarVisible && !isMobileMenuOpen}
+      className="app-navbar-safe-area sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80">
       <div className="page-container h-14 sm:h-16 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 cursor-pointer group shrink-0" onClick={() => handleTabClick('quiz')}>
           <img src="/logo.svg" alt="WordMaster Logo" className="w-8 h-8 sm:w-9 sm:h-9 object-contain group-hover:scale-105 transition-transform" />
@@ -207,8 +311,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             aria-label="导航菜单"
             className="relative w-[min(72vw,248px)] h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 rounded-l-2xl shadow-elevated z-10 flex flex-col justify-between overflow-hidden animate-in slide-in-from-right duration-200"
           >
-            {/* Drawer Header (Height: 72px, padding: 26px 16px 18px) */}
-            <div className="flex items-center justify-between px-4 pt-6 pb-4 border-b border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+            {/* Match the main navbar's safe area and button center. */}
+            <div className="app-navbar-safe-area border-b border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+            <div className="flex items-center justify-between px-4 h-14 sm:h-16">
               <div className="flex items-center gap-2">
                 <img src="/logo.svg" alt="WordMaster Logo" className="w-7 h-7 object-contain rounded-lg" />
                 <span className="font-bold text-[17px] tracking-tight text-slate-900 dark:text-slate-100">WordMaster</span>
@@ -221,6 +326,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
             </div>
 
             {/* Drawer Body (Single-column list of tabs, pinned to top) */}
@@ -264,22 +370,28 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               {/* 账户与同步 */}
-              <div className="flex items-center justify-between px-3.5 min-h-[46px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">账户状态</span>
+              <div className="flex items-center justify-end gap-2 min-h-[48px] pt-2 border-t border-slate-200/80 dark:border-slate-700/80 min-w-0">
                 {user && !user.isGuest ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500 max-w-[90px] truncate" title={user.displayName || user.email || '用户'}>
-                      {user.displayName || '用户'}
-                    </span>
+                  <div className="flex items-center gap-2 w-full min-w-0">
+                    <div className="relative w-8 h-8 shrink-0 rounded-full overflow-hidden bg-emerald-500 text-white flex items-center justify-center text-xs font-semibold" aria-hidden="true">
+                      <span>{(user.displayName || user.email || 'U').slice(0, 1).toUpperCase()}</span>
+                      {user.photoURL && <img key={user.photoURL} src={user.photoURL} alt="" referrerPolicy="no-referrer" className="absolute inset-0 w-full h-full object-cover" onError={event => { event.currentTarget.style.display = 'none'; }} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate" title={user.displayName || user.email || '用户'}>{user.displayName || user.email || '用户'}</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate" title={user.email || ''}>{user.email || ''}</div>
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
                         setIsMobileMenuOpen(false);
                         onLogout();
                       }}
-                      className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+                      title="退出登录"
+                      aria-label="退出登录"
+                      className="w-10 h-10 min-w-10 min-h-10 shrink-0 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
                     >
-                      退出
+                      <LogOut className="w-5 h-5" aria-hidden="true" />
                     </button>
                   </div>
                 ) : (
@@ -289,9 +401,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setIsMobileMenuOpen(false);
                       onOpenAuthModal();
                     }}
-                    className="h-9 px-4 text-xs font-semibold text-white gradient-brand rounded-full shadow-xs cursor-pointer inline-flex items-center justify-center transition-opacity hover:opacity-95"
+                    className="w-full min-h-[44px] px-4 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full cursor-pointer inline-flex items-center justify-center transition-opacity hover:opacity-95"
                   >
-                    登录
+                    登录 Google 账号
                   </button>
                 )}
               </div>

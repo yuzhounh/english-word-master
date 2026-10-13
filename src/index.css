@@ -187,3 +187,224 @@
   input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: 16px; }
   .app-panel-safe-area { overflow-y: auto; overscroll-behavior: contain; }
 }
+
+/* Android and phone browsers share a compact layout; desktop keeps its spacing. */
+.compact-layout [data-app-navbar] {
+  position: relative;
+  height: 0;
+  padding-top: 0;
+  border-bottom-width: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.compact-layout [data-app-navbar][data-toolbar-visible="true"] {
+  height: auto;
+  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  border-bottom-width: 1px;
+  overflow: visible;
+  visibility: visible;
+  pointer-events: auto;
+}
+.compact-layout .app-navbar-safe-area > .flex { height: 48px; }
+.compact-layout main {
+  padding-top: calc(12px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  padding-bottom: 16px;
+}
+.compact-layout[data-toolbar-visible="true"] main { padding-top: 12px; }
+/* Android's native host owns all system/keyboard insets. */
+.android-app body { padding: 0; }
+.android-app.compact-layout main { padding-top: 12px; }
+.android-app .app-navbar-safe-area,
+.android-app [data-app-navbar][data-toolbar-visible="true"] { padding-top: 0; }
+.android-app .app-panel-safe-area { padding-top: 20px; padding-bottom: 20px; }
+.compact-layout .quiz-intro { display: none; }
+.compact-layout[data-toolbar-visible="true"] .quiz-intro { display: block; }
+.compact-layout .quiz-intro .page-header-description { display: block; font-size: 11px; }
+.compact-layout .page-container, .compact-layout .quiz-container { padding-inline: 12px; }
+.compact-layout button { min-height: 40px; min-width: 40px; }
+.compact-layout input:not([type="checkbox"]):not([type="radio"]),
+.compact-layout textarea, .compact-layout select { font-size: 14px; min-height: 40px; }
+.compact-layout main .text-sm { font-size: 13px; }
+.compact-layout main .text-base { font-size: 14px; }
+.compact-layout main .text-lg { font-size: 16px; }
+.compact-layout main .text-xl, .compact-layout main .text-2xl { font-size: 18px; }
+.compact-layout main .space-y-6 { --tw-space-y-reverse: 0; }
+.compact-layout main .space-y-6 > :not(:last-child),
+.compact-layout main .space-y-5 > :not(:last-child) { margin-block-end: 12px; }
+.compact-layout main .gap-4 { gap: 10px; }
+.compact-layout main .gap-6 { gap: 12px; }
+.compact-layout main .p-5, .compact-layout main .p-6 { padding: 14px; }
+.compact-layout .page-header-content { padding: 12px; gap: 8px; }
+.compact-layout .page-header-content > div { gap: 8px; }
+.compact-layout .page-header h1 { font-size: 18px; line-height: 1.3; }
+.compact-layout .page-header-badge { font-size: 11px; padding: 3px 8px; }
+.compact-layout .page-header-description { display: none; }
+.compact-layout .page-header .surface-stat {
+  padding: 6px 8px;
+  min-width: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.compact-layout .page-header .surface-stat svg { width: 16px; height: 16px; margin: 0; }
+.compact-layout .page-header .surface-stat .text-xl { font-size: 14px; }
+.compact-layout .library-source-label { display: none; }
+.compact-layout .library-source-label-compact { display: inline; }
+.compact-layout .page-header-content > div:last-child > .flex {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.compact-layout .quiz-mobile-stage { min-height: 0; padding-bottom: 12px; }
+.compact-layout .quiz-question-card { padding: 16px; }
+.compact-layout .quiz-card-navigation { padding-bottom: 10px; }
+.compact-layout .quiz-card-navigation button { padding: 6px 10px; font-size: 12px; }
+.compact-layout .quiz-word { font-size: 30px; line-height: 1.15; overflow-wrap: anywhere; }
+.compact-layout .word-with-speaker-centered > div { max-width: calc(100% - 48px); }
+.compact-layout main .quiz-phonetic, .compact-layout main .word-card-phonetic { font-size: 12px; }
+.compact-layout .quiz-options { grid-template-columns: 1fr; gap: 8px; }
+.compact-layout .quiz-option { padding: 10px 12px; gap: 8px; }
+.compact-layout .quiz-option > span:first-child { width: 24px; height: 24px; }
+.compact-layout .quiz-option p { font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.compact-layout main .quiz-feedback { padding: 10px 12px; font-size: 12.5px; }
+.compact-layout .quiz-feedback-heading { gap: 8px; }
+.compact-layout .quiz-example-speaker { display: inline-flex; align-items: center; justify-content: center; }
+.compact-layout .quiz-example { display: block; padding-top: 8px; }
+.compact-layout .quiz-example > div { width: 100%; font-size: 10.5px; overflow-wrap: anywhere; }
+.compact-layout .quiz-example > div > div { line-height: 1.4; }
+.compact-layout .quiz-example .quiz-example-translation { font-size: 10px; }
+.compact-layout .word-card { padding: 9px 10px; }
+.compact-layout .word-card-word { font-size: 20px; line-height: 1.2; }
+.compact-layout .word-card-meaning { font-size: 13px; line-height: 1.45; padding: 0; overflow-wrap: anywhere; }
+.compact-layout .word-card-meaning-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.compact-layout main .word-card-example { padding: 6px 0 0; font-size: 11px; }
+.word-card-inline-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; min-height: 40px; }
+.word-card-inline-heading > .word-card-index { margin-left: auto; font-size: 10px; }
+.word-card-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; }
+.word-card-expand { padding: 0 6px; font-size: 11px; cursor: pointer; }
+.word-card-actions { margin-left: auto; flex-wrap: wrap; gap: 4px; }
+.compact-layout .word-card-example p { line-height: 1.45; overflow-wrap: anywhere; }
+.compact-layout .word-card-example p + p { font-size: 10px; }
+.compact-layout footer { padding-block: 12px; }
+.compact-layout main .library-global-search { padding: 4px 10px; gap: 8px; }
+.compact-layout .library-global-search input { padding-block: 0; height: 40px; }
+.compact-layout main .library-book-toolbar { padding: 10px; gap: 8px; }
+.compact-layout .library-books-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.compact-layout main .library-books-grid > .surface-card {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  column-gap: 6px;
+  row-gap: 2px;
+  align-items: center;
+  align-content: start;
+  padding: 10px;
+  min-width: 0;
+}
+.compact-layout .library-node-heading, .compact-layout .library-node-copy {
+  display: contents;
+}
+.compact-layout .library-books-grid > .surface-card > svg { display: none; }
+.compact-layout .library-books-grid > .surface-card > div:first-child:not(.library-node-heading),
+.compact-layout .library-node-heading > div:first-child {
+  grid-column: 1;
+  grid-row: 1;
+  padding: 3px;
+  border-radius: 8px;
+}
+.compact-layout .library-books-grid svg { width: 18px; height: 18px; }
+.compact-layout .library-node-title {
+  grid-column: 2;
+  grid-row: 1;
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.compact-layout .library-node-count {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 10.5px;
+}
+.compact-layout .library-node-count.truncate { max-width: 88px; }
+.compact-layout .notebook-toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+.compact-layout .notebook-search-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+.compact-layout .notebook-search-row > div:first-child { flex: 1; min-width: 0; width: auto; }
+.compact-layout .notebook-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.compact-layout .notebook-actions > button,
+.compact-layout .notebook-actions > div > button {
+  width: auto;
+  min-width: 0;
+  height: 40px;
+  padding: 6px 12px;
+  flex-direction: row;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.compact-layout .notebook-actions > div { min-width: 0; }
+.compact-layout .notebook-actions button:disabled { opacity: 0.45; cursor: not-allowed; }
+.compact-layout .notebook-actions > .notebook-enrich { grid-column: 1 / -1; grid-row: 2; flex-direction: row; font-size: 12px; }
+.compact-layout .notebook-sort-menu { border: 1px solid var(--color-border-subtle); }
+.compact-layout .notebook-view > .page-header { display: none; }
+.compact-layout .notebook-list-cards .grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+[data-book-target] { -webkit-touch-callout: none; user-select: none; touch-action: pan-y; }
+.compact-layout main .notebook-list-cards .grid > .cursor-pointer {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  column-gap: 6px;
+  row-gap: 2px;
+  align-items: center;
+  align-content: start;
+  padding: 10px;
+  min-height: 0;
+  min-width: 0;
+}
+.compact-layout .notebook-list-cards .grid > .cursor-pointer p,
+.compact-layout .notebook-list-cards .grid > .cursor-pointer > .border-t { display: none; }
+.compact-layout .notebook-card-heading, .compact-layout .notebook-card-content,
+.compact-layout .notebook-card-controls, .compact-layout .notebook-card-create { display: contents; }
+.compact-layout .notebook-card-heading > div:first-child,
+.compact-layout .notebook-card-create > div:first-child { grid-column: 1; grid-row: 1; padding: 3px; border-radius: 8px; }
+.compact-layout .notebook-list-cards .grid svg { width: 18px; height: 18px; }
+.compact-layout .notebook-list-cards .grid h3 {
+  grid-column: 2;
+  grid-row: 1;
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+}
+.compact-layout .notebook-card-count {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  text-align: right;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.compact-layout .notebook-list-cards .grid > .cursor-pointer:has(.notebook-card-controls button) { grid-template-columns: 24px minmax(0, 1fr) auto 40px; }
+.compact-layout .notebook-card-controls button { grid-column: 4; grid-row: 1; justify-self: end; }
+.compact-layout .notebook-list-cards .grid > .cursor-pointer > :not(:last-child) { margin-block-end: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .compact-layout [data-app-navbar] { transition: none; }
+}

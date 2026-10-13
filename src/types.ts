@@ -59,6 +59,7 @@ export interface LibraryCategoryNode {
   path: string;
   type: 'folder' | 'book';
   size?: number;
+  wordCount?: number;
   bookCount?: number;
   children?: LibraryCategoryNode[];
 }

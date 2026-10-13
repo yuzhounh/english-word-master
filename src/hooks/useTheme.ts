@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core';
+import { Capacitor, registerPlugin, SystemBars, SystemBarsStyle } from '@capacitor/core';
+
+const nativeLayout = registerPlugin<{ setBackground(options: { color: string }): Promise<void> }>('NativeLayout');
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -15,6 +17,9 @@ function resolveTheme(mode: ThemeMode): 'light' | 'dark' {
 function applyTheme(resolved: 'light' | 'dark') {
   document.documentElement.classList.toggle('dark', resolved === 'dark');
   if (Capacitor.isNativePlatform()) {
+    if (Capacitor.getPlatform() === 'android') {
+      void nativeLayout.setBackground({ color: resolved === 'dark' ? '#0f172a' : '#f8fafc' }).catch(() => undefined);
+    }
     void SystemBars.setStyle({
       style: resolved === 'dark' ? SystemBarsStyle.Dark : SystemBarsStyle.Light,
     }).catch(() => undefined);

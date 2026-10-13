@@ -1,7 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import { WordCard } from './ui/WordCard';
 import { 
-  Award, Search, Trash2, BookOpen, ArrowUpDown, 
+  Award, Search, Trash2, BookOpen, ArrowUpDown, ChevronLeft,
   CheckCircle2, RotateCcw, Download, Upload, FileText, X, 
   FileSpreadsheet, FileJson, Check, AlertTriangle, Sparkles, Loader2 
 } from 'lucide-react';
@@ -20,15 +20,19 @@ import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
 import { speakEnglish } from '../lib/speech';
 import { AiClientError } from '../lib/aiApi';
-import { useClickOutside } from '../hooks/useClickOutside';
+import { useBookLongPress } from '../hooks/useBookLongPress';
+import { useBackHandler } from '../hooks/useBackHandler';
+import { BookActionMenu } from './ui/BookActionMenu';
+import { SortMenu } from './ui/SortMenu';
+import { useCompactLayout } from '../hooks/useCompactLayout';
+import { saveTextFile } from '../lib/saveTextFile';
 
 interface MasteredWordsListProps {
   masteredWords: MasteredWordItem[];
   hideHeader?: boolean;
   onRemoveMasteredWord: (wordId: string) => void;
   onMoveToWrongWords: (word: MasteredWordItem) => void;
-  onStartMasteredWordsQuiz: (words: WordItem[]) => void;
-  onClearAllMasteredWords?: () => void;
+  onStartMasteredWordsQuiz: (words: WordItem[], bookName?: string) => void;
   onImportMasteredWords?: (words: MasteredWordItem[]) => void;
   speechAccent?: SpeechAccent;
 }
@@ -39,10 +43,10 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   onRemoveMasteredWord,
   onMoveToWrongWords,
   onStartMasteredWordsQuiz,
-  onClearAllMasteredWords,
   onImportMasteredWords,
   speechAccent = 'en-US',
 }) => {
+  const compactLayout = useCompactLayout();
   const listCardSelectedGreen =
     'border border-emerald-200/80 dark:border-emerald-700/40 !bg-emerald-50/90 dark:!bg-emerald-950/25 shadow-sm ring-1 ring-emerald-200/60 dark:ring-emerald-600/20';
   const listCardUnselected =
@@ -59,22 +63,23 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recent' | 'alphabetical'>('recent');
+  const [isListOpen, setIsListOpen] = useState(false);
+  const openList = () => {
+    setIsListOpen(true);
+    setSearchTerm('');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(30);
 
   // Modals & Popups
-  const [isClearModalOpen, setIsClearModalOpen] = useState<boolean>(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
-  const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
+  const [isBookMenuOpen, setIsBookMenuOpen] = useState(false);
   const [importText, setImportText] = useState<string>('');
   const [importFilePayload, setImportFilePayload] = useState<{ kind: 'json' | 'csv'; content: string } | null>(null);
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const exportMenuRef = useRef<HTMLDivElement>(null);
-  const closeExportMenu = useCallback(() => setIsExportMenuOpen(false), []);
-  useClickOutside(exportMenuRef, closeExportMenu, isExportMenuOpen);
-
   // Dictionary-first enrichment state; AI is used by the fallback only for unknown words.
   const [enrichingWordId, setEnrichingWordId] = useState<string | null>(null);
   const [isBulkEnriching, setIsBulkEnriching] = useState<boolean>(false);
@@ -177,6 +182,16 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   // Active word set depending on filter selection
   const activeWordSet = selectedListFilter === 'recent' ? recentMasteredWords : masteredWords;
 
+  const longPress = useBookLongPress(target => {
+    setSelectedListFilter(target as 'all' | 'recent'); setIsBookMenuOpen(true);
+  });
+  useBackHandler(() => {
+    if (isImportModalOpen) { if (!isEnriching) setIsImportModalOpen(false); return true; }
+    if (isListOpen) { setIsListOpen(false); window.scrollTo(0, 0); return true; }
+    return false;
+  });
+  const exportWords = activeWordSet;
+
   // Filter & Sort
   const filteredWords = activeWordSet
     .filter((w) =>
@@ -218,26 +233,20 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       exampleSentenceCn: w.exampleSentenceCn
     }));
     if (wordItems.length > 0) {
-      onStartMasteredWordsQuiz(wordItems);
+      onStartMasteredWordsQuiz(wordItems, getSelectedGroupLabel());
     }
   };
 
   // Export handlers
   const handleExportJSON = () => {
-    const jsonStr = JSON.stringify(masteredWords, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `熟词本_WordMaster_${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setIsExportMenuOpen(false);
+    const jsonStr = JSON.stringify(exportWords, null, 2);
+    void saveTextFile(jsonStr, `${getSelectedGroupLabel()}_WordMaster_${new Date().toISOString().slice(0, 10)}.json`, 'application/json').catch(() => window.alert('导出失败，请重新选择保存位置。'));
+    setIsBookMenuOpen(false);
   };
 
   const handleExportCSV = () => {
     let csvContent = '\uFEFF单词,音标,中文释义,例句,中文例句,掌握时间\n';
-    masteredWords.forEach((item) => {
+    exportWords.forEach((item) => {
       const word = `"${(item.word || '').replace(/"/g, '""')}"`;
       const phonetic = `"${(item.phonetic || '').replace(/"/g, '""')}"`;
       const chinese = `"${(item.chinese || '').replace(/"/g, '""')}"`;
@@ -247,14 +256,8 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       csvContent += `${word},${phonetic},${chinese},${example},${exampleCn},${dateStr}\n`;
     });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `熟词本_WordMaster_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setIsExportMenuOpen(false);
+    void saveTextFile(csvContent, `${getSelectedGroupLabel()}_WordMaster_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv').catch(() => window.alert('导出失败，请重新选择保存位置。'));
+    setIsBookMenuOpen(false);
   };
 
   const [isEnriching, setIsEnriching] = useState<boolean>(false);
@@ -377,7 +380,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
 
       {/* Word List Cards Grid */}
-      <div className="space-y-4">
+      {!isListOpen && <div className="notebook-list-cards space-y-4" {...longPress}>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             熟词本 · 系统分组
           </div>
@@ -386,22 +389,23 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             
             {/* Card 1: All Mastered Words List */}
             <div 
-              onClick={() => { setSelectedListFilter('all'); setCurrentPage(1); }}
+              data-book-target="all" role="button" tabIndex={0}
+                onClick={() => { setSelectedListFilter('all'); setCurrentPage(1); openList(); }}
               className={`rounded-2xl p-5 transition-all cursor-pointer group space-y-3 ${
                 selectedListFilter === 'all' ? listCardSelectedGreen : listCardUnselected
               }`}
             >
-              <div className="flex items-center justify-between">
+              <div className="notebook-card-heading flex items-center justify-between">
                 <div className={selectedListFilter === 'all' ? listIconSelectedLg : listIconBoxLg}>
                   <Award className="w-5 h-5" />
                 </div>
-                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                <span className={`notebook-card-count px-2 py-0.5 text-xs rounded-full ${
                   selectedListFilter === 'all' ? listBadgeSelected : listBadgeUnselected
                 }`}>
                   {masteredWords.length} 词
                 </span>
               </div>
-              <div>
+              <div className="notebook-card-content">
                 <h3 className={`font-bold text-base transition-colors ${
                   selectedListFilter === 'all' ? listTitleSelected : listTitleUnselected
                 }`}>
@@ -421,22 +425,23 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
             {/* Card 2: Recent Mastered List */}
             <div 
-              onClick={() => { setSelectedListFilter('recent'); setCurrentPage(1); }}
+              data-book-target="recent" role="button" tabIndex={0}
+                onClick={() => { setSelectedListFilter('recent'); setCurrentPage(1); openList(); }}
               className={`rounded-2xl p-5 transition-all cursor-pointer group space-y-3 ${
                 selectedListFilter === 'recent' ? listCardSelectedGreen : listCardUnselected
               }`}
             >
-              <div className="flex items-center justify-between">
+              <div className="notebook-card-heading flex items-center justify-between">
                 <div className={selectedListFilter === 'recent' ? listIconSelectedLg : listIconBoxLg}>
                   <Sparkles className="w-5 h-5" />
                 </div>
-                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                <span className={`notebook-card-count px-2 py-0.5 text-xs rounded-full ${
                   selectedListFilter === 'recent' ? listBadgeSelected : listBadgeUnselected
                 }`}>
                   {recentMasteredWords.length} 词
                 </span>
               </div>
-              <div>
+              <div className="notebook-card-content">
                 <h3 className={`font-bold text-base transition-colors ${
                   selectedListFilter === 'recent' ? listTitleSelected : listTitleUnselected
                 }`}>
@@ -455,12 +460,20 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             </div>
 
           </div>
-        </div>
+        </div>}
 
+      {isListOpen && <>
+      {<div className="notebook-detail-heading flex items-center gap-2">
+        <button type="button" aria-label="返回词本" onClick={() => { setIsListOpen(false); setIsBookMenuOpen(false); window.scrollTo({ top: 0, behavior: 'instant' }); }} className="w-10 h-10 shrink-0 surface-card rounded-xl flex items-center justify-center text-secondary cursor-pointer">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <h2 className="text-base font-bold text-primary min-w-0 truncate">{getSelectedGroupLabel()}</h2>
+      </div>}
       {/* Filter and Toolbar Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 surface-card p-3.5 rounded-2xl shadow-card">
+      <div className="notebook-toolbar flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 surface-card p-3.5 rounded-2xl shadow-card">
         
         {/* Search */}
+        <div className="notebook-search-row contents">
         <div className="relative w-full md:w-72">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -475,11 +488,17 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
           />
         </div>
 
-        {/* Right side controls: Sort + Import + Export + Clear */}
-        <div className="flex flex-wrap items-center gap-2 justify-end">
+        {compactLayout && <SortMenu value={sortBy} onChange={value => { setSortBy(value); setCurrentPage(1); }} options={[
+          { value: 'recent', label: '最近掌握', description: '最近掌握的在前' },
+          { value: 'alphabetical', label: '字母 A–Z', description: '按单词字母排列' },
+        ]} />}
+        </div>
+
+        {/* Action buttons share one compact Android row. */}
+        <div className="notebook-actions flex flex-wrap items-center gap-2 justify-end">
           
           {/* Sort selector */}
-          <div className="flex items-center gap-1.5 surface-muted px-2.5 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl">
+          {!compactLayout && <div className="flex items-center gap-1.5 surface-muted px-2.5 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl">
             <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
             <select
               value={sortBy}
@@ -492,92 +511,17 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
               <option value="recent">按最新掌握时间排序</option>
               <option value="alphabetical">按字母顺序 A-Z 排序</option>
             </select>
-          </div>
+          </div>}
 
-          {/* Bulk dictionary-first enrichment button */}
-          {activeWordSet.some(w => !w.exampleSentence || !w.exampleSentence.trim()) && (
+          {(activeWordSet.length > 0 || compactLayout) && (
             <button
-              onClick={handleBulkEnrichWords}
-              disabled={isBulkEnriching}
-              className="flex items-center gap-1.5 px-3 py-2 gradient-brand text-white font-bold text-xs rounded-xl shadow-sm hover:opacity-95 transition-all cursor-pointer disabled:opacity-50"
-              title="优先使用内置词库补全，仅对未收录单词使用智能托底"
-            >
-              {isBulkEnriching ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-              ) : (
-                <Sparkles className="w-3.5 h-3.5 text-brand-200 animate-pulse" />
-              )}
-              <span>
-                {isBulkEnriching 
-                  ? '补全中...' 
-                  : `补全例句 (${activeWordSet.filter(w => !w.exampleSentence || !w.exampleSentence.trim()).length})`}
-              </span>
-            </button>
-          )}
-
-          {/* Import Button */}
-          <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 surface-muted hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-secondary hover:text-emerald-700 dark:hover:text-emerald-300 font-semibold text-xs rounded-xl border border-slate-200 dark:border-slate-600 transition-all cursor-pointer"
-            title="导入词汇到熟词本"
-          >
-            <Upload className="w-3.5 h-3.5 text-emerald-600" />
-            <span>导入词汇</span>
-          </button>
-
-          {/* Export Menu */}
-          <div className="relative" ref={exportMenuRef}>
-            <button
-              onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-              className="flex items-center gap-1.5 px-3 py-2 surface-muted hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-secondary hover:text-emerald-700 dark:hover:text-emerald-300 font-semibold text-xs rounded-xl border border-slate-200 dark:border-slate-600 transition-all cursor-pointer"
-              title="导出熟词本"
-            >
-              <Download className="w-3.5 h-3.5 text-emerald-600" />
-              <span>导出词汇</span>
-            </button>
-
-            {isExportMenuOpen && (
-              <div className="absolute right-0 mt-2 w-44 surface-card rounded-xl shadow-elevated py-1 z-30 animate-in fade-in zoom-in-95">
-                <button
-                  onClick={handleExportJSON}
-                  disabled={masteredWords.length === 0}
-                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <FileJson className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>导出 JSON 文件</span>
-                </button>
-                <button
-                  onClick={handleExportCSV}
-                  disabled={masteredWords.length === 0}
-                  className="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100 dark:border-slate-700"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-teal-600" />
-                  <span>导出 CSV 表格</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Clear Button */}
-          {masteredWords.length > 0 && (
-            <button
-              onClick={() => setIsClearModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 btn-danger-soft font-semibold text-xs rounded-xl transition-all cursor-pointer"
-              title="清空整个熟词本"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>清空熟词本</span>
-            </button>
-          )}
-
-          {activeWordSet.length > 0 && (
-            <button
+              disabled={activeWordSet.length === 0}
               onClick={handleStartActiveListQuiz}
               className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold text-xs rounded-xl shadow-xs hover:opacity-95 transition-all cursor-pointer"
               title={`对当前选中的「${getSelectedGroupLabel()}」发起测试`}
             >
               <BookOpen className="w-3.5 h-3.5" />
-              <span>测试此词本</span>
+              <span>测试词本</span>
             </button>
           )}
 
@@ -677,7 +621,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
             totalItems={filteredWords.length}
             onPageChange={(p) => {
               setCurrentPage(p);
-              window.scrollTo({ top: 300, behavior: 'smooth' });
+              window.scrollTo({ top: compactLayout ? 0 : 150, behavior: 'smooth' });
             }}
             onPageSizeChange={(sz) => {
               setPageSize(sz);
@@ -687,44 +631,10 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
         </div>
       )}
 
-      {/* Clear Confirmation Modal */}
-      {isClearModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="surface-card rounded-2xl max-w-md w-full p-6 shadow-elevated space-y-5 animate-in fade-in zoom-in-95">
-            <div className="flex items-center gap-3 text-rose-600">
-              <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center shrink-0">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">清空熟词本？</h3>
-                <p className="text-xs text-slate-500">此操作将移除熟词本中的全部 {masteredWords.length} 个单词。</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 bg-rose-50/60 p-3 rounded-xl border border-rose-100">
-              ⚠️ 注意：清空后已掌握单词记录将被移除，若已登录将同步清除云端数据库。
-            </p>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setIsClearModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-secondary surface-muted hover:opacity-90 rounded-xl transition-colors cursor-pointer"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => {
-                  if (onClearAllMasteredWords) onClearAllMasteredWords();
-                  setIsClearModalOpen(false);
-                }}
-                className="px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md transition-all cursor-pointer"
-              >
-                确认清空熟词
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </>}
+      {isBookMenuOpen && <BookActionMenu name={getSelectedGroupLabel()} count={exportWords.length}
+        onClose={() => setIsBookMenuOpen(false)} onImport={() => setIsImportModalOpen(true)}
+        onExportJSON={handleExportJSON} onExportCSV={handleExportCSV} onTest={handleStartActiveListQuiz} />}
 
       {/* Import Modal */}
       {isImportModalOpen && (
