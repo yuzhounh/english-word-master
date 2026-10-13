@@ -4,20 +4,17 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import {
   getFirestore,
   doc,
-  getDoc,
-  setDoc,
-  updateDoc,
   collection,
   getDocs,
-  deleteDoc,
-  increment,
   query,
   orderBy,
-  serverTimestamp
+  runTransaction
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { WrongWordItem, MasteredWordItem } from '../types';
 import { signInWithPopupFallback, webAuthDomain } from './googleSignIn';
+import { LearningSync, type LearningWord } from './learningSync';
+import { writeLearningOperation } from './learningWrite';
 
 // Initialize Firebase
 const app = getApps().length === 0 ? initializeApp({
@@ -81,52 +78,23 @@ export const logOut = async () => {
   }
 };
 
-// Firestore helper functions for Wrong Words
-export const syncWrongWordToFirestore = async (userId: string, wordItem: {
-  word: string;
-  phonetic?: string;
-  chinese?: string;
-  exampleSentence?: string;
-  exampleSentenceCn?: string;
-  errorCount?: number;
-}) => {
-  if (!userId) return;
-  const wordId = wordItem.word.toLowerCase().trim();
-  const wordRef = doc(db, 'users', userId, 'wrongWords', wordId);
-  const snap = await getDoc(wordRef);
-
-  if (snap.exists()) {
-    if (typeof wordItem.errorCount === 'number' && wordItem.errorCount > 0) {
-      await updateDoc(wordRef, {
-        errorCount: increment(wordItem.errorCount),
-        lastErrorAt: Date.now(),
-        ...(wordItem.phonetic ? { phonetic: wordItem.phonetic } : {}),
-        ...(wordItem.chinese ? { chinese: wordItem.chinese } : {}),
-        ...(wordItem.exampleSentence ? { exampleSentence: wordItem.exampleSentence } : {}),
-        ...(wordItem.exampleSentenceCn ? { exampleSentenceCn: wordItem.exampleSentenceCn } : {})
-      });
-    } else {
-      await updateDoc(wordRef, {
-        ...(wordItem.phonetic ? { phonetic: wordItem.phonetic } : {}),
-        ...(wordItem.chinese ? { chinese: wordItem.chinese } : {}),
-        ...(wordItem.exampleSentence ? { exampleSentence: wordItem.exampleSentence } : {}),
-        ...(wordItem.exampleSentenceCn ? { exampleSentenceCn: wordItem.exampleSentenceCn } : {})
-      });
-    }
-  } else {
-    await setDoc(wordRef, {
-      id: wordId,
-      word: wordItem.word,
-      phonetic: wordItem.phonetic || '',
-      chinese: wordItem.chinese || '',
-      exampleSentence: wordItem.exampleSentence || '',
-      exampleSentenceCn: wordItem.exampleSentenceCn || '',
-      errorCount: typeof wordItem.errorCount === 'number' ? wordItem.errorCount : 0,
-      lastErrorAt: Date.now(),
-      createdAt: Date.now()
-    });
-  }
-};
+const learningSync = new LearningSync({
+  getItem: key => typeof localStorage === 'undefined' ? null : localStorage.getItem(key),
+  setItem: (key, value) => localStorage.setItem(key, value),
+}, (uid, operation) => runTransaction(db, transaction => writeLearningOperation(operation, {
+  get: async path => { const snapshot = await transaction.get(doc(db, 'users', uid, ...path.split('/'))); return snapshot.exists() ? snapshot.data() : null; },
+  set: (path, data) => { transaction.set(doc(db, 'users', uid, ...path.split('/')), data); },
+  delete: path => { transaction.delete(doc(db, 'users', uid, ...path.split('/'))); },
+})));
+export const subscribeLearningSync = learningSync.subscribe.bind(learningSync);
+export const setLearningSyncUser = learningSync.setUser.bind(learningSync);
+export const retryLearningSync = learningSync.flush.bind(learningSync);
+export const reportLearningReadError = learningSync.reportReadError.bind(learningSync);
+export const confirmedLearningChanges = learningSync.getConfirmedChanges.bind(learningSync);
+export const clearConfirmedLearningChanges = learningSync.clearConfirmedChanges.bind(learningSync);
+export const syncWrongWordToFirestore = (uid: string, word: LearningWord) => learningSync.enqueue(uid, 'wrong', word);
+export const moveWordToMasteredInFirestore = (uid: string, word: LearningWord) => learningSync.enqueue(uid, 'move-mastered', word);
+export const moveWordToWrongInFirestore = (uid: string, word: LearningWord) => learningSync.enqueue(uid, 'move-wrong', word);
 
 // Fetch user's wrong words list from Firestore
 export const fetchWrongWordsFromFirestore = async (userId: string): Promise<WrongWordItem[]> => {
@@ -152,47 +120,15 @@ export const fetchWrongWordsFromFirestore = async (userId: string): Promise<Wron
     return words;
   } catch (err) {
     console.error('Failed to fetch wrong words from firestore:', err);
-    return [];
+    throw err;
   }
 };
 
 // Delete or remove wrong word from Firestore
-export const removeWrongWordFromFirestore = async (userId: string, wordId: string) => {
-  if (!userId) return;
-  try {
-    await deleteDoc(doc(db, 'users', userId, 'wrongWords', wordId));
-  } catch (err) {
-    console.error('Failed to delete wrong word from firestore:', err);
-  }
-};
+export const removeWrongWordFromFirestore = (uid: string, wordId: string) => learningSync.enqueue(uid, 'delete-wrong', { word: wordId });
 
 // Firestore helper functions for Mastered Words (熟词本)
-export const syncMasteredWordToFirestore = async (userId: string, wordItem: {
-  id?: string;
-  word: string;
-  phonetic?: string;
-  chinese?: string;
-  exampleSentence?: string;
-  exampleSentenceCn?: string;
-}) => {
-  if (!userId) return;
-  const wordId = (wordItem.id || wordItem.word).toLowerCase().trim();
-  const wordRef = doc(db, 'users', userId, 'masteredWords', wordId);
-
-  try {
-    await setDoc(wordRef, {
-      id: wordId,
-      word: wordItem.word,
-      phonetic: wordItem.phonetic || '',
-      chinese: wordItem.chinese || '',
-      exampleSentence: wordItem.exampleSentence || '',
-      exampleSentenceCn: wordItem.exampleSentenceCn || '',
-      masteredAt: Date.now()
-    });
-  } catch (err) {
-    console.error('Error syncing mastered word to firestore:', err);
-  }
-};
+export const syncMasteredWordToFirestore = (uid: string, word: LearningWord) => learningSync.enqueue(uid, 'mastered', word);
 
 export const fetchMasteredWordsFromFirestore = async (userId: string): Promise<MasteredWordItem[]> => {
   if (!userId) return [];
@@ -215,15 +151,8 @@ export const fetchMasteredWordsFromFirestore = async (userId: string): Promise<M
     return words;
   } catch (err) {
     console.error('Failed to fetch mastered words from firestore:', err);
-    return [];
+    throw err;
   }
 };
 
-export const removeMasteredWordFromFirestore = async (userId: string, wordId: string) => {
-  if (!userId) return;
-  try {
-    await deleteDoc(doc(db, 'users', userId, 'masteredWords', wordId));
-  } catch (err) {
-    console.error('Failed to delete mastered word from firestore:', err);
-  }
-};
+export const removeMasteredWordFromFirestore = (uid: string, wordId: string) => learningSync.enqueue(uid, 'delete-mastered', { word: wordId });

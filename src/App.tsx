@@ -23,8 +23,12 @@ import {
   removeWrongWordFromFirestore,
   syncMasteredWordToFirestore,
   fetchMasteredWordsFromFirestore,
-  removeMasteredWordFromFirestore
+  removeMasteredWordFromFirestore,
+  moveWordToMasteredInFirestore, moveWordToWrongInFirestore,
+  subscribeLearningSync, setLearningSyncUser, retryLearningSync, reportLearningReadError,
+  confirmedLearningChanges, clearConfirmedLearningChanges
 } from './lib/firebase';
+import type { LearningSyncState } from './lib/learningSync';
 
 const LOCAL_STORAGE_WRONG_WORDS_KEY = 'wordmaster_wrong_words_v1';
 const LOCAL_STORAGE_MASTERED_WORDS_KEY = 'wordmaster_mastered_words_v1';
@@ -42,6 +46,10 @@ export default function App() {
     return (localStorage.getItem(LOCAL_STORAGE_SPEECH_ACCENT_KEY) as SpeechAccent) || 'en-US';
   });
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [learningSyncState, setLearningSyncState] = useState<LearningSyncState>({ pending: 0, busy: false, error: null, durable: true });
+  const authGeneration = React.useRef(0);
+  const refreshLearning = React.useRef<(user: typeof auth.currentUser) => Promise<void>>(async () => {});
+  useEffect(() => subscribeLearningSync(setLearningSyncState), []);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   useBackHandler(() => { if (!isAuthModalOpen) return false; setIsAuthModalOpen(false); return true; }, 30);
   useBackHandler(() => { if (activeTab === 'quiz') return false; setActiveTab('quiz'); return true; }, -10);
@@ -235,7 +243,10 @@ export default function App() {
       setAuthRedirectError(error?.message || 'Google 登录未完成，请重新尝试。');
       setIsAuthModalOpen(true);
     });
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const refresh = async (firebaseUser: typeof auth.currentUser) => {
+      const generation = ++authGeneration.current;
+      const current = () => generation === authGeneration.current && auth.currentUser?.uid === firebaseUser?.uid;
+      setLearningSyncUser(firebaseUser?.uid || null);
       if (firebaseUser) {
         const uProfile: UserProfile = {
           uid: firebaseUser.uid,
@@ -244,12 +255,18 @@ export default function App() {
           photoURL: firebaseUser.photoURL
         };
         setUser(uProfile);
+        try { await retryLearningSync(); } catch { return; }
+        if (!current()) return;
+        const confirmed = confirmedLearningChanges();
+        let readFailed = false;
 
         // Fetch user's wrong words from Firestore and merge
         try {
           const fsWrongWords = await fetchWrongWordsFromFirestore(firebaseUser.uid);
-          if (fsWrongWords && fsWrongWords.length > 0) {
+          if (!current()) return;
+          if (fsWrongWords.length > 0 || confirmed.size > 0) {
             setWrongWords((prevLocal) => {
+              if (!current()) return prevLocal;
               const map = new Map<string, WrongWordItem>();
               
               // Load Firestore first
@@ -257,10 +274,11 @@ export default function App() {
               
               // Merge local items if not present or has higher count
               prevLocal.forEach(w => {
+                if (['move-mastered', 'delete-wrong'].includes(confirmed.get(w.id) || '')) return;
                 const existing = map.get(w.id);
                 if (!existing) {
                   map.set(w.id, w);
-                  syncWrongWordToFirestore(firebaseUser.uid, w);
+                  void syncWrongWordToFirestore(firebaseUser.uid, w).catch(console.error);
                 } else if (w.errorCount > existing.errorCount) {
                   map.set(w.id, { ...existing, errorCount: w.errorCount });
                 }
@@ -270,35 +288,46 @@ export default function App() {
             });
           }
         } catch (err) {
+          readFailed = true;
           console.error('Error fetching Firestore wrong words:', err);
+          if (current()) reportLearningReadError();
         }
 
         // Fetch user's mastered words from Firestore and merge
         try {
           const fsMasteredWords = await fetchMasteredWordsFromFirestore(firebaseUser.uid);
-          if (fsMasteredWords && fsMasteredWords.length > 0) {
+          if (!current()) return;
+          if (fsMasteredWords.length > 0 || confirmed.size > 0) {
             setMasteredWords((prevLocal) => {
+              if (!current()) return prevLocal;
               const map = new Map<string, MasteredWordItem>();
               fsMasteredWords.forEach(w => map.set(w.id, w));
               prevLocal.forEach(w => {
+                if (['move-wrong', 'delete-mastered'].includes(confirmed.get(w.id) || '')) return;
                 if (!map.has(w.id)) {
                   map.set(w.id, w);
-                  syncMasteredWordToFirestore(firebaseUser.uid, w);
+                  void syncMasteredWordToFirestore(firebaseUser.uid, w).catch(console.error);
                 }
               });
               return Array.from(map.values());
             });
           }
         } catch (err) {
+          readFailed = true;
           console.error('Error fetching Firestore mastered words:', err);
+          if (current()) reportLearningReadError();
         }
+        if (!readFailed && current()) clearConfirmedLearningChanges();
 
       } else {
         setUser(null);
       }
-    });
-
-    return () => { cancelled = true; unsubscribe(); };
+    };
+    refreshLearning.current = refresh;
+    const unsubscribe = onAuthStateChanged(auth, refresh);
+    const online = () => { if (auth.currentUser) void refresh(auth.currentUser); };
+    window.addEventListener('online', online);
+    return () => { cancelled = true; authGeneration.current++; unsubscribe(); window.removeEventListener('online', online); setLearningSyncUser(null); };
   }, []);
 
   // Google Sign In
@@ -408,7 +437,7 @@ export default function App() {
 
     // Sync to Firestore if user logged in
     if (user && user.uid) {
-      syncWrongWordToFirestore(user.uid, {
+      moveWordToWrongInFirestore(user.uid, {
         word: wordItem.word,
         phonetic: wordItem.phonetic || '',
         chinese: wordItem.chinese || '',
@@ -417,9 +446,6 @@ export default function App() {
         errorCount: 1
       }).catch(err => {
         console.error('Error syncing wrong word to Firestore:', err);
-      });
-      removeMasteredWordFromFirestore(user.uid, wordId).catch(err => {
-        console.error('Error removing mastered word from Firestore:', err);
       });
     }
   };
@@ -460,7 +486,7 @@ export default function App() {
 
     // Remove from wrongWords
     setWrongWords((prev) => prev.filter((w) => w.id !== cleanId));
-    if (user && user.uid) {
+    if (user && user.uid && !wordItemToMaster) {
       removeWrongWordFromFirestore(user.uid, cleanId).catch(err => {
         console.error('Error removing wrong word from Firestore:', err);
       });
@@ -474,7 +500,7 @@ export default function App() {
       });
 
       if (user && user.uid) {
-        syncMasteredWordToFirestore(user.uid, wordItemToMaster).catch(err => {
+        moveWordToMasteredInFirestore(user.uid, wordItemToMaster).catch(err => {
           console.error('Error syncing mastered word to Firestore:', err);
         });
       }
@@ -493,11 +519,6 @@ export default function App() {
 
     // Remove from mastered
     setMasteredWords((prev) => prev.filter((w) => w.id !== wordId));
-    if (user && user.uid) {
-      removeMasteredWordFromFirestore(user.uid, wordId).catch(err => {
-        console.error('Error removing mastered word from Firestore:', err);
-      });
-    }
 
     // Add back to wrongWords / pending list
     const newItem: WrongWordItem = {
@@ -518,7 +539,7 @@ export default function App() {
     });
 
     if (user && user.uid) {
-      syncWrongWordToFirestore(user.uid, newItem).catch(err => {
+      moveWordToWrongInFirestore(user.uid, newItem).catch(err => {
         console.error('Error syncing word back to wrongWords in Firestore:', err);
       });
     }
@@ -624,6 +645,13 @@ export default function App() {
       />
 
       <main className="flex-1 py-4 sm:py-8">
+        {user && (learningSyncState.pending > 0 || learningSyncState.error || learningSyncState.busy) && (
+          <div role="status" className="mx-4 mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/80 px-4 py-2 text-sm dark:bg-slate-800/80">
+            <span>{learningSyncState.error || (learningSyncState.busy ? '正在同步学习记录…' : `${learningSyncState.pending} 项学习记录待同步`)}</span>
+            <button type="button" disabled={learningSyncState.busy} onClick={() => void refreshLearning.current(auth.currentUser)}
+              className="min-h-10 min-w-10 rounded-xl px-3 text-brand-600 disabled:opacity-50 dark:text-brand-400">重试同步</button>
+          </div>
+        )}
         {/* Keep library mounted so folder navigation survives tab switches */}
         <div className={activeTab === 'library' ? undefined : 'hidden'} aria-hidden={activeTab !== 'library'}>
           <WordLibraryView
