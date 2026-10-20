@@ -20,7 +20,7 @@
 
 🌐 **在线体验：[https://english-word-master.pages.dev/](https://english-word-master.pages.dev/)**
 
-当前版本 **2.0.21**：Web 与 Android 使用同一修复后的源码。学习记录同步失败时保留按账户保存的待同步操作，并支持联网恢复和手动重试；错词与熟词移动原子提交，重试不重复计数。APK 默认连接现有 Vercel API，AI 请求携带 Firebase 身份令牌；网页保留 Google 弹窗受阻后的整页登录回退。各平台验收范围见 [Release](https://github.com/yuzhounh/english-word-master/releases/tag/v2.0.21)。
+当前版本 **2.0.22**：Web 与 Android 使用同一修复后的源码。学习记录同步失败时保留按账户保存的待同步操作，并支持联网恢复和手动重试；错词与熟词移动原子提交，重试不重复计数。APK 默认连接现有 Vercel API，AI 请求携带 Firebase 身份令牌；网页保留 Google 弹窗受阻后的整页登录回退。各平台验收范围见 [Release](https://github.com/yuzhounh/english-word-master/releases/tag/v2.0.22)。
 
 ---
 
@@ -136,6 +136,10 @@ NODE_ENV=production npm start
 ```
 
 ---
+
+## 设计文档
+
+- [Android 布局与词本操作](docs/android-layout.md)：安全区、紧凑词卡、长按菜单和删除范围；历史审查与实机验收边界见文内引用。
 
 ## 相关项目
 
