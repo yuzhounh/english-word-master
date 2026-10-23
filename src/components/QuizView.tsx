@@ -484,22 +484,22 @@ export const QuizView: React.FC<QuizViewProps> = ({
             const isSelected = selectedOption === idx;
             const isCorrect = idx === currentQ.correctIndex;
 
-            let btnStyle = 'rounded-[var(--radius-card)] border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800/80 shadow-card hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-card-hover text-primary transition-all';
-            let badgeStyle = 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors';
+            let btnStyle = 'rounded-xl border border-slate-200/70 dark:border-slate-700/60 bg-white/70 dark:bg-slate-800/40 hover:border-brand-300 dark:hover:border-brand-600 hover:bg-white dark:hover:bg-slate-800/70 text-primary transition-colors';
+            let badgeStyle = 'border border-slate-200 dark:border-slate-600 text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:border-brand-300 dark:group-hover:border-brand-600 transition-colors';
             let icon = null;
 
             if (isAnswered) {
               if (isCorrect) {
-                btnStyle = 'rounded-[var(--radius-card)] bg-emerald-50 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-100 border border-emerald-200/90 dark:border-emerald-700/60 font-semibold';
-                badgeStyle = 'bg-emerald-200/70 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-100';
+                btnStyle = 'rounded-xl bg-emerald-50/80 dark:bg-emerald-900/25 text-emerald-900 dark:text-emerald-100 border border-emerald-200/80 dark:border-emerald-700/50 font-semibold';
+                badgeStyle = 'border border-emerald-300/80 dark:border-emerald-600/60 text-emerald-700 dark:text-emerald-200';
                 icon = <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />;
               } else if (isSelected && !isCorrect) {
-                btnStyle = 'rounded-[var(--radius-card)] bg-rose-50 dark:bg-rose-900/30 text-rose-900 dark:text-rose-100 border border-rose-200/90 dark:border-rose-700/60 font-semibold';
-                badgeStyle = 'bg-rose-200/70 dark:bg-rose-800/50 text-rose-800 dark:text-rose-100';
+                btnStyle = 'rounded-xl bg-rose-50/80 dark:bg-rose-900/25 text-rose-900 dark:text-rose-100 border border-rose-200/80 dark:border-rose-700/50 font-semibold';
+                badgeStyle = 'border border-rose-300/80 dark:border-rose-600/60 text-rose-700 dark:text-rose-200';
                 icon = <XCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />;
               } else {
-                btnStyle = 'rounded-[var(--radius-card)] bg-slate-50/80 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700/50 opacity-70';
-                badgeStyle = 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500';
+                btnStyle = 'rounded-xl bg-transparent text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700/40 opacity-60';
+                badgeStyle = 'border border-slate-200/70 dark:border-slate-700 text-slate-300 dark:text-slate-500';
               }
             }
 
@@ -515,9 +515,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   e.stopPropagation();
                   handleSelectOption(idx);
                 }}
-                className={`quiz-option p-4 text-left transition-all cursor-pointer flex items-center gap-3 group ${btnStyle}`}
+                className={`quiz-option px-4 py-3 text-left transition-colors cursor-pointer flex items-center gap-3 group ${btnStyle}`}
               >
-                <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs transition-colors shrink-0 ${badgeStyle}`}>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-[11px] transition-colors shrink-0 ${badgeStyle}`}>
                   {String.fromCharCode(65 + idx)}
                 </span>
                 <p className="min-w-0 flex-1 text-sm sm:text-base font-medium leading-snug whitespace-pre-line">{option}</p>

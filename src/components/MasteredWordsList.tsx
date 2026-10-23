@@ -1,4 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Play } from 'lucide-react';
+import { useChromeActions, useChromeSearch } from './mobile/chrome';
+import type { NotebookCommand } from '../types/navigation';
 import { WordCard } from './ui/WordCard';
 import { 
   Award, Search, Trash2, BookOpen, ArrowUpDown, ChevronLeft,
@@ -28,6 +31,10 @@ import { useCompactLayout } from '../hooks/useCompactLayout';
 import { saveTextFile } from '../lib/saveTextFile';
 
 interface MasteredWordsListProps {
+  /** Phone layout: the shell chooses the list ('all' | 'recent'). */
+  externalTarget?: string;
+  externalCommand?: NotebookCommand | null;
+  onCommandHandled?: () => void;
   masteredWords: MasteredWordItem[];
   hideHeader?: boolean;
   onRemoveMasteredWord: (wordId: string) => void;
@@ -38,6 +45,9 @@ interface MasteredWordsListProps {
 }
 
 export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
+  externalTarget,
+  externalCommand,
+  onCommandHandled,
   masteredWords,
   hideHeader = false,
   onRemoveMasteredWord,
@@ -47,6 +57,9 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   speechAccent = 'en-US',
 }) => {
   const compactLayout = useCompactLayout();
+  const chrome = useChromeActions();
+  const chromeSearch = useChromeSearch();
+  const mobile = externalTarget !== undefined && !!chrome;
   const listCardSelectedGreen =
     'border border-emerald-200/80 dark:border-emerald-700/40 !bg-emerald-50/90 dark:!bg-emerald-950/25 shadow-sm ring-1 ring-emerald-200/60 dark:ring-emerald-600/20';
   const listCardUnselected =
@@ -63,7 +76,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recent' | 'alphabetical'>('recent');
-  const [isListOpen, setIsListOpen] = useState(false);
+  const [isListOpen, setIsListOpen] = useState(externalTarget !== undefined);
   const openList = () => {
     setIsListOpen(true);
     setSearchTerm('');
@@ -171,7 +184,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
     });
   };
 
-  const [selectedListFilter, setSelectedListFilter] = useState<'all' | 'recent'>('all');
+  const [selectedListFilter, setSelectedListFilter] = useState<'all' | 'recent'>(externalTarget === 'recent' ? 'recent' : 'all');
 
   // Computed sub-lists
   const recentMasteredWords = masteredWords.filter(w => Date.now() - (w.masteredAt || 0) <= 7 * 86400000);
@@ -187,16 +200,17 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   });
   useBackHandler(() => {
     if (isImportModalOpen) { if (!isEnriching) setIsImportModalOpen(false); return true; }
-    if (isListOpen) { setIsListOpen(false); window.scrollTo(0, 0); return true; }
+    if (isListOpen && !mobile) { setIsListOpen(false); window.scrollTo(0, 0); return true; }
     return false;
   });
   const exportWords = activeWordSet;
 
   // Filter & Sort
+  const searchValue = mobile ? chromeSearch : searchTerm;
   const filteredWords = activeWordSet
     .filter((w) =>
-      w.word.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
-      w.chinese.includes(searchTerm.trim())
+      w.word.toLowerCase().includes(searchValue.toLowerCase().trim()) ||
+      w.chinese.includes(searchValue.trim())
     )
     .sort((a, b) => {
       if (sortBy === 'recent') {
@@ -209,6 +223,82 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   const isAllMastered = pageSize <= 0 || pageSize >= filteredWords.length;
   const pageStartIndexMastered = isAllMastered ? 0 : (currentPage - 1) * pageSize;
   const paginatedWords = isAllMastered ? filteredWords : filteredWords.slice(pageStartIndexMastered, pageStartIndexMastered + pageSize);
+
+  // Phone list selection (long press or avatar tap), driven from the shell's title bar and bottom bar.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const exitSelection = () => { setSelectMode(false); setSelectedIds(new Set()); };
+  const toggleSelect = (id: string) => {
+    setSelectMode(true);
+    setSelectedIds(previous => { const next = new Set(previous); if (!next.delete(id)) next.add(id); return next; });
+  };
+  const selectionApi = useRef({ run: (_: 'test' | 'unmaster' | 'delete') => {}, toggleAll: () => {} });
+  selectionApi.current = {
+    toggleAll: () => setSelectedIds(previous =>
+      previous.size === filteredWords.length ? new Set() : new Set(filteredWords.map(w => w.id))),
+    run: kind => {
+      const chosen = filteredWords.filter(w => selectedIds.has(w.id));
+      if (!chosen.length) return;
+      if (kind === 'test') {
+        onStartMasteredWordsQuiz(chosen.map(w => ({
+          id: w.id, word: w.word, phonetic: w.phonetic, chinese: w.chinese,
+          exampleSentence: w.exampleSentence, exampleSentenceCn: w.exampleSentenceCn,
+        })), `${getSelectedGroupLabel()}（所选）`);
+        exitSelection();
+      } else if (kind === 'unmaster') {
+        chosen.forEach(w => onMoveToWrongWords(w));
+        exitSelection();
+      } else if (window.confirm(`从熟词本删除所选的 ${chosen.length} 个单词？不会影响其他词本和生词本。`)) {
+        chosen.forEach(w => onRemoveMasteredWord(w.id));
+        exitSelection();
+      }
+    },
+  };
+
+  useEffect(() => {
+    if (externalTarget === undefined) return;
+    setSelectedListFilter(externalTarget === 'recent' ? 'recent' : 'all');
+    setIsListOpen(true);
+    setCurrentPage(1);
+    exitSelection();
+  }, [externalTarget]);
+  useEffect(() => {
+    if (!externalCommand) return;
+    if (externalCommand.type === 'menu') {
+      setSelectedListFilter((externalCommand.target ?? externalTarget) === 'recent' ? 'recent' : 'all');
+      setIsBookMenuOpen(true);
+    }
+    onCommandHandled?.();
+  }, [externalCommand?.id]);
+  useEffect(() => {
+    if (!mobile || !chrome) return;
+    chrome.setSort({
+      value: sortBy,
+      options: [
+        { value: 'recent', label: '最近掌握', description: '最近掌握的在前' },
+        { value: 'alphabetical', label: '字母 A–Z', description: '按单词字母排列' },
+      ],
+      onChange: value => { setSortBy(value as typeof sortBy); setCurrentPage(1); },
+    });
+    return () => chrome.setSort(null);
+  }, [mobile, sortBy]);
+  useEffect(() => {
+    if (!mobile || !chrome) return;
+    if (!selectMode) { chrome.setSelection(null); return; }
+    chrome.setSelection({
+      count: selectedIds.size,
+      total: filteredWords.length,
+      toggleAll: () => selectionApi.current.toggleAll(),
+      exit: exitSelection,
+      actions: [
+        { id: 'test', label: '测试', icon: Play, onClick: () => selectionApi.current.run('test') },
+        { id: 'unmaster', label: '移回生词本', icon: RotateCcw, onClick: () => selectionApi.current.run('unmaster') },
+      ],
+      more: [{ id: 'delete', label: '从熟词本删除', danger: true, onClick: () => selectionApi.current.run('delete') }],
+    });
+  }, [mobile, selectMode, selectedIds, filteredWords.length]);
+  useEffect(() => () => chrome?.setSelection(null), []);
+  useBackHandler(() => { if (!selectMode) return false; exitSelection(); return true; }, 15);
 
   // Convert MasteredWordItem to WordItem for Quiz
   const handleStartQuiz = () => {
@@ -463,15 +553,15 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
         </div>}
 
       {isListOpen && <>
-      {<div className="notebook-detail-heading flex items-center gap-2">
+      {!mobile && <div className="notebook-detail-heading flex items-center gap-2">
         <button type="button" aria-label="返回词本" onClick={() => { setIsListOpen(false); setIsBookMenuOpen(false); window.scrollTo({ top: 0, behavior: 'instant' }); }} className="w-10 h-10 shrink-0 surface-card rounded-xl flex items-center justify-center text-secondary cursor-pointer">
           <ChevronLeft className="w-5 h-5" />
         </button>
         <h2 className="text-base font-bold text-primary min-w-0 truncate">{getSelectedGroupLabel()}</h2>
       </div>}
       {/* Filter and Toolbar Bar */}
-      <div className="notebook-toolbar flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 surface-card p-3.5 rounded-2xl shadow-card">
-        
+      {!mobile && <div className="notebook-toolbar flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 surface-card p-3.5 rounded-2xl shadow-card">
+
         {/* Search */}
         <div className="notebook-search-row contents">
         <div className="relative w-full md:w-72">
@@ -526,14 +616,14 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
           )}
 
         </div>
-      </div>
+      </div>}
 
       {/* Words Grid */}
       {filteredWords.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
-          title={searchTerm ? '未找到符合条件的熟词' : '熟词本暂无单词'}
-          description={searchTerm ? '尝试更换搜索关键字' : '在单词测试中连续答对 3 次即可将词汇自动录入熟词本，也可直接在此【导入词汇】！'}
+          title={searchValue ? '未找到符合条件的熟词' : '熟词本暂无单词'}
+          description={searchValue ? '尝试更换搜索关键字' : '在单词测试中连续答对 3 次即可将词汇自动录入熟词本，也可直接在此【导入词汇】！'}
         />
       ) : (
         <div className="space-y-4">
@@ -556,6 +646,9 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                   speakWord(item.word, item.exampleSentence);
                 }}
                 onClick={() => speakWord(item.word, item.exampleSentence)}
+                selectionMode={mobile && selectMode}
+                selected={selectedIds.has(item.id)}
+                onToggleSelect={mobile ? () => toggleSelect(item.id) : undefined}
                 badge={
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold shrink-0">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />

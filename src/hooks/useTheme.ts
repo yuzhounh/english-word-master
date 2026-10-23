@@ -18,7 +18,7 @@ function applyTheme(resolved: 'light' | 'dark') {
   document.documentElement.classList.toggle('dark', resolved === 'dark');
   if (Capacitor.isNativePlatform()) {
     if (Capacitor.getPlatform() === 'android') {
-      void nativeLayout.setBackground({ color: resolved === 'dark' ? '#0f172a' : '#f8fafc' }).catch(() => undefined);
+      void nativeLayout.setBackground({ color: resolved === 'dark' ? '#131828' : '#F3F2FA' }).catch(() => undefined);
     }
     void SystemBars.setStyle({
       style: resolved === 'dark' ? SystemBarsStyle.Dark : SystemBarsStyle.Light,

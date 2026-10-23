@@ -46,6 +46,19 @@ public class NativeLayoutPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void getVersion(PluginCall call) {
+        try {
+            String name = getContext().getPackageManager()
+                .getPackageInfo(getContext().getPackageName(), 0).versionName;
+            JSObject response = new JSObject();
+            response.put("versionName", name);
+            call.resolve(response);
+        } catch (Exception error) {
+            call.reject("Unable to read version", error);
+        }
+    }
+
+    @PluginMethod
     public void setBackground(PluginCall call) {
         String color = call.getString("color", "#f8fafc");
         getActivity().runOnUiThread(() -> {

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bookmark, Search, Trash2, BookOpen, AlertTriangle, ChevronLeft,
   ArrowUpDown, CheckCircle2, Download, Upload, FileText, X, Plus,
@@ -26,8 +26,21 @@ import { BookActionMenu } from './ui/BookActionMenu';
 import { SortMenu } from './ui/SortMenu';
 import { useCompactLayout } from '../hooks/useCompactLayout';
 import { saveTextFile } from '../lib/saveTextFile';
+import { Play } from 'lucide-react';
+import { useChromeActions, useChromeSearch } from './mobile/chrome';
+import type { NotebookCommand } from '../types/navigation';
+
+const parseNotebookTarget = (target: string): { filter: 'all' | 'high_error' | 'recent' | 'custom'; listId: string | null } =>
+  target.startsWith('custom:') ? { filter: 'custom', listId: target.slice(7) }
+    : { filter: target === 'high_error' || target === 'recent' ? target : 'all', listId: null };
 
 interface WrongWordsListProps {
+  /** Phone layout: the shell chooses the list ('all' | 'high_error' | 'recent' | 'custom:<id>'). */
+  externalTarget?: string;
+  externalCommand?: NotebookCommand | null;
+  onCommandHandled?: () => void;
+  /** Phone layout: switch the shell to another list (e.g. the one just created). */
+  onNavigate?: (target: string) => void;
   wrongWords: WrongWordItem[];
   masteredWordIds?: string[];
   customWordLists?: WordListGroup[];
@@ -42,6 +55,10 @@ interface WrongWordsListProps {
 }
 
 export const WrongWordsList: React.FC<WrongWordsListProps> = ({
+  externalTarget,
+  externalCommand,
+  onCommandHandled,
+  onNavigate,
   wrongWords,
   masteredWordIds = [],
   customWordLists = [],
@@ -55,6 +72,9 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   speechAccent = 'en-US',
 }) => {
   const compactLayout = useCompactLayout();
+  const chrome = useChromeActions();
+  const chromeSearch = useChromeSearch();
+  const mobile = externalTarget !== undefined && !!chrome;
   const listCardSelectedBlue =
     'border border-brand-200/80 dark:border-brand-700/40 !bg-brand-50/90 dark:!bg-brand-900/30 shadow-sm ring-1 ring-brand-200/60 dark:ring-brand-600/20';
   const listCardUnselected =
@@ -109,6 +129,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
     setSelectedCustomListId(newId);
     setSelectedListFilter('custom');
     setCurrentPage(1);
+    if (externalTarget !== undefined) onNavigate?.(`custom:${newId}`);
     setIsCreateListModalOpen(false);
     setNewListName('');
     setCreateListError(null);
@@ -200,9 +221,10 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
     });
   };
 
-  const [selectedListFilter, setSelectedListFilter] = useState<'all' | 'high_error' | 'recent' | 'custom'>('all');
-  const [selectedCustomListId, setSelectedCustomListId] = useState<string | null>(null);
-  const [isListOpen, setIsListOpen] = useState(false);
+  const initialTarget = externalTarget !== undefined ? parseNotebookTarget(externalTarget) : null;
+  const [selectedListFilter, setSelectedListFilter] = useState<'all' | 'high_error' | 'recent' | 'custom'>(initialTarget?.filter ?? 'all');
+  const [selectedCustomListId, setSelectedCustomListId] = useState<string | null>(initialTarget?.listId ?? null);
+  const [isListOpen, setIsListOpen] = useState(externalTarget !== undefined);
   const openList = () => {
     setIsListOpen(true);
     setSearchTerm('');
@@ -279,16 +301,17 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
     if (deletingListForConfirm) { setDeletingListForConfirm(null); return true; }
     if (isCreateListModalOpen) { setIsCreateListModalOpen(false); return true; }
     if (isImportModalOpen) { if (!isEnriching) setIsImportModalOpen(false); return true; }
-    if (isListOpen) { setIsListOpen(false); window.scrollTo(0, 0); return true; }
+    if (isListOpen && !mobile) { setIsListOpen(false); window.scrollTo(0, 0); return true; }
     return false;
   });
   const exportWords = selectedListFilter === 'custom' && selectedCustomList ? selectedCustomList.words : activeWordSet;
 
   // Filter & Sort
+  const searchValue = mobile ? chromeSearch : searchTerm;
   const filteredWords = activeWordSet
-    .filter((w) => 
-      w.word.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
-      w.chinese.includes(searchTerm.trim())
+    .filter((w) =>
+      w.word.toLowerCase().includes(searchValue.toLowerCase().trim()) ||
+      w.chinese.includes(searchValue.trim())
     )
     .sort((a, b) => {
       if (sortBy === 'errorCount') {
@@ -303,6 +326,103 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   const isAllWrong = pageSize <= 0 || pageSize >= filteredWords.length;
   const pageStartIndexWrong = isAllWrong ? 0 : (currentPage - 1) * pageSize;
   const paginatedWords = isAllWrong ? filteredWords : filteredWords.slice(pageStartIndexWrong, pageStartIndexWrong + pageSize);
+
+  // Phone list selection (long press or avatar tap), driven from the shell's title bar and bottom bar.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const exitSelection = () => { setSelectMode(false); setSelectedIds(new Set()); };
+  const toggleSelect = (id: string) => {
+    setSelectMode(true);
+    setSelectedIds(previous => { const next = new Set(previous); if (!next.delete(id)) next.add(id); return next; });
+  };
+  const toWordItems = (items: WrongWordItem[]): WordItem[] => items.map(w => ({
+    id: w.id, word: w.word, phonetic: w.phonetic, chinese: w.chinese,
+    exampleSentence: w.exampleSentence, exampleSentenceCn: w.exampleSentenceCn,
+  }));
+  const selectionApi = useRef({ run: (_: 'test' | 'master' | 'enrich') => {}, toggleAll: () => {} });
+  selectionApi.current = {
+    toggleAll: () => setSelectedIds(previous =>
+      previous.size === filteredWords.length ? new Set() : new Set(filteredWords.map(w => w.id))),
+    run: kind => {
+      const chosen = filteredWords.filter(w => selectedIds.has(w.id));
+      if (!chosen.length) return;
+      if (kind === 'test') { onStartWrongWordsQuiz(toWordItems(chosen), `${getSelectedGroupLabel()}（所选）`); exitSelection(); }
+      else if (kind === 'master') { chosen.forEach(w => onRemoveWrongWord(w.id)); exitSelection(); }
+      else void (async () => {
+        setEnrichError(null);
+        try {
+          const missing = chosen.filter(w => !w.exampleSentence?.trim());
+          if (!missing.length) return;
+          const enriched = await enrichWordsWithDictionaryFallback(missing.map(w => ({ word: w.word, chinese: w.chinese, phonetic: w.phonetic })));
+          const byWord = new Map(enriched.map(e => [e.word.toLowerCase().trim(), e]));
+          onImportWrongWords?.(wrongWords.map(w => {
+            const match = byWord.get(w.id.toLowerCase().trim());
+            return match ? {
+              ...w, phonetic: match.phonetic || w.phonetic, chinese: match.chinese || w.chinese,
+              exampleSentence: match.exampleSentence || w.exampleSentence, exampleSentenceCn: match.exampleSentenceCn || w.exampleSentenceCn,
+            } : w;
+          }));
+          exitSelection();
+        } catch (err) {
+          setEnrichError(err instanceof AiClientError ? err.message : 'AI 补全失败，请稍后重试。');
+        }
+      })();
+    },
+  };
+
+  useEffect(() => {
+    if (externalTarget === undefined) return;
+    const target = parseNotebookTarget(externalTarget);
+    setSelectedListFilter(target.filter);
+    setSelectedCustomListId(target.listId);
+    setIsListOpen(true);
+    setCurrentPage(1);
+    exitSelection();
+  }, [externalTarget]);
+  useEffect(() => {
+    if (!externalCommand) return;
+    if (externalCommand.type === 'menu') {
+      const target = parseNotebookTarget(externalCommand.target ?? externalTarget ?? 'all');
+      setSelectedListFilter(target.filter);
+      setSelectedCustomListId(target.listId);
+      setIsBookMenuOpen(true);
+    } else {
+      setNewListName('');
+      setCreateListError(null);
+      setIsCreateListModalOpen(true);
+    }
+    onCommandHandled?.();
+  }, [externalCommand?.id]);
+  useEffect(() => {
+    if (!mobile || !chrome) return;
+    chrome.setSort({
+      value: sortBy,
+      options: [
+        { value: 'errorCount', label: '出错次数', description: '次数多的在前' },
+        { value: 'recent', label: '最近出错', description: '最近出错的在前' },
+        { value: 'alphabetical', label: '字母 A–Z', description: '按单词字母排列' },
+      ],
+      onChange: value => { setSortBy(value as typeof sortBy); setCurrentPage(1); },
+    });
+    return () => chrome.setSort(null);
+  }, [mobile, sortBy]);
+  useEffect(() => {
+    if (!mobile || !chrome) return;
+    if (!selectMode) { chrome.setSelection(null); return; }
+    chrome.setSelection({
+      count: selectedIds.size,
+      total: filteredWords.length,
+      toggleAll: () => selectionApi.current.toggleAll(),
+      exit: exitSelection,
+      actions: [
+        { id: 'test', label: '测试', icon: Play, onClick: () => selectionApi.current.run('test') },
+        { id: 'master', label: '已掌握', icon: CheckCircle2, onClick: () => selectionApi.current.run('master') },
+      ],
+      more: [{ id: 'enrich', label: '补全例句与音标', onClick: () => selectionApi.current.run('enrich') }],
+    });
+  }, [mobile, selectMode, selectedIds, filteredWords.length]);
+  useEffect(() => () => chrome?.setSelection(null), []);
+  useBackHandler(() => { if (!selectMode) return false; exitSelection(); return true; }, 15);
 
   // Convert WrongWordItem to WordItem for Quiz
   const handleStartQuiz = () => {
@@ -702,14 +822,14 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
         </div>}
 
       {isListOpen && <>
-      {<div className="notebook-detail-heading flex items-center gap-2">
+      {!mobile && <div className="notebook-detail-heading flex items-center gap-2">
         <button type="button" aria-label="返回词本" onClick={() => { setIsListOpen(false); setIsBookMenuOpen(false); window.scrollTo({ top: 0, behavior: 'instant' }); }} className="w-10 h-10 shrink-0 surface-card rounded-xl flex items-center justify-center text-secondary cursor-pointer">
           <ChevronLeft className="w-5 h-5" />
         </button>
         <h2 className="text-base font-bold text-primary min-w-0 truncate">{getSelectedGroupLabel()}</h2>
       </div>}
       {/* Filter and Toolbar Bar */}
-      <div className="notebook-toolbar flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 surface-card p-3.5 rounded-2xl shadow-card">
+      {!mobile && <div className="notebook-toolbar flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 surface-card p-3.5 rounded-2xl shadow-card">
         
         {/* Search */}
         <div className="notebook-search-row contents">
@@ -767,14 +887,14 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
           )}
 
         </div>
-      </div>
+      </div>}
 
       {/* Words Grid */}
       {filteredWords.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
-          title={searchTerm ? '未找到符合条件的生词' : '生词本暂无记录'}
-          description={searchTerm ? '尝试更换搜索关键字' : '在单词测试中答错的词汇会自动记录在这里，也可以通过【导入词汇】快捷批量添加。'}
+          title={searchValue ? '未找到符合条件的生词' : '生词本暂无记录'}
+          description={searchValue ? '尝试更换搜索关键字' : '在单词测试中答错的词汇会自动记录在这里，也可以通过【导入词汇】快捷批量添加。'}
           descriptionClassName={searchTerm ? undefined : 'max-w-none whitespace-nowrap overflow-x-auto text-xs sm:text-sm px-2'}
         />
       ) : (
@@ -794,6 +914,9 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                 isSpeaking={speakingWord === item.word}
                 onSpeak={() => speakWord(item.word, item.exampleSentence)}
                 onClick={() => speakWord(item.word, item.exampleSentence)}
+                selectionMode={mobile && selectMode}
+                selected={selectedIds.has(item.id)}
+                onToggleSelect={mobile ? () => toggleSelect(item.id) : undefined}
                 badge={
                   <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${
                     (item.errorCount || 0) > 0
@@ -1058,7 +1181,7 @@ discover`}
             <p className="text-sm text-secondary">删除此词本及其中的 {deletingListForConfirm.words.length} 个词条。其他词本中的相同单词及学习记录会保留。</p>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setDeletingListForConfirm(null)} className="px-4 py-2 rounded-xl surface-muted text-secondary">取消</button>
-              <button type="button" onClick={() => { onDeleteCustomList?.(deletingListForConfirm.id); setDeletingListForConfirm(null); setSelectedCustomListId(null); setSelectedListFilter('all'); setIsListOpen(false); }} className="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold">确认删除</button>
+              <button type="button" onClick={() => { onDeleteCustomList?.(deletingListForConfirm.id); setDeletingListForConfirm(null); setSelectedCustomListId(null); setSelectedListFilter('all'); if (externalTarget !== undefined) onNavigate?.('all'); else setIsListOpen(false); }} className="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold">确认删除</button>
             </div>
           </div>
         </div>
