@@ -1,20 +1,13 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, getRedirectResult, GoogleAuthProvider, signInWithCredential, signInWithPopup, signInWithRedirect, signOut, User } from 'firebase/auth';
+import { getAuth, getRedirectResult, GoogleAuthProvider, signInWithCredential, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from 'firebase/auth';
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import {
-  getFirestore,
-  doc,
-  collection,
-  getDocs,
-  query,
-  orderBy,
-  runTransaction
-} from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { WrongWordItem, MasteredWordItem } from '../types';
 import { signInWithPopupFallback, webAuthDomain } from './googleSignIn';
-import { LearningSync, type LearningWord } from './learningSync';
+import type { LearningOperation } from './learningSync';
 import { writeLearningOperation } from './learningWrite';
+import { lazyModule } from './lazyModule';
+export { onAuthStateChanged };
 
 // Initialize Firebase
 const app = getApps().length === 0 ? initializeApp({
@@ -33,8 +26,12 @@ interface NativeGoogleAuthPlugin {
 
 const nativeGoogleAuth = registerPlugin<NativeGoogleAuthPlugin>('NativeGoogleAuth');
 
-// Initialize Firestore with the default (default) database
-export const db = getFirestore(app);
+// Auth can restore without downloading or initializing Firestore.
+const store = lazyModule(async () => {
+  const { createStore } = await import('./firestoreClient');
+  return createStore(app);
+});
+const getStore = store.load;
 
 let redirectResult: ReturnType<typeof getRedirectResult> | undefined;
 export const completeGoogleRedirectSignIn = () => {
@@ -78,28 +75,21 @@ export const logOut = async () => {
   }
 };
 
-const learningSync = new LearningSync({
-  getItem: key => typeof localStorage === 'undefined' ? null : localStorage.getItem(key),
-  setItem: (key, value) => localStorage.setItem(key, value),
-}, (uid, operation) => runTransaction(db, transaction => writeLearningOperation(operation, {
-  get: async path => { const snapshot = await transaction.get(doc(db, 'users', uid, ...path.split('/'))); return snapshot.exists() ? snapshot.data() : null; },
-  set: (path, data) => { transaction.set(doc(db, 'users', uid, ...path.split('/')), data); },
-  delete: path => { transaction.delete(doc(db, 'users', uid, ...path.split('/'))); },
-})));
-export const subscribeLearningSync = learningSync.subscribe.bind(learningSync);
-export const setLearningSyncUser = learningSync.setUser.bind(learningSync);
-export const retryLearningSync = learningSync.flush.bind(learningSync);
-export const reportLearningReadError = learningSync.reportReadError.bind(learningSync);
-export const confirmedLearningChanges = learningSync.getConfirmedChanges.bind(learningSync);
-export const clearConfirmedLearningChanges = learningSync.clearConfirmedChanges.bind(learningSync);
-export const syncWrongWordToFirestore = (uid: string, word: LearningWord) => learningSync.enqueue(uid, 'wrong', word);
-export const moveWordToMasteredInFirestore = (uid: string, word: LearningWord) => learningSync.enqueue(uid, 'move-mastered', word);
-export const moveWordToWrongInFirestore = (uid: string, word: LearningWord) => learningSync.enqueue(uid, 'move-wrong', word);
+export async function applyLearningOperation(uid: string, operation: LearningOperation) {
+  const { db, doc, runTransaction } = await getStore();
+  if (auth.currentUser?.uid !== uid) throw Error('登录账户已经改变');
+  return runTransaction(db, transaction => writeLearningOperation(operation, {
+    get: async path => { const snapshot = await transaction.get(doc(db, 'users', uid, ...path.split('/'))); return snapshot.exists() ? snapshot.data() : null; },
+    set: (path, data) => { transaction.set(doc(db, 'users', uid, ...path.split('/')), data); },
+    delete: path => { transaction.delete(doc(db, 'users', uid, ...path.split('/'))); },
+  }));
+}
 
 // Fetch user's wrong words list from Firestore
 export const fetchWrongWordsFromFirestore = async (userId: string): Promise<WrongWordItem[]> => {
   if (!userId) return [];
   try {
+    const { db, collection, query, orderBy, getDocs } = await getStore();
     const q = query(collection(db, 'users', userId, 'wrongWords'), orderBy('errorCount', 'desc'));
     const querySnapshot = await getDocs(q);
     const words: WrongWordItem[] = [];
@@ -124,15 +114,12 @@ export const fetchWrongWordsFromFirestore = async (userId: string): Promise<Wron
   }
 };
 
-// Delete or remove wrong word from Firestore
-export const removeWrongWordFromFirestore = (uid: string, wordId: string) => learningSync.enqueue(uid, 'delete-wrong', { word: wordId });
-
 // Firestore helper functions for Mastered Words (熟词本)
-export const syncMasteredWordToFirestore = (uid: string, word: LearningWord) => learningSync.enqueue(uid, 'mastered', word);
 
 export const fetchMasteredWordsFromFirestore = async (userId: string): Promise<MasteredWordItem[]> => {
   if (!userId) return [];
   try {
+    const { db, collection, query, orderBy, getDocs } = await getStore();
     const q = query(collection(db, 'users', userId, 'masteredWords'), orderBy('masteredAt', 'desc'));
     const querySnapshot = await getDocs(q);
     const words: MasteredWordItem[] = [];
@@ -155,4 +142,3 @@ export const fetchMasteredWordsFromFirestore = async (userId: string): Promise<M
   }
 };
 
-export const removeMasteredWordFromFirestore = (uid: string, wordId: string) => learningSync.enqueue(uid, 'delete-mastered', { word: wordId });

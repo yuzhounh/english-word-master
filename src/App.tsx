@@ -1,21 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { onAuthStateChanged } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import { Navbar } from './components/Navbar';
 import { QuizView } from './components/QuizView';
 import { NotebookView } from './components/NotebookView';
 import { WordLibraryView } from './components/WordLibraryView';
+import { WrongWordsList } from './components/WrongWordsList';
+import { MasteredWordsList } from './components/MasteredWordsList';
+import { MobileShell } from './components/mobile/MobileShell';
+import { MobileMenu } from './components/mobile/MobileMenu';
 import { AuthModal } from './components/AuthModal';
+import { Plus } from 'lucide-react';
+import { useAppVersion } from './lib/appVersion';
 import { WordItem, WrongWordItem, MasteredWordItem, UserProfile, SpeechAccent, WordListGroup } from './types';
-import { AppTab, NotebookSubTab } from './types/navigation';
+import { AppTab, NotebookSubTab, NotebookCommand } from './types/navigation';
 import { useTheme } from './hooks/useTheme';
 import { useCompactLayout } from './hooks/useCompactLayout';
 import { loadOfflineVocabulary } from './lib/offlineVocabulary';
 import { exclusiveDeletedWordIds } from './lib/notebookDeletion';
 import { useBackHandler } from './hooks/useBackHandler';
 import {
-  auth,
-  completeGoogleRedirectSignIn,
+  currentFirebaseUser,
+  loadFirebaseAuth,
   signInWithGoogle,
   logOut,
   syncWrongWordToFirestore,
@@ -27,7 +33,7 @@ import {
   moveWordToMasteredInFirestore, moveWordToWrongInFirestore,
   subscribeLearningSync, setLearningSyncUser, retryLearningSync, reportLearningReadError,
   confirmedLearningChanges, clearConfirmedLearningChanges
-} from './lib/firebase';
+} from './lib/cloud';
 import type { LearningSyncState } from './lib/learningSync';
 
 const LOCAL_STORAGE_WRONG_WORDS_KEY = 'wordmaster_wrong_words_v1';
@@ -42,13 +48,19 @@ export default function App() {
   const { resolved, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<AppTab>('quiz');
   const [notebookSubTab, setNotebookSubTab] = useState<NotebookSubTab>('wrong');
+  // Phone layout: which list of the notebook is shown, the full-screen menu, and one-shot list commands.
+  const [notebookTarget, setNotebookTarget] = useState('all');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [notebookCommand, setNotebookCommand] = useState<NotebookCommand | null>(null);
+  const commandSeq = React.useRef(0);
+  const appVersion = useAppVersion();
   const [speechAccent, setSpeechAccent] = useState<SpeechAccent>(() => {
     return (localStorage.getItem(LOCAL_STORAGE_SPEECH_ACCENT_KEY) as SpeechAccent) || 'en-US';
   });
   const [user, setUser] = useState<UserProfile | null>(null);
   const [learningSyncState, setLearningSyncState] = useState<LearningSyncState>({ pending: 0, busy: false, error: null, durable: true });
   const authGeneration = React.useRef(0);
-  const refreshLearning = React.useRef<(user: typeof auth.currentUser) => Promise<void>>(async () => {});
+  const refreshLearning = React.useRef<(user: User | null) => Promise<void>>(async () => {});
   useEffect(() => subscribeLearningSync(setLearningSyncState), []);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   useBackHandler(() => { if (!isAuthModalOpen) return false; setIsAuthModalOpen(false); return true; }, 30);
@@ -238,14 +250,9 @@ export default function App() {
   // Auth Listener
   useEffect(() => {
     let cancelled = false;
-    completeGoogleRedirectSignIn().catch((error) => {
-      if (cancelled) return;
-      setAuthRedirectError(error?.message || 'Google 登录未完成，请重新尝试。');
-      setIsAuthModalOpen(true);
-    });
-    const refresh = async (firebaseUser: typeof auth.currentUser) => {
+    const refresh = async (firebaseUser: User | null) => {
       const generation = ++authGeneration.current;
-      const current = () => generation === authGeneration.current && auth.currentUser?.uid === firebaseUser?.uid;
+      const current = () => !cancelled && generation === authGeneration.current && currentFirebaseUser()?.uid === firebaseUser?.uid;
       setLearningSyncUser(firebaseUser?.uid || null);
       if (firebaseUser) {
         const uProfile: UserProfile = {
@@ -259,10 +266,16 @@ export default function App() {
         if (!current()) return;
         const confirmed = confirmedLearningChanges();
         let readFailed = false;
+        const [wrongRead, masteredRead] = await Promise.allSettled([
+          fetchWrongWordsFromFirestore(firebaseUser.uid),
+          fetchMasteredWordsFromFirestore(firebaseUser.uid),
+        ]);
+        if (!current()) return;
 
         // Fetch user's wrong words from Firestore and merge
         try {
-          const fsWrongWords = await fetchWrongWordsFromFirestore(firebaseUser.uid);
+          if (wrongRead.status === 'rejected') throw wrongRead.reason;
+          const fsWrongWords = wrongRead.value;
           if (!current()) return;
           if (fsWrongWords.length > 0 || confirmed.size > 0) {
             setWrongWords((prevLocal) => {
@@ -295,7 +308,8 @@ export default function App() {
 
         // Fetch user's mastered words from Firestore and merge
         try {
-          const fsMasteredWords = await fetchMasteredWordsFromFirestore(firebaseUser.uid);
+          if (masteredRead.status === 'rejected') throw masteredRead.reason;
+          const fsMasteredWords = masteredRead.value;
           if (!current()) return;
           if (fsMasteredWords.length > 0 || confirmed.size > 0) {
             setMasteredWords((prevLocal) => {
@@ -324,8 +338,34 @@ export default function App() {
       }
     };
     refreshLearning.current = refresh;
-    const unsubscribe = onAuthStateChanged(auth, refresh);
-    const online = () => { if (auth.currentUser) void refresh(auth.currentUser); };
+    let unsubscribe = () => {};
+    let listening = false;
+    let starting = false;
+    const startAuth = async () => {
+      if (cancelled || listening || starting) return;
+      starting = true;
+      try {
+        const client = await loadFirebaseAuth();
+        if (cancelled) return;
+        client.completeGoogleRedirectSignIn().catch((error) => {
+          if (cancelled) return;
+          setAuthRedirectError(error?.message || 'Google 登录未完成，请重新尝试。');
+          setIsAuthModalOpen(true);
+        });
+        unsubscribe = client.onAuthStateChanged(client.auth, firebaseUser => {
+          if (!cancelled) void refresh(firebaseUser);
+        });
+        listening = true;
+      } catch (error) {
+        if (!cancelled) { console.error('Authentication initialization failed:', error); reportLearningReadError(); }
+      } finally { starting = false; }
+    };
+    void startAuth();
+    const online = () => {
+      const firebaseUser = currentFirebaseUser();
+      if (firebaseUser) void refresh(firebaseUser);
+      else if (!listening) void startAuth();
+    };
     window.addEventListener('online', online);
     return () => { cancelled = true; authGeneration.current++; unsubscribe(); window.removeEventListener('online', online); setLearningSyncUser(null); };
   }, []);
@@ -629,9 +669,162 @@ export default function App() {
     });
   };
 
+  if (compactLayout) {
+    const viewKey = activeTab === 'notebook' ? `${notebookSubTab}:${notebookTarget}` : activeTab;
+    const openView = (key: string) => {
+      const [first, ...rest] = key.split(':');
+      if (first === 'wrong' || first === 'mastered') {
+        setNotebookSubTab(first);
+        setNotebookTarget(rest.join(':') || 'all');
+        setActiveTab('notebook');
+      } else {
+        setActiveTab(first === 'library' ? 'library' : 'quiz');
+      }
+      setMenuOpen(false);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    };
+    const sendCommand = (command: Omit<NotebookCommand, 'id'>) =>
+      setNotebookCommand({ ...command, id: ++commandSeq.current });
+    const manageView = (key: string) => {
+      openView(key);
+      sendCommand({ type: 'menu', target: key.split(':').slice(1).join(':') || 'all' });
+    };
+    const createList = () => {
+      if (activeTab !== 'notebook' || notebookSubTab !== 'wrong') openView('wrong:all');
+      sendCommand({ type: 'create' });
+      setMenuOpen(false);
+    };
+    const dayAgo = Date.now() - 7 * 86400000;
+    const counts = {
+      library: 949,
+      wrong: wrongWords.length,
+      highError: wrongWords.filter(w => w.errorCount >= 2).length,
+      recent: wrongWords.filter(w => (w.errorCount || 0) > 0 && (w.lastErrorAt || w.createdAt) >= dayAgo).length,
+      mastered: masteredWords.length,
+      masteredRecent: masteredWords.filter(w => (w.masteredAt || 0) >= dayAgo).length,
+    };
+    const wrongTitles: Record<string, string> = { all: '全量生词', high_error: '顽固难词', recent: '近期新增' };
+    const masteredTitles: Record<string, string> = { all: '全量熟词', recent: '近期掌握' };
+    const customList = notebookTarget.startsWith('custom:') ? availableWordLists.find(l => `custom:${l.id}` === notebookTarget) : undefined;
+    const title = activeTab === 'quiz' ? `单词测试 · ${quizPoolName}`
+      : activeTab === 'library' ? '官方词库'
+      : notebookSubTab === 'wrong' ? (customList?.name ?? wrongTitles[notebookTarget] ?? '词本')
+      : (masteredTitles[notebookTarget] ?? '全量熟词');
+    const placeholder = activeTab === 'library' ? '搜索全部词书（如：高考、四级、雅思）'
+      : activeTab === 'notebook' ? (notebookSubTab === 'wrong' ? '搜索单词或中文解释' : '搜索熟词或中文解释') : null;
+    const syncText = !user ? null
+      : learningSyncState.error || (learningSyncState.busy ? '正在同步学习记录…' : learningSyncState.pending > 0 ? `${learningSyncState.pending} 项学习记录待同步` : null);
+    const startQuiz = (words: WordItem[], name: string) => { setQuizPool(words); setQuizPoolName(name); setActiveTab('quiz'); };
+
+    return (
+      <div className="m-root font-sans">
+        <MobileShell
+          title={title}
+          placeholder={placeholder}
+          fab={activeTab === 'notebook' && notebookSubTab === 'wrong'
+            ? { icon: Plus, label: '新建词本', onClick: createList } : null}
+          status={syncText}
+          resetKey={viewKey}
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
+          menu={
+            <MobileMenu
+              activeKey={viewKey}
+              counts={counts}
+              lists={availableWordLists.map(list => ({ id: list.id, name: list.name, count: list.words.length }))}
+              onClose={() => setMenuOpen(false)}
+              onOpenView={openView}
+              onManage={manageView}
+              onCreateList={createList}
+              isDark={resolved === 'dark'}
+              onToggleTheme={toggleTheme}
+              speechAccent={speechAccent}
+              onToggleSpeechAccent={toggleSpeechAccent}
+              user={user}
+              onLogin={() => { setMenuOpen(false); setIsAuthModalOpen(true); }}
+              onLogout={() => { setMenuOpen(false); void handleLogout(); }}
+              sync={{ text: syncText, busy: learningSyncState.busy, onRetry: () => void refreshLearning.current(currentFirebaseUser()) }}
+              version={appVersion}
+            />
+          }
+        >
+          <div className={activeTab === 'library' ? undefined : 'hidden'} aria-hidden={activeTab !== 'library'}>
+            <WordLibraryView
+              active={activeTab === 'library'}
+              speechAccent={speechAccent}
+              onStartQuizWithWords={startQuiz}
+              onImportCustomList={(words, bookName) => { handleImportCustomList(words, bookName); }}
+              onGoToNotebook={() => openView('wrong:all')}
+            />
+          </div>
+
+          {activeTab === 'quiz' && (offlineStatus === 'ready' ?
+            <QuizView
+              wordPool={quizPool}
+              wordPoolName={quizPoolName}
+              fallbackWordPool={defaultQuizWords}
+              onRecordWrongWord={handleRecordWrongWord}
+              onRecordMasteredWord={handleRecordMasteredWord}
+              onGoToWrongWords={() => openView('wrong:all')}
+              wrongWordsCount={wrongWords.length}
+              speechAccent={speechAccent}
+            />
+            : <div className="m-empty">
+              {offlineStatus === 'error'
+                ? <><p>内置词集加载失败。</p><button type="button" className="m-btn" onClick={() => void loadBuiltIns()}>重试</button></>
+                : <p>正在读取内置词集…</p>}
+            </div>
+          )}
+
+          {activeTab === 'notebook' && notebookSubTab === 'wrong' && (
+            <WrongWordsList
+              hideHeader
+              externalTarget={notebookTarget}
+              externalCommand={notebookCommand}
+              onCommandHandled={() => setNotebookCommand(null)}
+              onNavigate={target => { setNotebookTarget(target); }}
+              wrongWords={wrongWords}
+              masteredWordIds={masteredWords.map(word => word.id)}
+              customWordLists={availableWordLists}
+              onRemoveWrongWord={handleRemoveWrongWord}
+              onStartWrongWordsQuiz={(words, bookName) => startQuiz(words, bookName || '生词本')}
+              onImportWrongWords={handleImportWrongWords}
+              onImportToWordList={handleMergeWordsIntoWordList}
+              onCreateCustomList={handleCreateEmptyWordList}
+              onDeleteCustomList={handleDeleteCustomList}
+              speechAccent={speechAccent}
+            />
+          )}
+
+          {activeTab === 'notebook' && notebookSubTab === 'mastered' && (
+            <MasteredWordsList
+              hideHeader
+              externalTarget={notebookTarget}
+              externalCommand={notebookCommand}
+              onCommandHandled={() => setNotebookCommand(null)}
+              masteredWords={masteredWords}
+              onRemoveMasteredWord={handleRemoveMasteredWord}
+              onMoveToWrongWords={handleMoveMasteredToWrongWords}
+              onStartMasteredWordsQuiz={(words, bookName) => startQuiz(words, bookName || '熟词本')}
+              onImportMasteredWords={handleImportMasteredWords}
+              speechAccent={speechAccent}
+            />
+          )}
+        </MobileShell>
+
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          initialErrorMessage={authRedirectError}
+          onClose={() => { setIsAuthModalOpen(false); setAuthRedirectError(''); }}
+          onGoogleSignIn={handleGoogleSignIn}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-surface text-slate-800 dark:text-slate-100 flex flex-col font-sans">
-      
+
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -648,7 +841,7 @@ export default function App() {
         {user && (learningSyncState.pending > 0 || learningSyncState.error || learningSyncState.busy) && (
           <div role="status" className="mx-4 mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/80 px-4 py-2 text-sm dark:bg-slate-800/80">
             <span>{learningSyncState.error || (learningSyncState.busy ? '正在同步学习记录…' : `${learningSyncState.pending} 项学习记录待同步`)}</span>
-            <button type="button" disabled={learningSyncState.busy} onClick={() => void refreshLearning.current(auth.currentUser)}
+            <button type="button" disabled={learningSyncState.busy} onClick={() => void refreshLearning.current(currentFirebaseUser())}
               className="min-h-10 min-w-10 rounded-xl px-3 text-brand-600 disabled:opacity-50 dark:text-brand-400">重试同步</button>
           </div>
         )}

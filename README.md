@@ -4,6 +4,8 @@
 
 <h1 align="center">English Word Master</h1>
 
+日常2.1.2（Android code26）整合现有手机界面：本地词库与学习界面先显示，认证随后异步恢复，Firestore首次云读写时才加载；队列确认后并行读取生词与熟词。保留Google弹窗/整页回调、Android登录、原持久队列和幂等事务；SDK加载期间切换账户不会发送旧账户操作。沿用原账户、词库、学习记录与存储格式，不迁移Firebase数据。本轮更新日常网页和APK，公开Release保持原版本。
+
 <p align="center"><strong>从阅读中积累词汇，用互动测验与错题复习巩固记忆。</strong></p>
 
 <p align="center">

@@ -4,8 +4,7 @@ import {
   Folder, BookOpen, Search, Download, Play, 
   RefreshCw, ChevronRight, Check, FileSpreadsheet, Layers, Loader2, ListPlus,
   Github, ExternalLink
-} from 'lucide-react';
-import { WordItem, LibraryCategoryNode, SpeechAccent } from '../types';
+} from 'lucide-react';import { WordItem, LibraryCategoryNode, SpeechAccent } from '../types';
 import { getApiUrl } from '../lib/apiConfig';
 import { Pagination } from './Pagination';
 import { LibraryTreeSkeleton, WordGridSkeleton } from './ui/Skeleton';
@@ -14,19 +13,24 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { speakEnglish } from '../lib/speech';
 import { withLibraryWordCounts } from '../lib/libraryMetadata';
+import { useChromeActions, useChromeSearch } from './mobile/chrome';
+import { useBackHandler } from '../hooks/useBackHandler';
 
 interface WordLibraryViewProps {
   onStartQuizWithWords: (words: WordItem[], bookName: string) => void;
   onImportCustomList: (words: WordItem[], listName: string) => void;
   onGoToNotebook?: () => void;
   speechAccent: SpeechAccent;
+  /** The view stays mounted while hidden; only the visible one may drive the phone shell. */
+  active?: boolean;
 }
 
 export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
   onStartQuizWithWords,
   onImportCustomList,
   onGoToNotebook,
-  speechAccent
+  speechAccent,
+  active = true,
 }) => {
   const libraryNodeIconClass =
     'p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 shrink-0 transition-colors';
@@ -53,6 +57,48 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
   const [importSuccess, setImportSuccess] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(30);
+
+  // Phone layout: the shell owns the title bar, search box and floating button.
+  const chrome = useChromeActions();
+  const chromeSearch = useChromeSearch();
+  const mobile = !!chrome;
+  const shell = active ? chrome : null;
+  const globalQuery = mobile ? (selectedBook ? '' : chromeSearch) : globalSearch;
+  const bookQuery = mobile ? chromeSearch : bookSearch;
+  const goUp = () => {
+    if (selectedBook) { setSelectedBook(null); setImportSuccess(false); }
+    else setNavPath(path => path.slice(0, -1));
+    chrome?.setSearch('');
+  };
+  const canGoUp = !!selectedBook || navPath.length > 0;
+  const goUpRef = React.useRef(goUp);
+  goUpRef.current = goUp;
+  useBackHandler(() => {
+    if (!mobile || !active || !canGoUp) return false;
+    goUpRef.current();
+    return true;
+  }, 5);
+  useEffect(() => {
+    if (!shell) return;
+    shell.setTitle(selectedBook?.name ?? navPath[navPath.length - 1]?.name ?? null);
+    shell.setBack(canGoUp ? () => goUpRef.current() : null);
+    shell.setPlaceholder(selectedBook ? '在当前词书中搜索单词或释义' : null);
+    return () => { shell.setTitle(null); shell.setBack(null); shell.setPlaceholder(null); };
+  }, [shell, selectedBook, navPath, canGoUp]);
+  useEffect(() => {
+    if (!shell) return;
+    shell.setStatus(importSuccess && selectedBook ? `已加入词本《${selectedBook.name}》` : null);
+    return () => shell.setStatus(null);
+  }, [shell, importSuccess, selectedBook]);
+  useEffect(() => {
+    if (!shell) return;
+    if (!selectedBook) { shell.setFab(null); return; }
+    shell.setFab({
+      icon: ListPlus, label: '加入词本',
+      onClick: () => { if (!loadingBook && bookWords.length > 0) importBookToList(bookWords); },
+    });
+    return () => shell.setFab(null);
+  }, [shell, selectedBook, loadingBook, bookWords]);
 
   const importBookToList = (words: WordItem[]) => {
     if (!selectedBook || words.length === 0) return;
@@ -112,6 +158,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
   const handleSelectBook = async (book: { name: string; path: string }) => {
     setGlobalSearch('');
+    chrome?.setSearch('');
     const folderPath = findFolderPathToBook(tree, book.path);
     if (folderPath) setNavPath(folderPath);
 
@@ -164,17 +211,17 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
   };
 
   const allBooks = getAllBooks(tree);
-  const filteredGlobalBooks = globalSearch.trim()
-    ? allBooks.filter(b => b.name.toLowerCase().includes(globalSearch.toLowerCase().trim()) || b.path.toLowerCase().includes(globalSearch.toLowerCase().trim()))
+  const filteredGlobalBooks = globalQuery.trim()
+    ? allBooks.filter(b => b.name.toLowerCase().includes(globalQuery.toLowerCase().trim()) || b.path.toLowerCase().includes(globalQuery.toLowerCase().trim()))
     : [];
 
   // Get current active folder nodes
   const currentNodes = navPath.length > 0 ? (navPath[navPath.length - 1].children || []) : tree;
 
   // Filtered words inside open book
-  const filteredBookWords = bookWords.filter(w => 
-    w.word.toLowerCase().includes(bookSearch.toLowerCase().trim()) ||
-    w.chinese.toLowerCase().includes(bookSearch.toLowerCase().trim())
+  const filteredBookWords = bookWords.filter(w =>
+    w.word.toLowerCase().includes(bookQuery.toLowerCase().trim()) ||
+    w.chinese.toLowerCase().includes(bookQuery.toLowerCase().trim())
   );
 
   const isAllBook = pageSize <= 0 || pageSize >= filteredBookWords.length;
@@ -183,8 +230,8 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
   return (
     <div className="page-container space-y-6">
-      
-      <PageHeader
+
+      {!mobile && <PageHeader
         badge="80,470 完整词条 · 949 本权威词书"
         badgeIcon={Layers}
         title="官方权威词库 (Word Library)"
@@ -210,10 +257,10 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
             </a>
           </div>
         }
-      />
+      />}
 
       {/* Breadcrumbs — folders + open book name */}
-      {!globalSearch.trim() && (
+      {!mobile && !globalSearch.trim() && (
         <div data-library-breadcrumbs className="flex flex-col items-start gap-y-2 text-sm font-medium text-secondary pb-1">
           <button
             onClick={navigateToRoot}
@@ -257,7 +304,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
         <div className="space-y-6">
           
           {/* Global Search Bar */}
-          <div className="library-global-search surface-card rounded-2xl p-4 shadow-xs flex items-center gap-3">
+          {!mobile && <div className="library-global-search surface-card rounded-2xl p-4 shadow-xs flex items-center gap-3">
             <Search className="w-5 h-5 text-slate-400 shrink-0" />
             <input 
               type="text"
@@ -274,7 +321,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                 清除
               </button>
             )}
-          </div>
+          </div>}
 
           {/* Directory Loading / Error States */}
           {loadingTree && <LibraryTreeSkeleton />}
@@ -292,7 +339,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
           )}
 
           {/* Display Global Search Results */}
-          {!loadingTree && globalSearch.trim() !== '' && (
+          {!loadingTree && globalQuery.trim() !== '' && (
             <div className="space-y-4">
               <div className="text-xs font-semibold text-slate-500">
                 找到 {filteredGlobalBooks.length} 本相关词书
@@ -300,7 +347,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
               {filteredGlobalBooks.length === 0 ? (
                 <div className="surface-card rounded-2xl p-8 text-center text-slate-400 text-sm">
-                  未找到包含 "{globalSearch}" 的词书
+                  未找到包含 "{globalQuery}" 的词书
                 </div>
               ) : (
                 <div className="library-books-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -329,7 +376,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
           )}
 
           {/* Normal Folder Grid View */}
-          {!loadingTree && !globalSearch.trim() && (
+          {!loadingTree && !globalQuery.trim() && (
             <div className="library-books-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {currentNodes.map((node) => {
                 if (node.type === 'folder') {
@@ -383,12 +430,28 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
             </div>
           )}
 
+          {mobile && !loadingTree && !globalQuery.trim() && (
+            <a className="m-source-link" href="https://github.com/yuzhounh/english-word-enriched" target="_blank" rel="noopener noreferrer">
+              词库来源：yuzhounh/english-word-enriched
+            </a>
+          )}
+
         </div>
       ) : (
         /* Detailed Book View */
         <div className="space-y-6">
 
           {/* Search + actions toolbar */}
+          {mobile ? (
+            <div className="m-book-bar">
+              <span>共 {bookWords.length} 词{bookQuery ? ` · 筛选 ${filteredBookWords.length}` : ''}</span>
+              <button type="button" disabled={loadingBook || bookWords.length === 0}
+                onClick={() => { if (bookWords.length > 0) onStartQuizWithWords(bookWords, selectedBook.name); }}>
+                <Play width={18} height={18} strokeWidth={1.8} aria-hidden />
+                <span>开始测试</span>
+              </button>
+            </div>
+          ) : (
           <div className="library-book-toolbar surface-card rounded-2xl p-4 shadow-xs flex flex-col lg:flex-row lg:items-center gap-3">
             <div className="relative flex-1 min-w-0">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -434,9 +497,10 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
               </button>
             </div>
           </div>
+          )}
 
           {/* Import Success Banner */}
-          {importSuccess && (
+          {!mobile && importSuccess && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-500 text-white rounded-xl">

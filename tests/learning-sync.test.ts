@@ -99,12 +99,13 @@ test('storage failures stay visible and do not send an unpersisted operation', a
 });
 test('real cloud read helpers distinguish an empty collection from a read failure', async () => {
   const source = readFileSync(new URL('../src/lib/firebase.ts', import.meta.url), 'utf8');
-  const wrong = source.slice(source.indexOf('export const fetchWrongWordsFromFirestore'), source.indexOf('// Delete or remove wrong word'));
-  const mastered = source.slice(source.indexOf('export const fetchMasteredWordsFromFirestore'), source.indexOf('export const removeMasteredWordFromFirestore'));
+  const wrong = source.slice(source.indexOf('export const fetchWrongWordsFromFirestore'), source.indexOf('// Firestore helper functions'));
+  const mastered = source.slice(source.indexOf('export const fetchMasteredWordsFromFirestore'));
   let fail = true;
-  const context = vm.createContext({ db: {}, console: { error() {} },
-    collection: () => ({}), query: () => ({}), orderBy: () => ({}),
-    getDocs: async () => { if (fail) throw Error('offline'); return { forEach() {} }; },
+  const context = vm.createContext({ console: { error() {} },
+    getStore: async () => ({ db: {}, collection: () => ({}), query: () => ({}), orderBy: () => ({}),
+      getDocs: async () => { if (fail) throw Error('offline'); return { forEach() {} }; },
+    }),
   });
   vm.runInContext(ts.transpileModule((wrong + mastered).replace(/\bexport /g, '') + '\nglobalThis.helpers = [fetchWrongWordsFromFirestore, fetchMasteredWordsFromFirestore];', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
   for (const helper of context.helpers) await assert.rejects(helper('A'), /offline/);

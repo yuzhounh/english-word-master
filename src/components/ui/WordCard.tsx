@@ -3,8 +3,14 @@ import { useCompactLayout } from '../../hooks/useCompactLayout';
 import { SpeechAccent } from '../../types';
 import { WordWithSpeaker } from './WordWithSpeaker';
 import { PhoneticDisplay } from './PhoneticDisplay';
+import { Award, BookOpen, Check } from 'lucide-react';
+import { useLongPress } from '../../hooks/useLongPress';
 
 interface WordCardProps {
+  /** Phone list selection: tapping the avatar or long-pressing a row starts it. */
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
   word: string;
   phonetic?: string;
   phoneticUk?: string;
@@ -45,8 +51,13 @@ export const WordCard: React.FC<WordCardProps> = ({
   actions,
   variant = 'brand',
   actionsClassName = 'flex items-center justify-end',
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
 }) => {
   const compact = useCompactLayout();
+  const selectable = compact && !!onToggleSelect;
+  const longPress = useLongPress(() => onToggleSelect?.(), selectable && !selectionMode);
   const [meaningOpen, setMeaningOpen] = useState(false);
   const [exampleOpen, setExampleOpen] = useState(false);
   const [meaningOverflow, setMeaningOverflow] = useState(false);
@@ -69,7 +80,18 @@ export const WordCard: React.FC<WordCardProps> = ({
     : 'text-brand-900 dark:text-brand-200 bg-brand-50/80 dark:bg-brand-900/20 border-brand-100/80 dark:border-brand-800/50';
 
   if (compact) return (
-    <div onClick={onClick} className={`word-card word-card-compact surface-card ${className}`}>
+    <div onClick={selectionMode && onToggleSelect ? onToggleSelect : onClick}
+      data-selected={selected || undefined}
+      className={`word-card word-card-compact m-word-row ${isEmerald ? 'is-mastered' : ''} ${selected ? 'is-selected' : ''} ${className}`}
+      {...(selectable ? longPress : {})}>
+      <button type="button" className="m-avatar" aria-pressed={selectable ? selected : undefined}
+        aria-label={selectable ? (selected ? '取消选择' : '选择') : undefined}
+        tabIndex={selectable ? 0 : -1}
+        onClick={e => { e.stopPropagation(); if (selectable) onToggleSelect?.(); else onClick?.(); }}>
+        {selected ? <Check width={22} height={22} strokeWidth={2} aria-hidden />
+          : isEmerald ? <Award width={22} height={22} strokeWidth={1.8} aria-hidden /> : <BookOpen width={22} height={22} strokeWidth={1.8} aria-hidden />}
+      </button>
+      <div className="m-word-main">
       <div className="word-card-inline-heading">
         <WordWithSpeaker word={word} isSpeaking={isSpeaking} onSpeak={onSpeak ? e => onSpeak(e) : undefined}
           wordClassName="word-card-word font-extrabold text-primary tracking-tight [overflow-wrap:anywhere]" />
@@ -87,6 +109,7 @@ export const WordCard: React.FC<WordCardProps> = ({
       )}
       {exampleOpen && exampleSentence && <div className="word-card-example text-secondary"><p>{exampleSentence}</p>{exampleSentenceCn && <p>{exampleSentenceCn}</p>}</div>}
       {!exampleSentence && footer}
+      </div>
     </div>
   );
 

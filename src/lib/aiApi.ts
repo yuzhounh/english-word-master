@@ -1,10 +1,11 @@
-import { auth } from './firebase';
+import { loadFirebaseAuth } from './cloud';
 import { getApiUrl } from './apiConfig';
 
 export class AiClientError extends Error {}
 
 /** Firebase refreshes an expired ID token before each request, including continuations. */
 export async function postAiJson(path: '/api/analyze-text' | '/api/enrich-words', body: unknown) {
+  const { auth } = await loadFirebaseAuth();
   await auth.authStateReady();
   if (!auth.currentUser) throw new AiClientError('请先登录，再使用 AI 补全。');
   let token: string;
