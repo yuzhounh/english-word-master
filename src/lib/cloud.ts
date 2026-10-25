@@ -13,7 +13,7 @@ export const logOut = () => firebase.current
 const learningSync = new LearningSync({
   getItem: key => typeof localStorage === 'undefined' ? null : localStorage.getItem(key),
   setItem: (key, value) => localStorage.setItem(key, value),
-}, async (uid, operation) => (await firebase.load()).applyLearningOperation(uid, operation));
+}, async (uid, operations) => (await firebase.load()).applyLearningOperations(uid, operations));
 export const subscribeLearningSync = learningSync.subscribe.bind(learningSync);
 export const setLearningSyncUser = learningSync.setUser.bind(learningSync);
 export const retryLearningSync = learningSync.flush.bind(learningSync);

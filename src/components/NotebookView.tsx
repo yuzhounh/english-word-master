@@ -8,6 +8,8 @@ import { PageHeader } from './ui/PageHeader';
 import { WrongWordItem, MasteredWordItem, WordItem, WordListGroup, SpeechAccent } from '../types';
 
 interface NotebookViewProps {
+  initialTarget?: string;
+  onNavigate?: (target: string) => void;
   subTab: NotebookSubTab;
   onSubTabChange: (tab: NotebookSubTab) => void;
   wrongWords: WrongWordItem[];
@@ -27,6 +29,8 @@ interface NotebookViewProps {
 }
 
 export const NotebookView: React.FC<NotebookViewProps> = ({
+  initialTarget,
+  onNavigate,
   subTab,
   onSubTabChange,
   wrongWords,
@@ -100,6 +104,8 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
       >
         {subTab === 'wrong' ? (
           <WrongWordsList
+            initialTarget={initialTarget}
+            onNavigate={onNavigate}
             hideHeader
             wrongWords={wrongWords}
             masteredWordIds={masteredWords.map(word => word.id)}
@@ -114,6 +120,8 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
           />
         ) : (
           <MasteredWordsList
+            initialTarget={initialTarget}
+            onNavigate={onNavigate}
             hideHeader
             masteredWords={masteredWords}
             onRemoveMasteredWord={onRemoveMasteredWord}

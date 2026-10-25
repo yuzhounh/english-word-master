@@ -1,7 +1,39 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 interface NativeSpeechPlugin {
-  speak(options: { text: string; language: string; rate: number; pitch: number }): Promise<void>;
+  speak(options: { text: string; language: string; rate: number; pitch: number; voice?: string }): Promise<void>;
+  getVoices(): Promise<{ voices: SpeechVoice[]; engine: string }>;
   stop(): Promise<void>;
+}
+
+export interface SpeechVoice {
+  id: string;
+  name: string;
+  language: string;
+  networkRequired: boolean;
+}
+
+const VOICE_STORAGE_KEY = 'wordmaster_speech_voices_v1';
+export function getPreferredVoice(language: string): string {
+  try {
+    const preferences = JSON.parse(localStorage.getItem(VOICE_STORAGE_KEY) || '{}');
+    return typeof preferences?.[language] === 'string' ? preferences[language] : '';
+  } catch { return ''; }
+}
+
+export function setPreferredVoice(language: string, id: string): void {
+  const preferences = Object.fromEntries(['en-US', 'en-GB'].map(tag => [tag, getPreferredVoice(tag)]));
+  localStorage.setItem(VOICE_STORAGE_KEY, JSON.stringify({ ...preferences, [language]: id }));
+}
+
+export async function getSpeechVoices(): Promise<{ voices: SpeechVoice[]; engine: string }> {
+  if (isAndroidNative()) return NativeSpeech.getVoices();
+  if (!('speechSynthesis' in window)) throw new Error('This browser does not support speech synthesis.');
+  return {
+    engine: '浏览器语音合成',
+    voices: window.speechSynthesis.getVoices()
+      .filter(voice => /^en(?:[-_]|$)/i.test(voice.lang))
+      .map(voice => ({ id: voice.voiceURI, name: voice.name, language: voice.lang.replace(/_/g, '-'), networkRequired: !voice.localService })),
+  };
 }
 
 interface SpeakOptions {
@@ -48,7 +80,8 @@ function speakInBrowser(text: string, language: string): Promise<void> {
 
     const normalizedLanguage = language.toLowerCase();
     const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find((candidate) =>
+    const preferred = getPreferredVoice(language);
+    const voice = voices.find(candidate => candidate.voiceURI === preferred && /^en(?:[-_]|$)/i.test(candidate.lang)) || voices.find((candidate) =>
       candidate.lang.toLowerCase().replace('_', '-') === normalizedLanguage,
     ) || voices.find((candidate) => candidate.lang.toLowerCase().startsWith('en'));
 
@@ -80,7 +113,7 @@ export async function speakEnglish(texts: Array<string | undefined>, options: Sp
       options.onTextStart?.(text);
 
       if (isAndroidNative()) {
-        await NativeSpeech.speak({ text, language, rate: 0.9, pitch: 1 });
+        await NativeSpeech.speak({ text, language, rate: 0.9, pitch: 1, voice: getPreferredVoice(language) || undefined });
       } else {
         await speakInBrowser(text, language);
       }

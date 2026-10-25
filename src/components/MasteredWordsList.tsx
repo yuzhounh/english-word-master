@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play } from 'lucide-react';
+import { ListChecks } from 'lucide-react';
 import { useChromeActions, useChromeSearch } from './mobile/chrome';
 import type { NotebookCommand } from '../types/navigation';
 import { WordCard } from './ui/WordCard';
@@ -26,11 +26,14 @@ import { AiClientError } from '../lib/aiApi';
 import { useBookLongPress } from '../hooks/useBookLongPress';
 import { useBackHandler } from '../hooks/useBackHandler';
 import { BookActionMenu } from './ui/BookActionMenu';
+import { DefaultBookBadge, useNotebookPreferences } from './NotebookPreferences';
 import { SortMenu } from './ui/SortMenu';
 import { useCompactLayout } from '../hooks/useCompactLayout';
 import { saveTextFile } from '../lib/saveTextFile';
 
 interface MasteredWordsListProps {
+  initialTarget?: string;
+  onNavigate?: (target: string) => void;
   /** Phone layout: the shell chooses the list ('all' | 'recent'). */
   externalTarget?: string;
   externalCommand?: NotebookCommand | null;
@@ -45,6 +48,8 @@ interface MasteredWordsListProps {
 }
 
 export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
+  initialTarget,
+  onNavigate,
   externalTarget,
   externalCommand,
   onCommandHandled,
@@ -52,7 +57,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
   hideHeader = false,
   onRemoveMasteredWord,
   onMoveToWrongWords,
-  onStartMasteredWordsQuiz,
+  onStartMasteredWordsQuiz: startQuiz,
   onImportMasteredWords,
   speechAccent = 'en-US',
 }) => {
@@ -76,7 +81,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recent' | 'alphabetical'>('recent');
-  const [isListOpen, setIsListOpen] = useState(externalTarget !== undefined);
+  const [isListOpen, setIsListOpen] = useState(externalTarget !== undefined || initialTarget !== undefined);
   const openList = () => {
     setIsListOpen(true);
     setSearchTerm('');
@@ -184,7 +189,17 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
     });
   };
 
-  const [selectedListFilter, setSelectedListFilter] = useState<'all' | 'recent'>(externalTarget === 'recent' ? 'recent' : 'all');
+  const [selectedListFilter, setSelectedListFilter] = useState<'all' | 'recent'>((externalTarget ?? initialTarget) === 'recent' ? 'recent' : 'all');
+  const { recordVisit, setDefault, defaultKey } = useNotebookPreferences();
+  const bookKey = `mastered:${selectedListFilter}`;
+  useEffect(() => {
+    if (!isListOpen) return;
+    recordVisit({ key: bookKey, mode: 'browse' });
+    if (externalTarget === undefined) onNavigate?.(selectedListFilter);
+  }, [isListOpen, bookKey, recordVisit]);
+  const onStartMasteredWordsQuiz = (words: WordItem[], name?: string) => {
+    recordVisit({ key: bookKey, mode: 'quiz' }); startQuiz(words, name);
+  };
 
   // Computed sub-lists
   const recentMasteredWords = masteredWords.filter(w => Date.now() - (w.masteredAt || 0) <= 7 * 86400000);
@@ -202,7 +217,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
     if (isImportModalOpen) { if (!isEnriching) setIsImportModalOpen(false); return true; }
     if (isListOpen && !mobile) { setIsListOpen(false); window.scrollTo(0, 0); return true; }
     return false;
-  });
+  }, 40);
   const exportWords = activeWordSet;
 
   // Filter & Sort
@@ -291,7 +306,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       toggleAll: () => selectionApi.current.toggleAll(),
       exit: exitSelection,
       actions: [
-        { id: 'test', label: '测试', icon: Play, onClick: () => selectionApi.current.run('test') },
+        { id: 'test', label: '测试', icon: ListChecks, onClick: () => selectionApi.current.run('test') },
         { id: 'unmaster', label: '移回生词本', icon: RotateCcw, onClick: () => selectionApi.current.run('unmaster') },
       ],
       more: [{ id: 'delete', label: '从熟词本删除', danger: true, onClick: () => selectionApi.current.run('delete') }],
@@ -326,6 +341,14 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
       onStartMasteredWordsQuiz(wordItems, getSelectedGroupLabel());
     }
   };
+
+  const startActiveQuizRef = useRef(handleStartActiveListQuiz);
+  startActiveQuizRef.current = handleStartActiveListQuiz;
+  useEffect(() => {
+    if (!mobile || !chrome) return;
+    chrome.setFab({ purpose: 'quiz', icon: ListChecks, label: '测试当前词本', disabled: activeWordSet.length === 0, onClick: () => startActiveQuizRef.current() });
+    return () => chrome.setFab(null);
+  }, [mobile, chrome, activeWordSet.length]);
 
   // Export handlers
   const handleExportJSON = () => {
@@ -460,7 +483,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
         action={
           masteredWords.length > 0 ? (
             <Button variant="success" onClick={handleStartQuiz}>
-              <BookOpen className="w-4 h-4" />
+              <ListChecks className="w-4 h-4" />
               <span>对熟词发起巩固复习</span>
             </Button>
           ) : undefined
@@ -499,7 +522,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                 <h3 className={`font-bold text-base transition-colors ${
                   selectedListFilter === 'all' ? listTitleSelected : listTitleUnselected
                 }`}>
-                  全量熟词列表
+                  全量熟词列表 <DefaultBookBadge bookKey="mastered:all" />
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
                   包含所有在测试中攻克并标记为已掌握的单词
@@ -535,7 +558,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
                 <h3 className={`font-bold text-base transition-colors ${
                   selectedListFilter === 'recent' ? listTitleSelected : listTitleUnselected
                 }`}>
-                  近期攻克熟词列表
+                  近期攻克熟词列表 <DefaultBookBadge bookKey="mastered:recent" />
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
                   近 7 天内成功攻克并加入熟词本的最新词汇
@@ -610,7 +633,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
               className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold text-xs rounded-xl shadow-xs hover:opacity-95 transition-all cursor-pointer"
               title={`对当前选中的「${getSelectedGroupLabel()}」发起测试`}
             >
-              <BookOpen className="w-3.5 h-3.5" />
+              <ListChecks className="w-3.5 h-3.5" />
               <span>测试词本</span>
             </button>
           )}
@@ -726,12 +749,13 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
 
       </>}
       {isBookMenuOpen && <BookActionMenu name={getSelectedGroupLabel()} count={exportWords.length}
+        isDefault={defaultKey === bookKey} onSetDefault={() => setDefault(bookKey)}
         onClose={() => setIsBookMenuOpen(false)} onImport={() => setIsImportModalOpen(true)}
         onExportJSON={handleExportJSON} onExportCSV={handleExportCSV} onTest={handleStartActiveListQuiz} />}
 
       {/* Import Modal */}
       {isImportModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="surface-card rounded-2xl max-w-xl w-full p-6 shadow-elevated space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}

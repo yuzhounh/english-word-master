@@ -6,6 +6,8 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useLongPress } from '../../hooks/useLongPress';
 import { UserProfile, SpeechAccent } from '../../types';
+import { DefaultBookBadge, StartupSettings } from '../NotebookPreferences';
+import { useCurrentBookQuiz } from './chrome';
 
 export interface MenuList { id: string; name: string; count: number }
 
@@ -33,15 +35,15 @@ const Ico: React.FC<{ icon: LucideIcon }> = ({ icon: Icon }) => <Icon width={22}
 
 const NavRow: React.FC<{
   icon: LucideIcon; label: string; detail?: string | number; active?: boolean;
-  onClick: () => void; onLongPress?: () => void; trailing?: React.ReactNode; busy?: boolean;
-}> = ({ icon, label, detail, active, onClick, onLongPress, trailing, busy }) => {
+  onClick: () => void; onLongPress?: () => void; trailing?: React.ReactNode; busy?: boolean; bookKey?: string;
+}> = ({ icon, label, detail, active, onClick, onLongPress, trailing, busy, bookKey }) => {
   const press = useLongPress(() => onLongPress?.(), !!onLongPress);
   return (
     <div className="m-nav-line">
       <button type="button" className={`m-nav-row${active ? ' is-active' : ''}`} aria-current={active ? 'page' : undefined}
         disabled={busy} onClick={onClick} {...press}>
         <Ico icon={icon} />
-        <span className="m-nav-label">{label}</span>
+        <span className="m-nav-label flex items-center gap-2"><span className="min-w-0 truncate" title={label}>{label}</span>{bookKey && <DefaultBookBadge bookKey={bookKey} />}</span>
         {detail !== undefined && detail !== 0 && <span className="m-nav-detail">{detail}</span>}
       </button>
       {trailing}
@@ -74,6 +76,13 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
   speechAccent, onToggleSpeechAccent, user, onLogin, onLogout, sync, version,
 }) => {
   const signedIn = !!user && !user.isGuest;
+  const currentQuiz = useCurrentBookQuiz();
+  const testCurrentBook = () => {
+    if (!currentQuiz) { onOpenView('quiz'); return; }
+    if (currentQuiz.disabled) return;
+    onClose();
+    currentQuiz.onClick();
+  };
   const open = (key: string) => () => onOpenView(key);
   const manage = (key: string) => () => onManage(key);
   return (
@@ -86,33 +95,33 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
       </div>
       <div className="m-page-body">
         <section className="m-section">
-          <NavRow icon={ListChecks} label="单词测试" active={activeKey === 'quiz'} onClick={open('quiz')} />
+          <NavRow icon={ListChecks} label="单词测试" active={activeKey === 'quiz'} busy={currentQuiz?.disabled} onClick={testCurrentBook} />
           <NavRow icon={Library} label="官方词库" detail={counts.library ? `${counts.library} 本` : undefined}
             active={activeKey === 'library'} onClick={open('library')} />
         </section>
 
         <section className="m-section">
           <GroupHeader icon={Bookmark} label="生词本" detail={String(counts.wrong)} gear={{ label: '生词本管理', onClick: manage('wrong:all') }} />
-          <NavRow icon={Bookmark} label="全量生词" detail={counts.wrong} active={activeKey === 'wrong:all'}
+          <NavRow bookKey="wrong:all" icon={Bookmark} label="全量生词" detail={counts.wrong} active={activeKey === 'wrong:all'}
             onClick={open('wrong:all')} onLongPress={manage('wrong:all')} />
-          <NavRow icon={TriangleAlert} label="顽固难词" detail={counts.highError} active={activeKey === 'wrong:high_error'}
+          <NavRow bookKey="wrong:high_error" icon={TriangleAlert} label="顽固难词" detail={counts.highError} active={activeKey === 'wrong:high_error'}
             onClick={open('wrong:high_error')} onLongPress={manage('wrong:high_error')} />
-          <NavRow icon={Clock} label="近期新增" detail={counts.recent} active={activeKey === 'wrong:recent'}
+          <NavRow bookKey="wrong:recent" icon={Clock} label="近期新增" detail={counts.recent} active={activeKey === 'wrong:recent'}
             onClick={open('wrong:recent')} onLongPress={manage('wrong:recent')} />
         </section>
 
         <section className="m-section">
           <GroupHeader icon={Award} label="熟词本" detail={String(counts.mastered)} gear={{ label: '熟词本管理', onClick: manage('mastered:all') }} />
-          <NavRow icon={Award} label="全量熟词" detail={counts.mastered} active={activeKey === 'mastered:all'}
+          <NavRow bookKey="mastered:all" icon={Award} label="全量熟词" detail={counts.mastered} active={activeKey === 'mastered:all'}
             onClick={open('mastered:all')} onLongPress={manage('mastered:all')} />
-          <NavRow icon={Clock} label="近期掌握" detail={counts.masteredRecent} active={activeKey === 'mastered:recent'}
+          <NavRow bookKey="mastered:recent" icon={Clock} label="近期掌握" detail={counts.masteredRecent} active={activeKey === 'mastered:recent'}
             onClick={open('mastered:recent')} onLongPress={manage('mastered:recent')} />
         </section>
 
         <section className="m-section">
           <GroupHeader icon={FileText} label="词本" detail={String(lists.length)} />
           {lists.map(list => (
-            <NavRow key={list.id} icon={FileText} label={list.name} detail={list.count}
+            <NavRow key={list.id} bookKey={`wrong:custom:${list.id}`} icon={FileText} label={list.name} detail={list.count}
               active={activeKey === `wrong:custom:${list.id}`} onClick={open(`wrong:custom:${list.id}`)}
               onLongPress={manage(`wrong:custom:${list.id}`)}
               trailing={<Gear label={`${list.name}管理`} onClick={manage(`wrong:custom:${list.id}`)} />} />
@@ -136,6 +145,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
           )}
         </section>
 
+        <section className="m-section"><StartupSettings /></section>
         <footer className="m-page-footer">
           <img src="/logo.svg" alt="" width={40} height={40} />
           <div>WordMaster {version}</div>

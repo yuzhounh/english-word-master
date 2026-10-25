@@ -6,6 +6,8 @@ export interface LearningWord {
 export interface LearningOperation { id: string; kind: LearningKind; word: LearningWord; createdAt: number }
 export interface LearningSyncState { pending: number; busy: boolean; error: string | null; durable: boolean }
 type Storage = Pick<globalThis.Storage, 'getItem' | 'setItem'>;
+/** Operations per cloud transaction; its reads run in parallel and its writes stay well under Firestore's 500. */
+const BATCH_SIZE = 40;
 
 /** An account-scoped, durable queue; retry is driven by login, connectivity or the user. */
 export class LearningSync {
@@ -13,11 +15,14 @@ export class LearningSync {
   private generation = 0;
   private queues = new Map<string, LearningOperation[]>();
   private running = new Map<string, Promise<void>>();
+  private staged = new Map<string, Promise<void>>();
+  private burst = new Set<string>();
   private confirmed = new Map<string, Map<string, LearningKind>>();
   private listeners = new Set<(state: LearningSyncState) => void>();
   private error: string | null = null;
   private durable = true;
-  constructor(private storage: Storage, private apply: (uid: string, operation: LearningOperation) => Promise<void>) {}
+  /** `apply` commits leading operations of the batch and resolves with how many are committed. */
+  constructor(private storage: Storage, private apply: (uid: string, operations: LearningOperation[]) => Promise<number>) {}
   private queue(uid: string) {
     if (!this.queues.has(uid)) {
       const value = JSON.parse(this.storage.getItem('wordmaster_learning_pending_v1:' + uid) || '[]');
@@ -52,12 +57,30 @@ export class LearningSync {
   async enqueue(uid: string, kind: LearningKind, word: LearningWord) {
     if (!uid || uid !== this.uid) throw Error('登录账户已经改变');
     this.queue(uid).push({ id: crypto.randomUUID(), kind, word: structuredClone(word), createdAt: Date.now() });
+    await this.stage(uid);
+    return this.flush();
+  }
+  /**
+   * The first edit is stored at once. Adding a book enqueues thousands of words in one burst, so the rest of
+   * the burst is stored together one microtask later instead of rewriting the whole queue for every word.
+   */
+  private stage(uid: string): Promise<void> {
+    const pending = this.staged.get(uid);
+    if (pending) { this.burst.add(uid); return pending; }
+    try { this.store(uid); } catch (error) { return Promise.reject(error); }
+    const staged = Promise.resolve().then(() => {
+      this.staged.delete(uid);
+      if (this.burst.delete(uid)) this.store(uid);
+    });
+    this.staged.set(uid, staged);
+    return staged;
+  }
+  private store(uid: string) {
     try { this.persist(uid); }
     catch (error) {
       this.durable = false; this.error = '待同步操作暂留在当前页面，请保持页面打开后重试。'; this.emit(); throw error;
     }
     this.emit();
-    return this.flush();
   }
   async flush(): Promise<void> {
     const uid = this.uid, generation = this.generation;
@@ -73,14 +96,14 @@ export class LearningSync {
       try {
         this.persist(uid);
         while (current() && this.queue(uid).length) {
-          const operation = this.queue(uid)[0];
-          await this.apply(uid, operation);
+          const batch = this.queue(uid).slice(0, BATCH_SIZE);
+          const committed = Math.min(batch.length, Math.max(1, await this.apply(uid, batch)));
           if (!current()) return;
           if (!this.confirmed.has(uid)) this.confirmed.set(uid, new Map());
-          this.confirmed.get(uid)!.set((operation.word.id || operation.word.word).toLowerCase().trim(), operation.kind);
-          this.queue(uid).shift();
+          const done = this.queue(uid).splice(0, committed);
+          for (const operation of done) this.confirmed.get(uid)!.set((operation.word.id || operation.word.word).toLowerCase().trim(), operation.kind);
           try { this.persist(uid); }
-          catch (error) { this.queue(uid).unshift(operation); this.durable = false; throw error; }
+          catch (error) { this.queue(uid).unshift(...done); this.durable = false; throw error; }
           this.emit();
         }
         if (current()) this.error = null;

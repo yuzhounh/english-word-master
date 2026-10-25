@@ -2,11 +2,17 @@ package com.wordmaster.app;
 
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.speech.tts.Voice;
+import com.getcapacitor.JSArray;
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @CapacitorPlugin(name = "NativeSpeech")
@@ -20,7 +26,43 @@ public class NativeSpeechPlugin extends Plugin {
     private Locale pendingLocale;
     private float pendingRate;
     private float pendingPitch;
+    private String pendingVoice;
+    private final List<PluginCall> voiceCalls = new ArrayList<>();
     private String activeUtteranceId;
+
+    @PluginMethod
+    public void getVoices(PluginCall call) {
+        getActivity().runOnUiThread(() -> {
+            voiceCalls.add(call);
+            if (ready) resolveVoiceCalls();
+            else initializeEngine();
+        });
+    }
+
+    private void resolveVoiceCalls() {
+        if (voiceCalls.isEmpty()) return;
+        JSArray voices = new JSArray();
+        Set<Voice> available = engine.getVoices();
+        if (available != null) for (Voice voice : available) {
+            if (!"en".equals(voice.getLocale().getLanguage())) continue;
+            if (voice.getFeatures() != null && voice.getFeatures().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)) continue;
+            JSObject item = new JSObject();
+            item.put("id", voice.getName());
+            item.put("name", voice.getName());
+            item.put("language", voice.getLocale().toLanguageTag());
+            item.put("networkRequired", voice.isNetworkConnectionRequired());
+            voices.put(item);
+        }
+        String label = engine.getDefaultEngine();
+        for (TextToSpeech.EngineInfo info : engine.getEngines()) {
+            if (info.name.equals(label)) { label = info.label; break; }
+        }
+        JSObject result = new JSObject();
+        result.put("engine", label);
+        result.put("voices", voices);
+        for (PluginCall call : voiceCalls) call.resolve(result);
+        voiceCalls.clear();
+    }
 
     @PluginMethod
     public void speak(PluginCall call) {
@@ -41,6 +83,7 @@ public class NativeSpeechPlugin extends Plugin {
             pendingLocale = Locale.forLanguageTag(language);
             pendingRate = rate.floatValue();
             pendingPitch = pitch.floatValue();
+            pendingVoice = call.getString("voice");
 
             if (ready) {
                 startPendingSpeech();
@@ -67,6 +110,8 @@ public class NativeSpeechPlugin extends Plugin {
             if (!ready) {
                 if (pendingCall != null) pendingCall.reject("Android text-to-speech initialization failed.");
                 clearPending();
+                for (PluginCall call : voiceCalls) call.reject("Android text-to-speech initialization failed.");
+                voiceCalls.clear();
                 if (engine != null) {
                     engine.shutdown();
                     engine = null;
@@ -98,6 +143,7 @@ public class NativeSpeechPlugin extends Plugin {
                     finishUtterance(utteranceId, interrupted ? "Speech was interrupted." : null);
                 }
             });
+            resolveVoiceCalls();
             startPendingSpeech();
         });
     }
@@ -115,6 +161,16 @@ public class NativeSpeechPlugin extends Plugin {
             return;
         }
 
+        if (pendingVoice != null && !pendingVoice.isEmpty()) {
+            Set<Voice> voices = engine.getVoices();
+            if (voices != null) for (Voice voice : voices) {
+                if (pendingVoice.equals(voice.getName()) && "en".equals(voice.getLocale().getLanguage())
+                    && (voice.getFeatures() == null || !voice.getFeatures().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED))) {
+                    engine.setVoice(voice);
+                    break;
+                }
+            }
+        }
         engine.setSpeechRate(pendingRate);
         engine.setPitch(pendingPitch);
         activeUtteranceId = UUID.randomUUID().toString();
@@ -144,12 +200,15 @@ public class NativeSpeechPlugin extends Plugin {
         pendingCall = null;
         pendingText = null;
         pendingLocale = null;
+        pendingVoice = null;
         activeUtteranceId = null;
     }
 
     @Override
     protected void handleOnDestroy() {
         interruptPending("Speech engine was closed.");
+        for (PluginCall call : voiceCalls) call.reject("Speech engine was closed.");
+        voiceCalls.clear();
         if (engine != null) {
             engine.shutdown();
             engine = null;

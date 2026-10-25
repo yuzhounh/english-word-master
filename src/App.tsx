@@ -10,7 +10,9 @@ import { MasteredWordsList } from './components/MasteredWordsList';
 import { MobileShell } from './components/mobile/MobileShell';
 import { MobileMenu } from './components/mobile/MobileMenu';
 import { AuthModal } from './components/AuthModal';
-import { Plus } from 'lucide-react';
+import { NotebookPreferencesProvider, useNotebookPreferences } from './components/NotebookPreferences';
+import { resolveLocalBook } from './lib/startupPreferences';
+import { getApiUrl } from './lib/apiConfig';
 import { useAppVersion } from './lib/appVersion';
 import { WordItem, WrongWordItem, MasteredWordItem, UserProfile, SpeechAccent, WordListGroup } from './types';
 import { AppTab, NotebookSubTab, NotebookCommand } from './types/navigation';
@@ -18,6 +20,7 @@ import { useTheme } from './hooks/useTheme';
 import { useCompactLayout } from './hooks/useCompactLayout';
 import { loadOfflineVocabulary } from './lib/offlineVocabulary';
 import { exclusiveDeletedWordIds } from './lib/notebookDeletion';
+import { createListStore, openListDatabase } from './lib/listStore';
 import { useBackHandler } from './hooks/useBackHandler';
 import {
   currentFirebaseUser,
@@ -34,15 +37,23 @@ import {
   subscribeLearningSync, setLearningSyncUser, retryLearningSync, reportLearningReadError,
   confirmedLearningChanges, clearConfirmedLearningChanges
 } from './lib/cloud';
-import type { LearningSyncState } from './lib/learningSync';
+import type { LearningSyncState, LearningWord } from './lib/learningSync';
 
 const LOCAL_STORAGE_WRONG_WORDS_KEY = 'wordmaster_wrong_words_v1';
 const LOCAL_STORAGE_MASTERED_WORDS_KEY = 'wordmaster_mastered_words_v1';
 const LOCAL_STORAGE_SPEECH_ACCENT_KEY = 'wordmaster_speech_accent_v1';
-const LOCAL_STORAGE_CUSTOM_LISTS_KEY = 'wordmaster_custom_lists_v1';
 const DELETED_LISTS_KEY = 'wordmaster_deleted_lists_v1';
+const listStore = createListStore(openListDatabase(), localStorage);
 
 export default function App() {
+  return <NotebookPreferencesProvider><AppContent /></NotebookPreferencesProvider>;
+}
+
+function AppContent() {
+  const { initialVisit, ready: startupReady, finishStartup, recordVisit, setQuizSource, recordCurrentQuiz, forgetBook, defaultKey } = useNotebookPreferences();
+  const [startupError, setStartupError] = useState('');
+  const [startupAttempt, setStartupAttempt] = useState(0);
+  const [initialLibraryBook, setInitialLibraryBook] = useState<{ name: string; path: string } | null>(null);
   const compactLayout = useCompactLayout();
   React.useLayoutEffect(() => { document.documentElement.classList.toggle('compact-layout', compactLayout); }, [compactLayout]);
   const { resolved, toggleTheme } = useTheme();
@@ -68,6 +79,7 @@ export default function App() {
   const [authRedirectError, setAuthRedirectError] = useState('');
   const [quizPool, setQuizPool] = useState<WordItem[]>([]);
   const [quizPoolName, setQuizPoolName] = useState('大学四级');
+  useEffect(() => { if (startupReady && activeTab === 'quiz') recordCurrentQuiz(); }, [activeTab, startupReady, recordCurrentQuiz]);
   const [defaultQuizWords, setDefaultQuizWords] = useState<WordItem[]>([]);
   const [builtInLists, setBuiltInLists] = useState<WordListGroup[]>([]);
   const [offlineStatus, setOfflineStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -110,14 +122,22 @@ export default function App() {
     }
   });
 
-  const [customWordLists, setCustomWordLists] = useState<WordListGroup[]>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_CUSTOM_LISTS_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Latest learning records for event and async handlers, so state updaters stay free of cloud writes.
+  const wrongWordsRef = React.useRef(wrongWords);
+  wrongWordsRef.current = wrongWords;
+  const masteredWordsRef = React.useRef(masteredWords);
+  masteredWordsRef.current = masteredWords;
+
+  const [customWordLists, setCustomWordLists] = useState<WordListGroup[]>([]);
+  const [listsReady, setListsReady] = useState(false);
+  useEffect(() => {
+    void navigator.storage?.persist?.().catch(() => false);
+    void listStore.load().then(saved => {
+      // Keep any list created during the brief load.
+      setCustomWordLists(current => [...current, ...saved.filter(list => !current.some(added => added.id === list.id))]);
+      setListsReady(true);
+    });
+  }, []);
 
   const [deletedBuiltInIds, setDeletedBuiltInIds] = useState<string[]>(() => {
     try { const saved = JSON.parse(localStorage.getItem(DELETED_LISTS_KEY) || '[]'); return Array.isArray(saved) ? saved.filter(id => typeof id === 'string') : []; }
@@ -136,15 +156,55 @@ export default function App() {
     }).concat(customWordLists.filter(list => !builtInIds.has(list.id)));
   }, [builtInLists, customWordLists, deletedBuiltInIds]);
 
-  // Store only user additions; bundled vocabulary stays in the packaged asset.
+  // Restore once, after bundled IDs are available. Later cloud reads and settings changes
+  // must not navigate away from what the user is doing.
   useEffect(() => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_CUSTOM_LISTS_KEY, JSON.stringify(customWordLists));
-    } catch (err) {
-      console.error('Failed to save customWordLists to localStorage:', err);
-    }
-  }, [customWordLists]);
+    if (startupReady || offlineStatus !== 'ready' || !listsReady) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    setStartupError('');
+    void (async () => {
+      try {
+        if (resolveLocalBook(defaultKey, availableWordLists, wrongWords, masteredWords).key !== defaultKey) forgetBook(defaultKey);
+        if (initialVisit.key.startsWith('library:')) {
+          const book = { path: initialVisit.key.slice(8), name: initialVisit.name || '官方词书' };
+          setInitialLibraryBook(book);
+          if (initialVisit.mode === 'quiz') {
+            const response = await fetch(getApiUrl(`/api/wordlibrary/book?path=${encodeURIComponent(book.path)}`), { signal: controller.signal });
+            const data = await response.json();
+            if (!response.ok || !data.success || !Array.isArray(data.words) || !data.words.length) throw new Error('上次词书暂时无法加载，请联网后重试。');
+            if (cancelled) return;
+            setQuizPool(data.words); setQuizPoolName(book.name); setActiveTab('quiz');
+          } else setActiveTab('library');
+          if (cancelled) return;
+          finishStartup(); recordVisit(initialVisit);
+          return;
+        }
+        const book = resolveLocalBook(initialVisit.key, availableWordLists, wrongWords, masteredWords);
+        const mode = book.key === initialVisit.key && book.words.length ? initialVisit.mode : 'browse';
+        if (book.key !== initialVisit.key) forgetBook(initialVisit.key);
+        const [section, ...target] = book.key.split(':');
+        setNotebookSubTab(section === 'mastered' ? 'mastered' : 'wrong');
+        setNotebookTarget(target.join(':'));
+        setQuizPool(book.words); setQuizPoolName(book.name);
+        setQuizSource({ key: book.key, mode: 'quiz' });
+        setActiveTab(mode === 'quiz' ? 'quiz' : 'notebook');
+        finishStartup(); recordVisit({ key: book.key, mode });
+      } catch {
+        if (!cancelled) setStartupError('上次词书暂时无法加载，请联网后重试。');
+      } finally { window.clearTimeout(timeout); }
+    })();
+    return () => { cancelled = true; controller.abort(); window.clearTimeout(timeout); };
+  }, [offlineStatus, listsReady, startupAttempt]);
 
+  // Store only user additions; bundled vocabulary stays in the packaged asset. Saving waits for the
+  // stored lists, so the empty initial state never overwrites them.
+  useEffect(() => {
+    if (listsReady) void listStore.save(customWordLists);
+  }, [customWordLists, listsReady]);
+
+  /** Creates a word list only; its words join the 生词本 when answered wrongly in a test. */
   const handleImportCustomList = (words: WordItem[], listName: string) => {
     const cleanName = listName || `自定义词表 ${customWordLists.length + 1}`;
     const newList: WordListGroup = {
@@ -158,9 +218,6 @@ export default function App() {
     };
 
     setCustomWordLists((prev) => [newList, ...prev.filter((l) => l.name !== cleanName)]);
-    if (words.length > 0) {
-      handleAddWordsToNotebook(words);
-    }
     return newList.id;
   };
 
@@ -205,13 +262,13 @@ export default function App() {
       );
     } else {
       handleImportCustomList(words, cleanName);
-      return;
     }
 
     handleAddWordsToNotebook(words);
   };
 
   const handleDeleteCustomList = (listId: string) => {
+    forgetBook(`wrong:custom:${listId}`);
     const removed = exclusiveDeletedWordIds(availableWordLists, listId);
     setWrongWords(previous => previous.filter(word => !removed.has(word.id.toLowerCase().trim())));
     setMasteredWords(previous => previous.filter(word => !removed.has(word.id.toLowerCase().trim())));
@@ -278,20 +335,22 @@ export default function App() {
           const fsWrongWords = wrongRead.value;
           if (!current()) return;
           if (fsWrongWords.length > 0 || confirmed.size > 0) {
+            const removedLocally = (id: string) => ['move-mastered', 'delete-wrong'].includes(confirmed.get(id) || '');
+            const cloudIds = new Set(fsWrongWords.map(w => w.id));
+            const localOnly = wrongWordsRef.current.filter(w => !removedLocally(w.id) && !cloudIds.has(w.id));
             setWrongWords((prevLocal) => {
               if (!current()) return prevLocal;
               const map = new Map<string, WrongWordItem>();
-              
+
               // Load Firestore first
               fsWrongWords.forEach(w => map.set(w.id, w));
-              
+
               // Merge local items if not present or has higher count
               prevLocal.forEach(w => {
-                if (['move-mastered', 'delete-wrong'].includes(confirmed.get(w.id) || '')) return;
+                if (removedLocally(w.id)) return;
                 const existing = map.get(w.id);
                 if (!existing) {
                   map.set(w.id, w);
-                  void syncWrongWordToFirestore(firebaseUser.uid, w).catch(console.error);
                 } else if (w.errorCount > existing.errorCount) {
                   map.set(w.id, { ...existing, errorCount: w.errorCount });
                 }
@@ -299,6 +358,7 @@ export default function App() {
 
               return Array.from(map.values());
             });
+            localOnly.forEach(w => { void syncWrongWordToFirestore(firebaseUser.uid, w).catch(console.error); });
           }
         } catch (err) {
           readFailed = true;
@@ -312,19 +372,20 @@ export default function App() {
           const fsMasteredWords = masteredRead.value;
           if (!current()) return;
           if (fsMasteredWords.length > 0 || confirmed.size > 0) {
+            const removedLocally = (id: string) => ['move-wrong', 'delete-mastered'].includes(confirmed.get(id) || '');
+            const cloudIds = new Set(fsMasteredWords.map(w => w.id));
+            const localOnly = masteredWordsRef.current.filter(w => !removedLocally(w.id) && !cloudIds.has(w.id));
             setMasteredWords((prevLocal) => {
               if (!current()) return prevLocal;
               const map = new Map<string, MasteredWordItem>();
               fsMasteredWords.forEach(w => map.set(w.id, w));
               prevLocal.forEach(w => {
-                if (['move-wrong', 'delete-mastered'].includes(confirmed.get(w.id) || '')) return;
-                if (!map.has(w.id)) {
-                  map.set(w.id, w);
-                  void syncMasteredWordToFirestore(firebaseUser.uid, w).catch(console.error);
-                }
+                if (removedLocally(w.id)) return;
+                if (!map.has(w.id)) map.set(w.id, w);
               });
               return Array.from(map.values());
             });
+            localOnly.forEach(w => { void syncMasteredWordToFirestore(firebaseUser.uid, w).catch(console.error); });
           }
         } catch (err) {
           readFailed = true;
@@ -390,56 +451,59 @@ export default function App() {
     }
   };
 
-  // Add newly extracted words directly into the pending notebook
-  const handleAddWordsToNotebook = (words: WordItem[]) => {
-    setWrongWords((prev) => {
-      const map = new Map<string, WrongWordItem>();
-      prev.forEach((w) => map.set(w.id, w));
+  // Add newly extracted words directly into the pending notebook. The merge is pure: it is run once on the
+  // latest records to find the cloud changes and again inside the state updater.
+  const mergeIntoNotebook = (previous: WrongWordItem[], words: WordItem[]) => {
+    const map = new Map<string, WrongWordItem>();
+    const changes: LearningWord[] = [];
+    previous.forEach((w) => map.set(w.id, w));
 
-      words.forEach((wordItem) => {
-        const wordId = (wordItem.id || wordItem.word).toLowerCase().trim();
-        const existing = map.get(wordId);
-        if (!existing) {
-          const newItem: WrongWordItem = {
-            id: wordId,
-            word: wordItem.word,
-            phonetic: wordItem.phonetic || '',
-            chinese: wordItem.chinese || '',
-            exampleSentence: wordItem.exampleSentence || '',
-            exampleSentenceCn: wordItem.exampleSentenceCn || '',
-            errorCount: 0,
-            lastErrorAt: Date.now(),
-            createdAt: Date.now()
-          };
-          map.set(wordId, newItem);
+    words.forEach((wordItem) => {
+      const wordId = (wordItem.id || wordItem.word).toLowerCase().trim();
+      const existing = map.get(wordId);
+      if (!existing) {
+        const newItem: WrongWordItem = {
+          id: wordId,
+          word: wordItem.word,
+          phonetic: wordItem.phonetic || '',
+          chinese: wordItem.chinese || '',
+          exampleSentence: wordItem.exampleSentence || '',
+          exampleSentenceCn: wordItem.exampleSentenceCn || '',
+          errorCount: 0,
+          lastErrorAt: Date.now(),
+          createdAt: Date.now()
+        };
+        map.set(wordId, newItem);
+        changes.push(wordItem);
+      } else {
+        // If word already exists, merge and enrich with new example sentence, phonetic or chinese definition
+        const updatedItem: WrongWordItem = {
+          ...existing,
+          word: wordItem.word || existing.word,
+          phonetic: wordItem.phonetic || existing.phonetic,
+          chinese: wordItem.chinese || existing.chinese,
+          exampleSentence: wordItem.exampleSentence || existing.exampleSentence,
+          exampleSentenceCn: wordItem.exampleSentenceCn || existing.exampleSentenceCn
+        };
+        map.set(wordId, updatedItem);
 
-          if (user && user.uid) {
-            syncWrongWordToFirestore(user.uid, wordItem).catch((err) => {
-              console.error('Error syncing extracted word to Firestore:', err);
-            });
-          }
-        } else {
-          // If word already exists, merge and enrich with new example sentence, phonetic or chinese definition
-          const updatedItem: WrongWordItem = {
-            ...existing,
-            word: wordItem.word || existing.word,
-            phonetic: wordItem.phonetic || existing.phonetic,
-            chinese: wordItem.chinese || existing.chinese,
-            exampleSentence: wordItem.exampleSentence || existing.exampleSentence,
-            exampleSentenceCn: wordItem.exampleSentenceCn || existing.exampleSentenceCn
-          };
-          map.set(wordId, updatedItem);
-
-          if (user && user.uid && (wordItem.exampleSentence || wordItem.phonetic)) {
-            syncWrongWordToFirestore(user.uid, updatedItem).catch((err) => {
-              console.error('Error syncing updated word to Firestore:', err);
-            });
-          }
-        }
-      });
-
-      return Array.from(map.values());
+        // Sync only refreshed details; a synced errorCount is added to the cloud count.
+        const changed = (['word', 'phonetic', 'chinese', 'exampleSentence', 'exampleSentenceCn'] as const)
+          .some((key) => updatedItem[key] !== existing[key]);
+        if (changed) changes.push({ ...updatedItem, errorCount: 0 });
+      }
     });
+
+    return { words: Array.from(map.values()), changes };
+  };
+  const handleAddWordsToNotebook = (words: WordItem[]) => {
+    const { changes } = mergeIntoNotebook(wrongWordsRef.current, words);
+    setWrongWords((prev) => mergeIntoNotebook(prev, words).words);
+    if (user && user.uid) {
+      changes.forEach((word) => {
+        syncWrongWordToFirestore(user.uid, word).catch((err) => console.error('Error syncing word to Firestore:', err));
+      });
+    }
   };
 
   // Record Wrong Word (Increments error count)
@@ -595,83 +659,94 @@ export default function App() {
     }
   };
 
-  // Import wrong words
-  const handleImportWrongWords = (newItems: WrongWordItem[]) => {
-    setWrongWords((prev) => {
-      const map = new Map<string, WrongWordItem>();
-      prev.forEach((w) => map.set(w.id, w));
+  // Import wrong words; like mergeIntoNotebook, the merge is pure and the cloud changes are sent once.
+  const mergeImportedWrongWords = (previous: WrongWordItem[], newItems: WrongWordItem[]) => {
+    const map = new Map<string, WrongWordItem>();
+    const changes: LearningWord[] = [];
+    previous.forEach((w) => map.set(w.id, w));
 
-      newItems.forEach((item) => {
-        const id = (item.id || item.word).toLowerCase().trim();
-        const existing = map.get(id);
-        if (!existing) {
-          const formatted: WrongWordItem = {
-            id,
-            word: item.word,
-            phonetic: item.phonetic || '',
-            chinese: item.chinese || item.word,
-            exampleSentence: item.exampleSentence || '',
-            exampleSentenceCn: item.exampleSentenceCn || '',
-            errorCount: item.errorCount || 0,
-            lastErrorAt: item.lastErrorAt || Date.now(),
-            createdAt: item.createdAt || Date.now()
-          };
-          map.set(id, formatted);
-          if (user && user.uid) {
-            syncWrongWordToFirestore(user.uid, formatted).catch(err => console.error(err));
-          }
-        } else {
-          const formatted: WrongWordItem = {
-            ...existing,
-            word: item.word || existing.word,
-            phonetic: item.phonetic || existing.phonetic,
-            chinese: item.chinese || existing.chinese,
-            exampleSentence: item.exampleSentence || existing.exampleSentence,
-            exampleSentenceCn: item.exampleSentenceCn || existing.exampleSentenceCn
-          };
-          map.set(id, formatted);
-          if (user && user.uid) {
-            syncWrongWordToFirestore(user.uid, formatted).catch(err => console.error(err));
-          }
-        }
-      });
-
-      return Array.from(map.values());
+    newItems.forEach((item) => {
+      const id = (item.id || item.word).toLowerCase().trim();
+      const existing = map.get(id);
+      if (!existing) {
+        const formatted: WrongWordItem = {
+          id,
+          word: item.word,
+          phonetic: item.phonetic || '',
+          chinese: item.chinese || item.word,
+          exampleSentence: item.exampleSentence || '',
+          exampleSentenceCn: item.exampleSentenceCn || '',
+          errorCount: item.errorCount || 0,
+          lastErrorAt: item.lastErrorAt || Date.now(),
+          createdAt: item.createdAt || Date.now()
+        };
+        map.set(id, formatted);
+        changes.push(formatted);
+      } else {
+        const formatted: WrongWordItem = {
+          ...existing,
+          word: item.word || existing.word,
+          phonetic: item.phonetic || existing.phonetic,
+          chinese: item.chinese || existing.chinese,
+          exampleSentence: item.exampleSentence || existing.exampleSentence,
+          exampleSentenceCn: item.exampleSentenceCn || existing.exampleSentenceCn
+        };
+        map.set(id, formatted);
+        // The local count is kept, so the cloud count must not grow either.
+        changes.push({ ...formatted, errorCount: 0 });
+      }
     });
+
+    return { words: Array.from(map.values()), changes };
+  };
+  const handleImportWrongWords = (newItems: WrongWordItem[]) => {
+    const { changes } = mergeImportedWrongWords(wrongWordsRef.current, newItems);
+    setWrongWords((prev) => mergeImportedWrongWords(prev, newItems).words);
+    if (user && user.uid) changes.forEach(word => { syncWrongWordToFirestore(user.uid, word).catch(err => console.error(err)); });
   };
 
   // Import mastered words
-  const handleImportMasteredWords = (newItems: MasteredWordItem[]) => {
-    setMasteredWords((prev) => {
-      const map = new Map<string, MasteredWordItem>();
-      prev.forEach((w) => map.set(w.id, w));
+  const mergeImportedMasteredWords = (previous: MasteredWordItem[], newItems: MasteredWordItem[]) => {
+    const map = new Map<string, MasteredWordItem>();
+    const added: MasteredWordItem[] = [];
+    previous.forEach((w) => map.set(w.id, w));
 
-      newItems.forEach((item) => {
-        const id = (item.id || item.word).toLowerCase().trim();
-        if (!map.has(id)) {
-          const formatted: MasteredWordItem = {
-            id,
-            word: item.word,
-            phonetic: item.phonetic || '',
-            chinese: item.chinese || item.word,
-            exampleSentence: item.exampleSentence || '',
-            exampleSentenceCn: item.exampleSentenceCn || '',
-            masteredAt: item.masteredAt || Date.now()
-          };
-          map.set(id, formatted);
-          if (user && user.uid) {
-            syncMasteredWordToFirestore(user.uid, formatted).catch(err => console.error(err));
-          }
-        }
-      });
-
-      return Array.from(map.values());
+    newItems.forEach((item) => {
+      const id = (item.id || item.word).toLowerCase().trim();
+      if (!map.has(id)) {
+        const formatted: MasteredWordItem = {
+          id,
+          word: item.word,
+          phonetic: item.phonetic || '',
+          chinese: item.chinese || item.word,
+          exampleSentence: item.exampleSentence || '',
+          exampleSentenceCn: item.exampleSentenceCn || '',
+          masteredAt: item.masteredAt || Date.now()
+        };
+        map.set(id, formatted);
+        added.push(formatted);
+      }
     });
+
+    return { words: Array.from(map.values()), added };
   };
+  const handleImportMasteredWords = (newItems: MasteredWordItem[]) => {
+    const { added } = mergeImportedMasteredWords(masteredWordsRef.current, newItems);
+    setMasteredWords((prev) => mergeImportedMasteredWords(prev, newItems).words);
+    if (user && user.uid) added.forEach(word => { syncMasteredWordToFirestore(user.uid, word).catch(err => console.error(err)); });
+  };
+
+  if (!startupReady) return <div className="flex min-h-dvh items-center justify-center bg-surface p-6 text-center text-primary"><div>
+    <p>{offlineStatus === 'error' ? '内置词集读取失败。' : startupError || '正在打开词本…'}</p>
+    {(startupError || offlineStatus === 'error') && <div className="mt-4 flex justify-center gap-3">
+      <button type="button" className="min-h-12 rounded-xl px-4 text-brand-600" onClick={() => offlineStatus === 'error' ? void loadBuiltIns() : setStartupAttempt(value => value + 1)}>重试</button>
+      <button type="button" className="min-h-12 rounded-xl px-4 text-brand-600" onClick={() => { setNotebookSubTab('wrong'); setNotebookTarget('all'); setActiveTab('notebook'); finishStartup(); }}>打开全量生词</button>
+    </div>}
+  </div></div>;
 
   if (compactLayout) {
     const viewKey = activeTab === 'notebook' ? `${notebookSubTab}:${notebookTarget}` : activeTab;
-    const openView = (key: string) => {
+    const openView = (key: string, closeMenu = true) => {
       const [first, ...rest] = key.split(':');
       if (first === 'wrong' || first === 'mastered') {
         setNotebookSubTab(first);
@@ -680,19 +755,20 @@ export default function App() {
       } else {
         setActiveTab(first === 'library' ? 'library' : 'quiz');
       }
-      setMenuOpen(false);
-      window.scrollTo({ top: 0, behavior: 'instant' });
+      if (closeMenu) {
+        setMenuOpen(false);
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
     };
     const sendCommand = (command: Omit<NotebookCommand, 'id'>) =>
       setNotebookCommand({ ...command, id: ++commandSeq.current });
     const manageView = (key: string) => {
-      openView(key);
+      openView(key, false);
       sendCommand({ type: 'menu', target: key.split(':').slice(1).join(':') || 'all' });
     };
     const createList = () => {
-      if (activeTab !== 'notebook' || notebookSubTab !== 'wrong') openView('wrong:all');
+      if (activeTab !== 'notebook' || notebookSubTab !== 'wrong') openView('wrong:all', false);
       sendCommand({ type: 'create' });
-      setMenuOpen(false);
     };
     const dayAgo = Date.now() - 7 * 86400000;
     const counts = {
@@ -714,15 +790,14 @@ export default function App() {
       : activeTab === 'notebook' ? (notebookSubTab === 'wrong' ? '搜索单词或中文解释' : '搜索熟词或中文解释') : null;
     const syncText = !user ? null
       : learningSyncState.error || (learningSyncState.busy ? '正在同步学习记录…' : learningSyncState.pending > 0 ? `${learningSyncState.pending} 项学习记录待同步` : null);
-    const startQuiz = (words: WordItem[], name: string) => { setQuizPool(words); setQuizPoolName(name); setActiveTab('quiz'); };
+    const startQuiz = (words: WordItem[], name: string) => { setMenuOpen(false); setQuizPool(words); setQuizPoolName(name); setActiveTab('quiz'); };
 
     return (
       <div className="m-root font-sans">
         <MobileShell
           title={title}
           placeholder={placeholder}
-          fab={activeTab === 'notebook' && notebookSubTab === 'wrong'
-            ? { icon: Plus, label: '新建词本', onClick: createList } : null}
+          fab={null}
           status={syncText}
           resetKey={viewKey}
           menuOpen={menuOpen}
@@ -741,8 +816,8 @@ export default function App() {
               speechAccent={speechAccent}
               onToggleSpeechAccent={toggleSpeechAccent}
               user={user}
-              onLogin={() => { setMenuOpen(false); setIsAuthModalOpen(true); }}
-              onLogout={() => { setMenuOpen(false); void handleLogout(); }}
+              onLogin={() => setIsAuthModalOpen(true)}
+              onLogout={() => { void handleLogout(); }}
               sync={{ text: syncText, busy: learningSyncState.busy, onRetry: () => void refreshLearning.current(currentFirebaseUser()) }}
               version={appVersion}
             />
@@ -750,6 +825,7 @@ export default function App() {
         >
           <div className={activeTab === 'library' ? undefined : 'hidden'} aria-hidden={activeTab !== 'library'}>
             <WordLibraryView
+              initialBook={initialLibraryBook}
               active={activeTab === 'library'}
               speechAccent={speechAccent}
               onStartQuizWithWords={startQuiz}
@@ -758,7 +834,7 @@ export default function App() {
             />
           </div>
 
-          {activeTab === 'quiz' && (offlineStatus === 'ready' ?
+          {activeTab === 'quiz' && (offlineStatus === 'ready' && quizPool.length > 0 ?
             <QuizView
               wordPool={quizPool}
               wordPoolName={quizPoolName}
@@ -772,7 +848,7 @@ export default function App() {
             : <div className="m-empty">
               {offlineStatus === 'error'
                 ? <><p>内置词集加载失败。</p><button type="button" className="m-btn" onClick={() => void loadBuiltIns()}>重试</button></>
-                : <p>正在读取内置词集…</p>}
+                : <p>{offlineStatus === 'ready' ? '当前词本暂无可测试的单词。' : '正在读取内置词集…'}</p>}
             </div>
           )}
 
@@ -848,6 +924,8 @@ export default function App() {
         {/* Keep library mounted so folder navigation survives tab switches */}
         <div className={activeTab === 'library' ? undefined : 'hidden'} aria-hidden={activeTab !== 'library'}>
           <WordLibraryView
+            initialBook={initialLibraryBook}
+            active={activeTab === 'library'}
             speechAccent={speechAccent}
             onStartQuizWithWords={(words, bookName) => {
               setQuizPool(words);
@@ -873,7 +951,7 @@ export default function App() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === 'quiz' && (offlineStatus === 'ready' ?
+            {activeTab === 'quiz' && (offlineStatus === 'ready' && quizPool.length > 0 ?
               <QuizView
                 wordPool={quizPool}
                 wordPoolName={quizPoolName}
@@ -888,12 +966,14 @@ export default function App() {
                 speechAccent={speechAccent}
               />
               : <div className="quiz-container"><div className="surface-card p-6 rounded-2xl text-center text-sm text-secondary">
-                {offlineStatus === 'error' ? <><p>内置词集加载失败。</p><button type="button" onClick={() => void loadBuiltIns()} className="mt-3 px-4 py-2 gradient-brand text-white rounded-xl">重试</button></> : '正在读取内置词集…'}
+                {offlineStatus === 'error' ? <><p>内置词集加载失败。</p><button type="button" onClick={() => void loadBuiltIns()} className="mt-3 px-4 py-2 gradient-brand text-white rounded-xl">重试</button></> : offlineStatus === 'ready' ? '当前词本暂无可测试的单词。' : '正在读取内置词集…'}
               </div></div>
             )}
 
             {activeTab === 'notebook' && (
               <NotebookView
+                initialTarget={notebookTarget}
+                onNavigate={setNotebookTarget}
                 subTab={notebookSubTab}
                 onSubTabChange={setNotebookSubTab}
                 wrongWords={wrongWords}

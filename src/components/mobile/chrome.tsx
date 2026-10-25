@@ -16,7 +16,7 @@ export interface ChromeSort {
   options: { value: string; label: string; description: string }[];
   onChange: (value: string) => void;
 }
-export interface ChromeFab { icon: LucideIcon; label: string; onClick: () => void }
+export interface ChromeFab { purpose: 'quiz' | 'add'; icon: LucideIcon; label: string; onClick: () => void; disabled?: boolean }
 
 export interface ChromeActions {
   setTitle: (title: string | null) => void;
@@ -31,6 +31,8 @@ export interface ChromeActions {
 
 export const ChromeActionsContext = createContext<ChromeActions | null>(null);
 export const ChromeSearchContext = createContext('');
+export const ChromeQuizContext = createContext<ChromeFab | null>(null);
+export const useCurrentBookQuiz = () => useContext(ChromeQuizContext);
 
 /** Null on the desktop layout, where pages keep their own toolbars. */
 export const useChromeActions = () => useContext(ChromeActionsContext);

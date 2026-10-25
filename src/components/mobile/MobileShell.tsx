@@ -4,7 +4,7 @@ import { SortMenu } from '../ui/SortMenu';
 import { SelectionBar } from './SelectionBar';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import {
-  ChromeActions, ChromeActionsContext, ChromeFab, ChromeSearchContext, ChromeSelection, ChromeSort,
+  ChromeActions, ChromeActionsContext, ChromeFab, ChromeSearchContext, ChromeQuizContext, ChromeSelection, ChromeSort,
 } from './chrome';
 
 interface MobileShellProps {
@@ -73,7 +73,10 @@ export const MobileShell: React.FC<MobileShellProps> = ({
   return (
     <ChromeActionsContext.Provider value={actions}>
       <ChromeSearchContext.Provider value={search}>
+        <ChromeQuizContext.Provider value={shownFab?.purpose === 'quiz' ? shownFab : null}>
         <div className="m-shell">
+          {/* Keep the document height stable while the visible header collapses. */}
+          <div className={`m-header-slot${shownPlaceholder !== null ? ' has-search' : ''}`}>
           <header className={`m-header${collapsed ? ' is-collapsed' : ''}`} data-m-header>
             <div className="m-titlebar">
               {back && !selection && (
@@ -112,11 +115,12 @@ export const MobileShell: React.FC<MobileShellProps> = ({
               </div>
             )}
           </header>
+          </div>
 
           <main className="m-panel">{children}</main>
 
           {shownFab && !selection && !menuOpen && (
-            <button type="button" className="m-fab" aria-label={shownFab.label} title={shownFab.label} onClick={shownFab.onClick}>
+            <button type="button" className="m-fab" disabled={shownFab.disabled} aria-label={shownFab.label} title={shownFab.label} onClick={shownFab.onClick}>
               <shownFab.icon width={24} height={24} strokeWidth={1.8} />
             </button>
           )}
@@ -125,6 +129,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({
 
           {menuOpen && menu}
         </div>
+        </ChromeQuizContext.Provider>
       </ChromeSearchContext.Provider>
     </ChromeActionsContext.Provider>
   );

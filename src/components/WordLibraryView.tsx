@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { WordCard } from './ui/WordCard';
 import { 
-  Folder, BookOpen, Search, Download, Play, 
+  Folder, BookOpen, Search, Download,
   RefreshCw, ChevronRight, Check, FileSpreadsheet, Layers, Loader2, ListPlus,
-  Github, ExternalLink
+  Github, ExternalLink, ListChecks
 } from 'lucide-react';import { WordItem, LibraryCategoryNode, SpeechAccent } from '../types';
 import { getApiUrl } from '../lib/apiConfig';
 import { Pagination } from './Pagination';
@@ -15,8 +15,10 @@ import { speakEnglish } from '../lib/speech';
 import { withLibraryWordCounts } from '../lib/libraryMetadata';
 import { useChromeActions, useChromeSearch } from './mobile/chrome';
 import { useBackHandler } from '../hooks/useBackHandler';
+import { useNotebookPreferences } from './NotebookPreferences';
 
 interface WordLibraryViewProps {
+  initialBook?: { name: string; path: string } | null;
   onStartQuizWithWords: (words: WordItem[], bookName: string) => void;
   onImportCustomList: (words: WordItem[], listName: string) => void;
   onGoToNotebook?: () => void;
@@ -26,7 +28,8 @@ interface WordLibraryViewProps {
 }
 
 export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
-  onStartQuizWithWords,
+  onStartQuizWithWords: startQuiz,
+  initialBook,
   onImportCustomList,
   onGoToNotebook,
   speechAccent,
@@ -50,6 +53,20 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
 
   // Selected book state
   const [selectedBook, setSelectedBook] = useState<{ name: string; path: string } | null>(null);
+  const { recordVisit } = useNotebookPreferences();
+  const onStartQuizWithWords = (words: WordItem[], name: string) => {
+    if (selectedBook) recordVisit({ key: `library:${selectedBook.path}`, name: selectedBook.name, mode: 'quiz' });
+    startQuiz(words, name);
+  };
+  useEffect(() => {
+    if (active && selectedBook) recordVisit({ key: `library:${selectedBook.path}`, name: selectedBook.name, mode: 'browse' });
+  }, [active, selectedBook, recordVisit]);
+  const initialBookOpened = React.useRef(false);
+  useEffect(() => {
+    if (!initialBook || !active || initialBookOpened.current) return;
+    initialBookOpened.current = true;
+    void handleSelectBook(initialBook);
+  }, [initialBook, active]);
   const [bookWords, setBookWords] = useState<WordItem[]>([]);
   const [loadingBook, setLoadingBook] = useState<boolean>(false);
   const [bookError, setBookError] = useState<string | null>(null);
@@ -94,8 +111,8 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
     if (!shell) return;
     if (!selectedBook) { shell.setFab(null); return; }
     shell.setFab({
-      icon: ListPlus, label: '加入词本',
-      onClick: () => { if (!loadingBook && bookWords.length > 0) importBookToList(bookWords); },
+      purpose: 'quiz', icon: ListChecks, label: '测试当前词本', disabled: loadingBook || bookWords.length === 0,
+      onClick: () => { if (!loadingBook && bookWords.length > 0) onStartQuizWithWords(bookWords, selectedBook.name); },
     });
     return () => shell.setFab(null);
   }, [shell, selectedBook, loadingBook, bookWords]);
@@ -163,6 +180,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
     if (folderPath) setNavPath(folderPath);
 
     setSelectedBook(book);
+    setBookWords([]);
     setLoadingBook(true);
     setBookError(null);
     setBookSearch('');
@@ -446,9 +464,9 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
             <div className="m-book-bar">
               <span>共 {bookWords.length} 词{bookQuery ? ` · 筛选 ${filteredBookWords.length}` : ''}</span>
               <button type="button" disabled={loadingBook || bookWords.length === 0}
-                onClick={() => { if (bookWords.length > 0) onStartQuizWithWords(bookWords, selectedBook.name); }}>
-                <Play width={18} height={18} strokeWidth={1.8} aria-hidden />
-                <span>开始测试</span>
+                onClick={() => importBookToList(bookWords)}>
+                <ListPlus width={18} height={18} strokeWidth={1.8} aria-hidden />
+                <span>加入词本</span>
               </button>
             </div>
           ) : (
@@ -482,7 +500,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                 disabled={loadingBook || bookWords.length === 0}
                 className="flex items-center gap-2 px-4 py-2 surface-muted border border-slate-200 dark:border-slate-600 text-secondary rounded-xl text-xs font-bold hover:opacity-95 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
               >
-                <Play className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <ListChecks className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                 <span>开始测试</span>
               </button>
 
@@ -490,7 +508,7 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                 onClick={() => importBookToList(bookWords)}
                 disabled={loadingBook || bookWords.length === 0}
                 className="flex items-center gap-2 px-4 py-2 gradient-brand text-white rounded-xl text-xs font-bold hover:opacity-95 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                title="将词书中的完整词条直接加入生词本"
+                title="将词书加入我的词本列表"
               >
                 <ListPlus className="w-4 h-4" />
                 <span>加入词本</span>
@@ -508,10 +526,10 @@ export const WordLibraryView: React.FC<WordLibraryViewProps> = ({
                 </div>
                 <div>
                   <div className="font-bold text-emerald-900 text-sm">
-                    已成功导入自定义词表《{selectedBook.name}》({bookWords.length} 个单词)！
+                    已加入词本《{selectedBook.name}》（{bookWords.length} 个单词）
                   </div>
                   <div className="text-xs text-emerald-700 mt-0.5">
-                    该词表已成功加入生词本。你可以随时进入【生词本】查看自定义词表、管理单词或发起专项练习。
+                    可在【生词本】的词本列表中查看和测试；测试中答错的单词会自动加入生词本。
                   </div>
                 </div>
               </div>

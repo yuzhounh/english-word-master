@@ -6,6 +6,7 @@ import { AppTab } from '../types/navigation';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useCompactLayout } from '../hooks/useCompactLayout';
 import { useBackHandler } from '../hooks/useBackHandler';
+import { StartupSettings } from './NotebookPreferences';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -193,6 +194,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Desktop Controls */}
         <div className="hidden lg:flex items-center gap-2">
+          <StartupSettings desktop />
           <button
             onClick={onToggleTheme}
             className="flex items-center justify-center px-2.5 py-1.5 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-600 rounded-full transition-all border border-slate-200/80 dark:border-slate-700 shadow-sm cursor-pointer"

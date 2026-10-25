@@ -5,7 +5,7 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { WrongWordItem, MasteredWordItem } from '../types';
 import { signInWithPopupFallback, webAuthDomain } from './googleSignIn';
 import type { LearningOperation } from './learningSync';
-import { writeLearningOperation } from './learningWrite';
+import { writeLearningOperations } from './learningWrite';
 import { lazyModule } from './lazyModule';
 export { onAuthStateChanged };
 
@@ -75,10 +75,10 @@ export const logOut = async () => {
   }
 };
 
-export async function applyLearningOperation(uid: string, operation: LearningOperation) {
+export async function applyLearningOperations(uid: string, operations: LearningOperation[]) {
   const { db, doc, runTransaction } = await getStore();
   if (auth.currentUser?.uid !== uid) throw Error('登录账户已经改变');
-  return runTransaction(db, transaction => writeLearningOperation(operation, {
+  return runTransaction(db, transaction => writeLearningOperations(operations, {
     get: async path => { const snapshot = await transaction.get(doc(db, 'users', uid, ...path.split('/'))); return snapshot.exists() ? snapshot.data() : null; },
     set: (path, data) => { transaction.set(doc(db, 'users', uid, ...path.split('/')), data); },
     delete: path => { transaction.delete(doc(db, 'users', uid, ...path.split('/'))); },

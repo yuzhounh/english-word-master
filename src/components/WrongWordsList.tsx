@@ -23,10 +23,11 @@ import { AiClientError } from '../lib/aiApi';
 import { useBookLongPress } from '../hooks/useBookLongPress';
 import { useBackHandler } from '../hooks/useBackHandler';
 import { BookActionMenu } from './ui/BookActionMenu';
+import { DefaultBookBadge, useNotebookPreferences } from './NotebookPreferences';
 import { SortMenu } from './ui/SortMenu';
 import { useCompactLayout } from '../hooks/useCompactLayout';
 import { saveTextFile } from '../lib/saveTextFile';
-import { Play } from 'lucide-react';
+import { ListChecks } from 'lucide-react';
 import { useChromeActions, useChromeSearch } from './mobile/chrome';
 import type { NotebookCommand } from '../types/navigation';
 
@@ -35,6 +36,7 @@ const parseNotebookTarget = (target: string): { filter: 'all' | 'high_error' | '
     : { filter: target === 'high_error' || target === 'recent' ? target : 'all', listId: null };
 
 interface WrongWordsListProps {
+  initialTarget?: string;
   /** Phone layout: the shell chooses the list ('all' | 'high_error' | 'recent' | 'custom:<id>'). */
   externalTarget?: string;
   externalCommand?: NotebookCommand | null;
@@ -55,6 +57,7 @@ interface WrongWordsListProps {
 }
 
 export const WrongWordsList: React.FC<WrongWordsListProps> = ({
+  initialTarget: restoredTarget,
   externalTarget,
   externalCommand,
   onCommandHandled,
@@ -64,7 +67,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
   customWordLists = [],
   hideHeader = false,
   onRemoveWrongWord,
-  onStartWrongWordsQuiz,
+  onStartWrongWordsQuiz: startQuiz,
   onImportWrongWords,
   onImportToWordList,
   onDeleteCustomList,
@@ -221,10 +224,20 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
     });
   };
 
-  const initialTarget = externalTarget !== undefined ? parseNotebookTarget(externalTarget) : null;
+  const { recordVisit, setDefault, defaultKey } = useNotebookPreferences();
+  const initialTarget = externalTarget !== undefined || restoredTarget !== undefined ? parseNotebookTarget(externalTarget ?? restoredTarget!) : null;
   const [selectedListFilter, setSelectedListFilter] = useState<'all' | 'high_error' | 'recent' | 'custom'>(initialTarget?.filter ?? 'all');
   const [selectedCustomListId, setSelectedCustomListId] = useState<string | null>(initialTarget?.listId ?? null);
-  const [isListOpen, setIsListOpen] = useState(externalTarget !== undefined);
+  const [isListOpen, setIsListOpen] = useState(externalTarget !== undefined || restoredTarget !== undefined);
+  const bookKey = `wrong:${selectedListFilter === 'custom' ? `custom:${selectedCustomListId}` : selectedListFilter}`;
+  useEffect(() => {
+    if (!isListOpen) return;
+    recordVisit({ key: bookKey, mode: 'browse' });
+    if (externalTarget === undefined) onNavigate?.(bookKey.slice(6));
+  }, [isListOpen, bookKey, recordVisit]);
+  const onStartWrongWordsQuiz = (words: WordItem[], name?: string) => {
+    recordVisit({ key: bookKey, mode: 'quiz' }); startQuiz(words, name);
+  };
   const openList = () => {
     setIsListOpen(true);
     setSearchTerm('');
@@ -268,8 +281,10 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
         };
       });
 
+    // A Set keeps a book of thousands of words from comparing every word with every 生词.
+    const wrongIds = new Set(wrongWords.map(mw => mw.id.toLowerCase().trim()));
     const unMatchedListWords: WrongWordItem[] = selectedCustomList.words
-      .filter(w => !wrongWords.some(mw => mw.id.toLowerCase().trim() === (w.id || w.word).toLowerCase().trim()))
+      .filter(w => !wrongIds.has((w.id || w.word).toLowerCase().trim()))
       .map(w => ({
         id: (w.id || w.word).toLowerCase().trim(),
         word: w.word,
@@ -303,7 +318,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
     if (isImportModalOpen) { if (!isEnriching) setIsImportModalOpen(false); return true; }
     if (isListOpen && !mobile) { setIsListOpen(false); window.scrollTo(0, 0); return true; }
     return false;
-  });
+  }, 40);
   const exportWords = selectedListFilter === 'custom' && selectedCustomList ? selectedCustomList.words : activeWordSet;
 
   // Filter & Sort
@@ -415,7 +430,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
       toggleAll: () => selectionApi.current.toggleAll(),
       exit: exitSelection,
       actions: [
-        { id: 'test', label: '测试', icon: Play, onClick: () => selectionApi.current.run('test') },
+        { id: 'test', label: '测试', icon: ListChecks, onClick: () => selectionApi.current.run('test') },
         { id: 'master', label: '已掌握', icon: CheckCircle2, onClick: () => selectionApi.current.run('master') },
       ],
       more: [{ id: 'enrich', label: '补全例句与音标', onClick: () => selectionApi.current.run('enrich') }],
@@ -450,6 +465,14 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
       onStartWrongWordsQuiz(wordItems, getSelectedGroupLabel());
     }
   };
+
+  const startActiveQuizRef = useRef(handleStartActiveListQuiz);
+  startActiveQuizRef.current = handleStartActiveListQuiz;
+  useEffect(() => {
+    if (!mobile || !chrome) return;
+    chrome.setFab({ purpose: 'quiz', icon: ListChecks, label: '测试当前词本', disabled: activeWordSet.length === 0, onClick: () => startActiveQuizRef.current() });
+    return () => chrome.setFab(null);
+  }, [mobile, chrome, activeWordSet.length]);
 
   // Export handlers
   const handleExportJSON = () => {
@@ -591,7 +614,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
         action={
           wrongWords.length > 0 ? (
             <Button onClick={handleStartQuiz}>
-              <BookOpen className="w-4 h-4" />
+              <ListChecks className="w-4 h-4" />
               <span>对生词发起强化测试</span>
             </Button>
           ) : undefined
@@ -633,7 +656,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                   <h3 className={`font-bold text-base transition-colors ${
                     selectedListFilter === 'all' ? listTitleSelected : listTitleUnselected
                   }`}>
-                    全量生词列表
+                    全量生词列表 <DefaultBookBadge bookKey="wrong:all" />
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     包含文章提取与测试答错的所有待掌握生词
@@ -679,7 +702,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                       ? 'text-rose-700 dark:text-rose-300'
                       : 'text-slate-700 dark:text-slate-300 group-hover:text-rose-600/90'
                   }`}>
-                    顽固高频难词列表
+                    顽固高频难词列表 <DefaultBookBadge bookKey="wrong:high_error" />
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     连续错2次及以上的难记高频易错词集
@@ -717,7 +740,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                   <h3 className={`font-bold text-base transition-colors ${
                     selectedListFilter === 'recent' ? listTitleSelected : listTitleUnselected
                   }`}>
-                    近期新增错题列表
+                    近期新增错题列表 <DefaultBookBadge bookKey="wrong:recent" />
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     近 7 天内测试答错收录的最新词汇
@@ -777,7 +800,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
                       <h3 className={`font-bold text-base transition-colors line-clamp-1 ${
                         isSelected ? listTitleSelected : listTitleUnselected
                       }`}>
-                        {list.name}
+                        <span className="inline-flex max-w-full items-center gap-2"><span className="min-w-0 truncate">{list.name}</span><DefaultBookBadge bookKey={`wrong:custom:${list.id}`} /></span>
                       </h3>
                       <p className="text-xs text-slate-400 mt-1 line-clamp-2">
                         {list.description || `包含 ${list.words.length} 个单词，导入于 ${new Date(list.createdAt).toLocaleDateString()}`}
@@ -881,7 +904,7 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
               className="flex items-center gap-1.5 px-3 py-2 gradient-brand text-white font-semibold text-xs rounded-xl shadow-xs hover:opacity-95 transition-all cursor-pointer"
               title={`对当前选中的「${getSelectedGroupLabel()}」发起测试`}
             >
-              <BookOpen className="w-3.5 h-3.5" />
+              <ListChecks className="w-3.5 h-3.5" />
               <span>测试词本</span>
             </button>
           )}
@@ -984,13 +1007,14 @@ export const WrongWordsList: React.FC<WrongWordsListProps> = ({
 
       </>}
       {isBookMenuOpen && <BookActionMenu name={getSelectedGroupLabel()} count={exportWords.length}
+        isDefault={defaultKey === bookKey} onSetDefault={() => setDefault(bookKey)}
         onClose={() => setIsBookMenuOpen(false)} onImport={() => setIsImportModalOpen(true)}
         onExportJSON={handleExportJSON} onExportCSV={handleExportCSV} onTest={handleStartActiveListQuiz}
         onDelete={selectedCustomList && onDeleteCustomList ? () => setDeletingListForConfirm(selectedCustomList) : undefined} />}
 
       {/* Import Modal */}
       {isImportModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="surface-card rounded-2xl max-w-xl w-full p-6 shadow-elevated space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
@@ -1112,7 +1136,7 @@ discover`}
 
       {/* Create Custom List Modal */}
       {isCreateListModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fade-in">
           <div className="surface-card rounded-3xl p-6 max-w-md w-full shadow-elevated space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-brand-700 font-bold text-lg">
@@ -1175,7 +1199,7 @@ discover`}
 
       {/* Delete Custom List Confirmation Modal */}
       {deletingListForConfirm && (
-        <div className="fixed inset-0 z-50 bg-slate-900/35 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setDeletingListForConfirm(null)}>
+        <div className="fixed inset-0 z-[70] bg-slate-900/35 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setDeletingListForConfirm(null)}>
           <div role="dialog" aria-modal="true" aria-label="删除词本" className="surface-card rounded-3xl p-5 max-w-sm w-full shadow-elevated space-y-4" onClick={e => e.stopPropagation()}>
             <h3 className="font-bold text-primary">删除词本《{deletingListForConfirm.name}》？</h3>
             <p className="text-sm text-secondary">删除此词本及其中的 {deletingListForConfirm.words.length} 个词条。其他词本中的相同单词及学习记录会保留。</p>
