@@ -1,9 +1,9 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Settings, Volume2, X } from 'lucide-react';
+import { BookOpen, Globe, Settings, Volume2, X } from 'lucide-react';
 import { useBackHandler } from '../hooks/useBackHandler';
 import { SpeechVoiceSettings } from './SpeechVoiceSettings';
-import { LangSelect, useI18n } from '../i18n';
+import { useI18n } from '../i18n';
 import { BookVisit, StartupPreferences, STARTUP_STORAGE_KEY, parseStartupPreferences, startupVisit } from '../lib/startupPreferences';
 
 interface PreferencesContext {
@@ -68,7 +68,7 @@ export function DefaultBookBadge({ bookKey }: { bookKey: string }) {
 
 export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
   const { rememberLast, toggleRemember } = useNotebookPreferences();
-  const { t } = useI18n();
+  const { t, lang, setLang } = useI18n();
   const [page, setPage] = useState<'help' | 'voice' | null>(null);
   const helpOpen = page !== null;
   const pageTitle = page === 'voice' ? t('朗读声音') : t('使用说明');
@@ -84,10 +84,12 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
     return () => { document.body.style.overflow = previousOverflow; previousFocus?.focus(); };
   }, [helpOpen, settingsOpen]);
   const rows = <>
-    <label className={desktop ? 'flex min-h-12 w-full items-center justify-between gap-4 rounded-xl px-3 text-sm' : 'm-nav-row w-full'}>
-      <span className="flex-1 text-left">{t('语言 / Language')}</span>
-      <LangSelect />
-    </label>
+    <button type="button" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+      className={desktop ? 'flex min-h-12 w-full items-center justify-between gap-4 rounded-xl px-3 text-sm hover:bg-slate-100 dark:hover:bg-slate-700' : 'm-nav-row w-full'}>
+      <Globe width={22} height={22} strokeWidth={1.8} aria-hidden />
+      <span className="flex-1 text-left">{t('界面语言')}</span>
+      <span className={desktop ? 'text-slate-500 dark:text-slate-400' : 'm-nav-detail'}>{lang === 'zh' ? '简体中文' : 'English'}</span>
+    </button>
     <button type="button" role="switch" aria-checked={rememberLast} onClick={toggleRemember}
       className={desktop ? 'flex min-h-12 w-full items-center justify-between gap-4 rounded-xl px-3 text-sm hover:bg-slate-100 dark:hover:bg-slate-700' : 'm-nav-row w-full'}>
       <Settings width={22} height={22} strokeWidth={1.8} aria-hidden /><span className="flex-1 text-left">{t('保持上次使用词本')}</span><span>{rememberLast ? t('开') : t('关')}</span>

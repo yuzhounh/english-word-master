@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n';
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { SpeakerIcon } from './SpeakerIcon';
@@ -68,6 +69,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
   speechAccent = 'en-US',
 }) => {
   const compactLayout = useCompactLayout();
+  const { t } = useI18n();
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
@@ -602,13 +604,13 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
       <div className="flex items-center justify-between text-sm font-medium text-muted surface-card px-5 py-3 rounded-xl shadow-card">
         <div className="flex items-center gap-3">
-          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">正确 {score}</span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{t('正确')} {score}</span>
           <span className="text-slate-300 dark:text-slate-600">|</span>
-          <span className="text-rose-600 dark:text-rose-400 font-semibold">错误 {wrongInRound.length}</span>
+          <span className="text-rose-600 dark:text-rose-400 font-semibold">{t('错误')} {wrongInRound.length}</span>
         </div>
         <button
           onClick={initQuiz}
-          title="换一轮随机30词"
+          title="{t('换一轮随机30词')}"
           className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-muted hover:text-primary transition-colors cursor-pointer"
         >
           <RefreshCw className="w-4 h-4" />

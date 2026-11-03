@@ -195,6 +195,8 @@ const DICT: Record<string, string> = {
   '换一轮随机30词': 'Another random 30 words',
   '回答错误，已记入生词本': 'Wrong — added to wrong words',
   '回答正确': 'Correct',
+  '正确': 'Correct',
+  '错误': 'Wrong',
   '或手动标记的词汇均会收录于熟词本中。随时可发起温故知新强化复习！': 'or manually marked words are collected in the mastered list. Start a review anytime!',
   '及时巩固复习': 'Review promptly',
   '加入词本': 'Add to notebook',
