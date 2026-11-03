@@ -3,12 +3,15 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { isAndroidApp } from './lib/nativeLayout';
+import { I18nProvider } from './i18n';
 
 document.documentElement.classList.toggle('android-app', isAndroidApp);
 document.documentElement.classList.toggle('compact-layout', isAndroidApp || window.matchMedia('(max-width: 767px)').matches);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <I18nProvider>
+      <App />
+    </I18nProvider>
   </StrictMode>,
 );

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { LoaderCircle, LogIn, X, ShieldCheck, Cloud } from 'lucide-react';
 import { Button } from './ui/Button';
+import { useI18n } from '../i18n';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const { t } = useI18n();
 
   useEffect(() => {
     if (isOpen) setErrorMessage(initialErrorMessage);
@@ -40,7 +42,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         SIGN_IN_CANCELLED: '已取消 Google 登录。',
         NATIVE_SIGN_IN_FAILED: '手机系统未能完成 Google 登录，请检查 Google Play 服务和网络后重试。'
       };
-      setErrorMessage(friendlyMessages[code] || error?.message || '登录失败，请稍后重试。');
+      setErrorMessage(t(friendlyMessages[code] || error?.message || '登录失败，请稍后重试。'));
     } finally {
       setIsSigningIn(false);
     }
@@ -52,12 +54,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain p-6 sm:p-8 shadow-elevated relative border border-slate-200/80 dark:border-slate-700 space-y-6"
         role="dialog"
         aria-modal="true"
-        aria-label="登录账号"
+        aria-label={t('登录账号')}
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          aria-label="关闭登录窗口"
+          aria-label={t('关闭登录窗口')}
           disabled={isSigningIn}
           className="absolute top-4 right-4 w-9 h-9 rounded-full border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 shadow-xs hover:border-brand-500 transition-colors cursor-pointer"
         >
@@ -68,20 +70,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div className="w-12 h-12 bg-brand-50 dark:bg-brand-900/40 text-brand-600 dark:text-brand-300 rounded-2xl flex items-center justify-center mx-auto border border-brand-100/50 dark:border-brand-700/50">
             <LogIn className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">登录账号 (Google 账号)</h2>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t('登录账号 (Google 账号)')}</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-            使用 Google 账号登录以解锁多端同步与永久存储生词本功能
+            {t('使用 Google 账号登录以解锁多端同步与永久存储生词本功能')}
           </p>
         </div>
 
         <div className="space-y-3 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-100 dark:border-slate-700/60 text-sm text-slate-600 dark:text-slate-300">
           <div className="flex items-start gap-2.5">
             <Cloud className="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5" />
-            <span><b className="text-slate-800 dark:text-slate-200">云端协同同步：</b>生词本与练习记录实时同步至 Firebase 数据库。</span>
+            <span><b className="text-slate-800 dark:text-slate-200">{t('云端协同同步：')}</b>{t('生词本与练习记录实时同步至 Firebase 数据库。')}</span>
           </div>
           <div className="flex items-start gap-2.5">
             <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-            <span><b className="text-slate-800 dark:text-slate-200">安全保障：</b>基于 Google OAuth 官方安全授权，无须担心密码泄露。</span>
+            <span><b className="text-slate-800 dark:text-slate-200">{t('安全保障：')}</b>{t('基于 Google OAuth 官方安全授权，无须担心密码泄露。')}</span>
           </div>
         </div>
 
@@ -98,7 +100,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             disabled={isSigningIn}
           >
             {isSigningIn ? <LoaderCircle className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-            <span>{isSigningIn ? '正在登录…' : '使用 Google 账号一键登录'}</span>
+            <span>{isSigningIn ? t('正在登录…') : t('使用 Google 账号一键登录')}</span>
           </Button>
 
           <button
@@ -106,7 +108,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             disabled={isSigningIn}
             className="w-full py-2.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors text-center"
           >
-            暂不登录，以游客身份体验 (使用本地存储)
+            {t('暂不登录，以游客身份体验 (使用本地存储)')}
           </button>
         </div>
       </div>

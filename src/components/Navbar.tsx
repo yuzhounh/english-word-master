@@ -7,6 +7,7 @@ import { useClickOutside } from '../hooks/useClickOutside';
 import { useCompactLayout } from '../hooks/useCompactLayout';
 import { useBackHandler } from '../hooks/useBackHandler';
 import { StartupSettings } from './NotebookPreferences';
+import { useI18n } from '../i18n';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -38,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleTheme,
 }) => {
   const compactLayout = useCompactLayout();
+  const { lang, setLang, t } = useI18n();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState<boolean>(false);
   const userMenuRef = React.useRef<HTMLDivElement>(null);
@@ -171,7 +173,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       >
         <div className={`flex items-center ${mobile ? 'gap-2.5' : 'gap-1.5'}`}>
           <Icon className={`${mobile ? 'w-4 h-4' : 'w-4 h-4'} ${isActive ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400'}`} />
-          <span>{item.label}</span>
+          <span>{t(item.label)}</span>
         </div>
       </button>
     );
@@ -198,20 +200,28 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onToggleTheme}
             className="flex items-center justify-center px-2.5 py-1.5 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-600 rounded-full transition-all border border-slate-200/80 dark:border-slate-700 shadow-sm cursor-pointer"
-            title={isDark ? '当前深色模式，点击切换浅色' : '当前浅色模式，点击切换深色'}
-            aria-label={isDark ? '当前深色模式' : '当前浅色模式'}
+            title={isDark ? t('当前深色模式，点击切换浅色') : t('当前浅色模式，点击切换深色')}
+            aria-label={isDark ? t('当前深色模式') : t('当前浅色模式')}
           >
             {isDark ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+            className="flex items-center justify-center w-8 h-8 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-600 rounded-full transition-all border border-slate-200/80 dark:border-slate-700 shadow-sm cursor-pointer select-none"
+            title={lang === 'zh' ? 'Switch to English' : '切换为中文'}
+            aria-label={lang === 'zh' ? 'Switch to English' : '切换为中文'}
+          >
+            {lang === 'zh' ? '中' : 'EN'}
           </button>
 
           <button
             onClick={onToggleSpeechAccent}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-600 rounded-full transition-all border border-slate-200/80 dark:border-slate-700 shadow-sm cursor-pointer"
-            title={speechAccent === 'en-US' ? '当前美音，点击切换英音' : '当前英音，点击切换美音'}
-            aria-label={speechAccent === 'en-US' ? '当前美音' : '当前英音'}
+            title={speechAccent === 'en-US' ? t('当前美音，点击切换英音') : t('当前英音，点击切换美音')}
+            aria-label={speechAccent === 'en-US' ? t('当前美音') : t('当前英音')}
           >
             <Volume2 className="w-3.5 h-3.5" />
-            <span>{speechAccent === 'en-US' ? '美' : '英'}</span>
+            <span>{speechAccent === 'en-US' ? t('美') : t('英')}</span>
           </button>
 
           {user && !user.isGuest ? (
@@ -220,8 +230,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
                 className="flex items-center justify-center p-0.5 rounded-full hover:ring-2 hover:ring-brand-500/50 dark:hover:ring-brand-400/50 focus-ring transition-all cursor-pointer"
-                title={user.displayName || user.email || '用户菜单'}
-                aria-label="用户菜单"
+                title={user.displayName || user.email || t('用户菜单')}
+                aria-label={t('用户菜单')}
                 aria-expanded={isUserMenuOpen}
               >
                 {user.photoURL ? (
@@ -253,7 +263,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                        {user.displayName || '用户'}
+                        {user.displayName || t('用户')}
                       </p>
                       {user.email && (
                         <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={user.email}>
@@ -272,7 +282,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors cursor-pointer"
                     >
                       <LogOut className="w-4 h-4 shrink-0" />
-                      <span>退出登录</span>
+                      <span>{t('退出登录')}</span>
                     </button>
                   </div>
                 </div>
@@ -284,7 +294,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white gradient-brand rounded-full transition-all cursor-pointer shadow-sm hover:opacity-95"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>登录</span>
+              <span>{t('登录')}</span>
             </button>
           )}
         </div>
@@ -295,8 +305,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
             className="w-9 h-9 rounded-full border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 shadow-xs hover:border-brand-500 hover:text-brand-600 transition-colors cursor-pointer"
-            aria-label="打开导航菜单"
-            title="打开导航菜单"
+            aria-label={t('打开导航菜单')}
+            title={t('打开导航菜单')}
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -310,7 +320,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="导航菜单"
+            aria-label={t('导航菜单')}
             className="relative w-[min(72vw,248px)] h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 rounded-l-2xl shadow-elevated z-10 flex flex-col justify-between overflow-hidden animate-in slide-in-from-right duration-200"
           >
             {/* Match the main navbar's safe area and button center. */}
@@ -322,7 +332,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
               <button
                 type="button"
-                aria-label="关闭导航菜单"
+                aria-label={t('关闭导航菜单')}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="w-9 h-9 rounded-full border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-600 hover:border-brand-500 flex items-center justify-center transition-colors cursor-pointer shadow-xs"
               >
@@ -334,7 +344,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Drawer Body (Single-column list of tabs, pinned to top) */}
             <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 tracking-wider">功能导航</span>
+                <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 tracking-wider">{t('功能导航')}</span>
                 <div className="flex flex-col gap-1.5">
                   {navItems.map((item) => renderNavButton(item, true))}
                 </div>
@@ -345,29 +355,43 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="px-4 py-3 border-t border-slate-200/80 dark:border-slate-800 flex flex-col gap-2 shrink-0 bg-white dark:bg-slate-900">
               {/* 外观主题 */}
               <div className="flex items-center justify-between px-3.5 min-h-[46px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">外观主题</span>
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('外观主题')}</span>
                 <button
                   type="button"
                   onClick={onToggleTheme}
                   className="w-9 h-9 min-w-9 min-h-9 rounded-full border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-brand-600 transition-colors cursor-pointer shadow-xs"
-                  title={isDark ? '切换浅色模式' : '切换深色模式'}
-                  aria-label={isDark ? '切换浅色模式' : '切换深色模式'}
+                  title={isDark ? t('切换浅色模式') : t('切换深色模式')}
+                  aria-label={isDark ? t('切换浅色模式') : t('切换深色模式')}
                 >
                   {isDark ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                 </button>
               </div>
 
+              {/* 界面语言 */}
+              <div className="flex items-center justify-between px-3.5 min-h-[46px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('界面语言')}</span>
+                <button
+                  type="button"
+                  onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+                  className="w-9 h-9 min-w-9 min-h-9 rounded-full border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-[15px] font-bold leading-none text-slate-800 dark:text-slate-200 hover:text-brand-600 transition-colors cursor-pointer shadow-xs select-none"
+                  title={lang === 'zh' ? 'Switch to English' : '切换为中文'}
+                  aria-label={lang === 'zh' ? 'Switch to English' : '切换为中文'}
+                >
+                  {lang === 'zh' ? '中' : 'EN'}
+                </button>
+              </div>
+
               {/* 朗读发音 */}
               <div className="flex items-center justify-between px-3.5 min-h-[46px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">朗读发音</span>
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('朗读发音')}</span>
                 <button
                   type="button"
                   onClick={onToggleSpeechAccent}
                   className="w-9 h-9 min-w-9 min-h-9 rounded-full border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-[15px] font-bold leading-none text-slate-800 dark:text-slate-200 hover:text-brand-600 transition-colors cursor-pointer shadow-xs"
-                  title={speechAccent === 'en-US' ? '当前美音，点击切换英音' : '当前英音，点击切换美音'}
-                  aria-label={speechAccent === 'en-US' ? '当前美音' : '当前英音'}
+                  title={speechAccent === 'en-US' ? t('当前美音，点击切换英音') : t('当前英音，点击切换美音')}
+                  aria-label={speechAccent === 'en-US' ? t('当前美音') : t('当前英音')}
                 >
-                  {speechAccent === 'en-US' ? '美' : '英'}
+                  {speechAccent === 'en-US' ? t('美') : t('英')}
                 </button>
               </div>
 
@@ -380,7 +404,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {user.photoURL && <img key={user.photoURL} src={user.photoURL} alt="" referrerPolicy="no-referrer" className="absolute inset-0 w-full h-full object-cover" onError={event => { event.currentTarget.style.display = 'none'; }} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate" title={user.displayName || user.email || '用户'}>{user.displayName || user.email || '用户'}</div>
+                      <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate" title={user.displayName || user.email || t('用户')}>{user.displayName || user.email || t('用户')}</div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate" title={user.email || ''}>{user.email || ''}</div>
                     </div>
                     <button
@@ -389,8 +413,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                         setIsMobileMenuOpen(false);
                         onLogout();
                       }}
-                      title="退出登录"
-                      aria-label="退出登录"
+                      title={t('退出登录')}
+                      aria-label={t('退出登录')}
                       className="w-10 h-10 min-w-10 min-h-10 shrink-0 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
                     >
                       <LogOut className="w-5 h-5" aria-hidden="true" />
@@ -405,7 +429,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }}
                     className="w-full min-h-[44px] px-4 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full cursor-pointer inline-flex items-center justify-center transition-opacity hover:opacity-95"
                   >
-                    登录 Google 账号
+                    {t('登录 Google 账号')}
                   </button>
                 )}
               </div>

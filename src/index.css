@@ -611,3 +611,7 @@ html.compact-layout .m-book-bar button { display: inline-flex; align-items: cent
 html.compact-layout .m-book-bar button:disabled { opacity: 0.5; }
 .m-source-link { display: block; padding: 16px; text-align: center; font-size: 12px; color: var(--m-muted); }
 
+
+/* 语言切换 */
+.ewm-lang-select{border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit;border-radius:8px;padding:4px 8px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+.ewm-lang-select:hover{border-color:#0ea5e9;color:#0ea5e9;}

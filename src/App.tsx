@@ -11,6 +11,7 @@ import { MobileShell } from './components/mobile/MobileShell';
 import { MobileMenu } from './components/mobile/MobileMenu';
 import { AuthModal } from './components/AuthModal';
 import { NotebookPreferencesProvider, useNotebookPreferences } from './components/NotebookPreferences';
+import { useI18n } from './i18n';
 import { resolveLocalBook } from './lib/startupPreferences';
 import { getApiUrl } from './lib/apiConfig';
 import { useAppVersion } from './lib/appVersion';
@@ -69,6 +70,7 @@ function AppContent() {
     return (localStorage.getItem(LOCAL_STORAGE_SPEECH_ACCENT_KEY) as SpeechAccent) || 'en-US';
   });
   const [user, setUser] = useState<UserProfile | null>(null);
+  const { t } = useI18n();
   const [learningSyncState, setLearningSyncState] = useState<LearningSyncState>({ pending: 0, busy: false, error: null, durable: true });
   const authGeneration = React.useRef(0);
   const refreshLearning = React.useRef<(user: User | null) => Promise<void>>(async () => {});
@@ -737,10 +739,10 @@ function AppContent() {
   };
 
   if (!startupReady) return <div className="flex min-h-dvh items-center justify-center bg-surface p-6 text-center text-primary"><div>
-    <p>{offlineStatus === 'error' ? '内置词集读取失败。' : startupError || '正在打开词本…'}</p>
+    <p>{offlineStatus === 'error' ? t('内置词集读取失败。') : startupError || t('正在打开词本…')}</p>
     {(startupError || offlineStatus === 'error') && <div className="mt-4 flex justify-center gap-3">
-      <button type="button" className="min-h-12 rounded-xl px-4 text-brand-600" onClick={() => offlineStatus === 'error' ? void loadBuiltIns() : setStartupAttempt(value => value + 1)}>重试</button>
-      <button type="button" className="min-h-12 rounded-xl px-4 text-brand-600" onClick={() => { setNotebookSubTab('wrong'); setNotebookTarget('all'); setActiveTab('notebook'); finishStartup(); }}>打开全量生词</button>
+      <button type="button" className="min-h-12 rounded-xl px-4 text-brand-600" onClick={() => offlineStatus === 'error' ? void loadBuiltIns() : setStartupAttempt(value => value + 1)}>{t('重试')}</button>
+      <button type="button" className="min-h-12 rounded-xl px-4 text-brand-600" onClick={() => { setNotebookSubTab('wrong'); setNotebookTarget('all'); setActiveTab('notebook'); finishStartup(); }}>{t('打开全量生词')}</button>
     </div>}
   </div></div>;
 
@@ -782,14 +784,14 @@ function AppContent() {
     const wrongTitles: Record<string, string> = { all: '全量生词', high_error: '顽固难词', recent: '近期新增' };
     const masteredTitles: Record<string, string> = { all: '全量熟词', recent: '近期掌握' };
     const customList = notebookTarget.startsWith('custom:') ? availableWordLists.find(l => `custom:${l.id}` === notebookTarget) : undefined;
-    const title = activeTab === 'quiz' ? `单词测试 · ${quizPoolName}`
-      : activeTab === 'library' ? '官方词库'
-      : notebookSubTab === 'wrong' ? (customList?.name ?? wrongTitles[notebookTarget] ?? '词本')
-      : (masteredTitles[notebookTarget] ?? '全量熟词');
-    const placeholder = activeTab === 'library' ? '搜索全部词书（如：高考、四级、雅思）'
-      : activeTab === 'notebook' ? (notebookSubTab === 'wrong' ? '搜索单词或中文解释' : '搜索熟词或中文解释') : null;
+    const title = activeTab === 'quiz' ? t('单词测试 · {name}', { name: quizPoolName })
+      : activeTab === 'library' ? t('官方词库')
+      : notebookSubTab === 'wrong' ? (customList?.name ?? t(wrongTitles[notebookTarget] ?? '词本'))
+      : t(masteredTitles[notebookTarget] ?? '全量熟词');
+    const placeholder = activeTab === 'library' ? t('搜索全部词书（如：高考、四级、雅思）')
+      : activeTab === 'notebook' ? (notebookSubTab === 'wrong' ? t('搜索单词或中文解释') : t('搜索熟词或中文解释')) : null;
     const syncText = !user ? null
-      : learningSyncState.error || (learningSyncState.busy ? '正在同步学习记录…' : learningSyncState.pending > 0 ? `${learningSyncState.pending} 项学习记录待同步` : null);
+      : learningSyncState.error || (learningSyncState.busy ? t('正在同步学习记录…') : learningSyncState.pending > 0 ? t('{n} 项学习记录待同步', { n: learningSyncState.pending }) : null);
     const startQuiz = (words: WordItem[], name: string) => { setMenuOpen(false); setQuizPool(words); setQuizPoolName(name); setActiveTab('quiz'); };
 
     return (
@@ -847,8 +849,8 @@ function AppContent() {
             />
             : <div className="m-empty">
               {offlineStatus === 'error'
-                ? <><p>内置词集加载失败。</p><button type="button" className="m-btn" onClick={() => void loadBuiltIns()}>重试</button></>
-                : <p>{offlineStatus === 'ready' ? '当前词本暂无可测试的单词。' : '正在读取内置词集…'}</p>}
+                ? <><p>{t('内置词集加载失败。')}</p><button type="button" className="m-btn" onClick={() => void loadBuiltIns()}>{t('重试')}</button></>
+                : <p>{offlineStatus === 'ready' ? t('当前词本暂无可测试的单词。') : t('正在读取内置词集…')}</p>}
             </div>
           )}
 
@@ -863,7 +865,7 @@ function AppContent() {
               masteredWordIds={masteredWords.map(word => word.id)}
               customWordLists={availableWordLists}
               onRemoveWrongWord={handleRemoveWrongWord}
-              onStartWrongWordsQuiz={(words, bookName) => startQuiz(words, bookName || '生词本')}
+              onStartWrongWordsQuiz={(words, bookName) => startQuiz(words, bookName || t('生词本'))}
               onImportWrongWords={handleImportWrongWords}
               onImportToWordList={handleMergeWordsIntoWordList}
               onCreateCustomList={handleCreateEmptyWordList}
@@ -881,7 +883,7 @@ function AppContent() {
               masteredWords={masteredWords}
               onRemoveMasteredWord={handleRemoveMasteredWord}
               onMoveToWrongWords={handleMoveMasteredToWrongWords}
-              onStartMasteredWordsQuiz={(words, bookName) => startQuiz(words, bookName || '熟词本')}
+              onStartMasteredWordsQuiz={(words, bookName) => startQuiz(words, bookName || t('熟词本'))}
               onImportMasteredWords={handleImportMasteredWords}
               speechAccent={speechAccent}
             />
@@ -916,9 +918,9 @@ function AppContent() {
       <main className="flex-1 py-4 sm:py-8">
         {user && (learningSyncState.pending > 0 || learningSyncState.error || learningSyncState.busy) && (
           <div role="status" className="mx-4 mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/80 px-4 py-2 text-sm dark:bg-slate-800/80">
-            <span>{learningSyncState.error || (learningSyncState.busy ? '正在同步学习记录…' : `${learningSyncState.pending} 项学习记录待同步`)}</span>
+            <span>{learningSyncState.error || (learningSyncState.busy ? t('正在同步学习记录…') : t('{n} 项学习记录待同步', { n: learningSyncState.pending }))}</span>
             <button type="button" disabled={learningSyncState.busy} onClick={() => void refreshLearning.current(currentFirebaseUser())}
-              className="min-h-10 min-w-10 rounded-xl px-3 text-brand-600 disabled:opacity-50 dark:text-brand-400">重试同步</button>
+              className="min-h-10 min-w-10 rounded-xl px-3 text-brand-600 disabled:opacity-50 dark:text-brand-400">{t('重试同步')}</button>
           </div>
         )}
         {/* Keep library mounted so folder navigation survives tab switches */}
@@ -966,7 +968,7 @@ function AppContent() {
                 speechAccent={speechAccent}
               />
               : <div className="quiz-container"><div className="surface-card p-6 rounded-2xl text-center text-sm text-secondary">
-                {offlineStatus === 'error' ? <><p>内置词集加载失败。</p><button type="button" onClick={() => void loadBuiltIns()} className="mt-3 px-4 py-2 gradient-brand text-white rounded-xl">重试</button></> : offlineStatus === 'ready' ? '当前词本暂无可测试的单词。' : '正在读取内置词集…'}
+                {offlineStatus === 'error' ? <><p>{t('内置词集加载失败。')}</p><button type="button" onClick={() => void loadBuiltIns()} className="mt-3 px-4 py-2 gradient-brand text-white rounded-xl">{t('重试')}</button></> : offlineStatus === 'ready' ? t('当前词本暂无可测试的单词。') : t('正在读取内置词集…')}
               </div></div>
             )}
 
@@ -982,7 +984,7 @@ function AppContent() {
                 onRemoveWrongWord={handleRemoveWrongWord}
                 onStartWrongWordsQuiz={(words, bookName) => {
                   setQuizPool(words);
-                  setQuizPoolName(bookName || '生词本');
+                  setQuizPoolName(bookName || t('生词本'));
                   setActiveTab('quiz');
                 }}
                 onImportWrongWords={handleImportWrongWords}
@@ -993,7 +995,7 @@ function AppContent() {
                 onMoveToWrongWords={handleMoveMasteredToWrongWords}
                 onStartMasteredWordsQuiz={(words, bookName) => {
                   setQuizPool(words);
-                  setQuizPoolName(bookName || '熟词本');
+                  setQuizPoolName(bookName || t('熟词本'));
                   setActiveTab('quiz');
                 }}
                 onImportMasteredWords={handleImportMasteredWords}
@@ -1009,7 +1011,7 @@ function AppContent() {
       <footer className="border-t border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm py-6">
         <div className="page-container text-center">
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-            四选一测验 · 80,470 完整词条 · 949 本内置词书
+            {t('四选一测验 · 80,470 完整词条 · 949 本内置词书')}
           </p>
         </div>
       </footer>

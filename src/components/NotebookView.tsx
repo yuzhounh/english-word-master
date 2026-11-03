@@ -6,6 +6,7 @@ import { WrongWordsList } from './WrongWordsList';
 import { MasteredWordsList } from './MasteredWordsList';
 import { PageHeader } from './ui/PageHeader';
 import { WrongWordItem, MasteredWordItem, WordItem, WordListGroup, SpeechAccent } from '../types';
+import { useI18n } from '../i18n';
 
 interface NotebookViewProps {
   initialTarget?: string;
@@ -47,13 +48,15 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
   onStartMasteredWordsQuiz,
   onImportMasteredWords,
   speechAccent = 'en-US',
-}) => (
+}) => {
+  const { t } = useI18n();
+  return (
     <div className="notebook-view page-container space-y-6">
     <PageHeader
-      badge="我的词本"
+      badge={t('我的词本')}
       badgeIcon={BookOpen}
-      title="生词本 · 熟词本"
-      description="生词本收录待掌握词汇，熟词本记录已攻克单词。测试中连续答对 3 次自动移入熟词本。"
+      title={t('生词本 · 熟词本')}
+      description={t('生词本收录待掌握词汇，熟词本记录已攻克单词。测试中连续答对 3 次自动移入熟词本。')}
       compactOnMobile
     />
 
@@ -68,7 +71,7 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
         }`}
       >
         <Bookmark className="w-4.5 h-4.5 sm:w-5 sm:h-5 shrink-0" />
-        <span className="whitespace-nowrap">生词本</span>
+        <span className="whitespace-nowrap">{t('生词本')}</span>
         {wrongWords.length > 0 && (
           <span className="shrink-0 px-1.5 sm:px-2 py-0.5 text-xs sm:text-sm bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 rounded-full font-bold">
             {wrongWords.length}
@@ -85,7 +88,7 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
         }`}
       >
         <Award className="w-4.5 h-4.5 sm:w-5 sm:h-5 shrink-0" />
-        <span className="whitespace-nowrap">熟词本</span>
+        <span className="whitespace-nowrap">{t('熟词本')}</span>
         {masteredWords.length > 0 && (
           <span className="shrink-0 px-1.5 sm:px-2 py-0.5 text-xs sm:text-sm bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full font-bold">
             {masteredWords.length}
@@ -134,4 +137,5 @@ export const NotebookView: React.FC<NotebookViewProps> = ({
       </motion.div>
     </AnimatePresence>
   </div>
-);
+  );
+};
