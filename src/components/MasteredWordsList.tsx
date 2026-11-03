@@ -759,7 +759,7 @@ export const MasteredWordsList: React.FC<MasteredWordsListProps> = ({
           <div className="surface-card rounded-2xl max-w-xl w-full p-6 shadow-elevated space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700/80">
               <div className="flex items-center gap-2 text-emerald-700 font-bold text-xl">
                 <Upload className="w-5 h-5" />
                 <span>批量导入到熟词本</span>
@@ -841,7 +841,7 @@ discover`}
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center gap-2 pt-3 border-t border-slate-100 shrink-0">
+            <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-700/80 shrink-0">
               <button
                 disabled={isEnriching}
                 onClick={() => {

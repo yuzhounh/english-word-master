@@ -420,7 +420,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
           }
         }}
       >
-        <div onClick={(e) => e.stopPropagation()} className="quiz-card-navigation flex items-center justify-between w-full pb-4 border-b border-slate-100">
+        <div onClick={(e) => e.stopPropagation()} className="quiz-card-navigation flex items-center justify-between w-full pb-4 border-b border-slate-100 dark:border-slate-700/80">
           <button
             type="button"
             onClick={handlePrev}
