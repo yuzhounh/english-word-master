@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Layers, Notebook, LogIn, LogOut, Volume2, Menu, X, Moon, Sun } from 'lucide-react';
+import { BookOpen, Globe, Layers, Notebook, LogIn, LogOut, Volume2, Menu, X, Moon, Sun, Settings, User } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { UserProfile, SpeechAccent } from '../types';
 import { AppTab } from '../types/navigation';
@@ -194,109 +194,169 @@ export const Navbar: React.FC<NavbarProps> = ({
           {navItems.map((item) => renderNavButton(item))}
         </nav>
 
-        {/* Desktop Controls */}
+        {/* Desktop Controls: All settings, language, theme, and speech are collapsed into Profile Avatar Menu */}
         <div className="hidden lg:flex items-center gap-2">
           <StartupSettings desktop />
-          <button
-            onClick={onToggleTheme}
-            className="flex items-center justify-center px-2.5 py-1.5 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-600 rounded-full transition-all border border-slate-200/80 dark:border-slate-700 shadow-sm cursor-pointer"
-            title={isDark ? t('当前深色模式，点击切换浅色') : t('当前浅色模式，点击切换深色')}
-            aria-label={isDark ? t('当前深色模式') : t('当前浅色模式')}
-          >
-            {isDark ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
-          </button>
-          <button
-            onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
-            className="flex items-center justify-center w-8 h-8 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-600 rounded-full transition-all border border-slate-200/80 dark:border-slate-700 shadow-sm cursor-pointer select-none"
-            title={lang === 'zh' ? 'Switch to English' : '切换为中文'}
-            aria-label={lang === 'zh' ? 'Switch to English' : '切换为中文'}
-          >
-            {lang === 'zh' ? '中' : 'EN'}
-          </button>
+          <div className="relative" ref={userMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsUserMenuOpen(prev => !prev)}
+              className="flex items-center justify-center p-0.5 rounded-full hover:ring-2 hover:ring-brand-500/50 dark:hover:ring-brand-400/50 focus-ring transition-all cursor-pointer"
+              title={user && !user.isGuest ? (user.displayName || user.email || t('用户菜单')) : t('个人中心与设置')}
+              aria-label={t('用户菜单')}
+              aria-expanded={isUserMenuOpen}
+            >
+              {user && !user.isGuest && user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt={user.displayName || 'User'}
+                  className="w-8 h-8 rounded-full object-cover border border-slate-200/80 dark:border-slate-700 shadow-xs"
+                />
+              ) : user && !user.isGuest ? (
+                <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 flex items-center justify-center font-bold text-xs border border-brand-200/80 dark:border-brand-700 shadow-xs">
+                  {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs border border-slate-200/80 dark:border-slate-700 shadow-xs hover:text-brand-600 dark:hover:text-brand-400">
+                  <User className="w-4 h-4" />
+                </div>
+              )}
+            </button>
 
-          <button
-            onClick={onToggleSpeechAccent}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-600 rounded-full transition-all border border-slate-200/80 dark:border-slate-700 shadow-sm cursor-pointer"
-            title={speechAccent === 'en-US' ? t('当前美音，点击切换英音') : t('当前英音，点击切换美音')}
-            aria-label={speechAccent === 'en-US' ? t('当前美音') : t('当前英音')}
-          >
-            <Volume2 className="w-3.5 h-3.5" />
-            <span>{speechAccent === 'en-US' ? t('美') : t('英')}</span>
-          </button>
-
-          {user && !user.isGuest ? (
-            <div className="relative" ref={userMenuRef}>
-              <button
-                type="button"
-                onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                className="flex items-center justify-center p-0.5 rounded-full hover:ring-2 hover:ring-brand-500/50 dark:hover:ring-brand-400/50 focus-ring transition-all cursor-pointer"
-                title={user.displayName || user.email || t('用户菜单')}
-                aria-label={t('用户菜单')}
-                aria-expanded={isUserMenuOpen}
-              >
-                {user.photoURL ? (
-                  <img
-                    src={user.photoURL}
-                    alt={user.displayName || 'User'}
-                    className="w-8 h-8 rounded-full object-cover border border-slate-200/80 dark:border-slate-700 shadow-xs"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 flex items-center justify-center font-bold text-xs border border-brand-200/80 dark:border-brand-700 shadow-xs">
-                    {(user.displayName || user.email || 'U')[0].toUpperCase()}
-                  </div>
-                )}
-              </button>
-
-              {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white dark:bg-slate-800 shadow-elevated border border-slate-200/80 dark:border-slate-700 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-700/60 flex items-center gap-3">
-                    {user.photoURL ? (
-                      <img
-                        src={user.photoURL}
-                        alt={user.displayName || 'User'}
-                        className="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200/80 dark:border-slate-700"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 flex items-center justify-center font-bold text-xs shrink-0 border border-brand-200 dark:border-brand-700">
-                        {(user.displayName || user.email || 'U')[0].toUpperCase()}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                        {user.displayName || t('用户')}
-                      </p>
-                      {user.email && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={user.email}>
-                          {user.email}
-                        </p>
-                      )}
+            {isUserMenuOpen && (
+              <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-white dark:bg-slate-800 shadow-elevated border border-slate-200/80 dark:border-slate-700 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                {/* 1. Header: User Info / Guest */}
+                <div className="px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-700/60 flex items-center gap-3">
+                  {user && !user.isGuest && user.photoURL ? (
+                    <img
+                      src={user.photoURL}
+                      alt={user.displayName || 'User'}
+                      className="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200/80 dark:border-slate-700"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 flex items-center justify-center font-bold text-xs shrink-0 border border-brand-200 dark:border-brand-700">
+                      {user && !user.isGuest ? (user.displayName || user.email || 'U')[0].toUpperCase() : <User className="w-4 h-4" />}
                     </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                      {user && !user.isGuest ? (user.displayName || t('用户')) : t('游客模式')}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {user && !user.isGuest ? (user.email || '') : t('未登录 (使用本地存储)')}
+                    </p>
                   </div>
+                </div>
 
-                  <div className="p-1">
+                {/* 2. Collapsed Options: Language, Theme, Accent, Settings, Help */}
+                <div className="p-1 space-y-0.5 border-b border-slate-100 dark:border-slate-700/60">
+                  {/* Language Row (LinkFlow style 1-Click) */}
+                  <button
+                    type="button"
+                    onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Globe className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                      <span>{t('界面语言')}</span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+                      {lang === 'zh' ? '简体中文' : 'English'}
+                    </span>
+                  </button>
+
+                  {/* Theme Row */}
+                  <button
+                    type="button"
+                    onClick={onToggleTheme}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {isDark ? <Moon className="w-4 h-4 text-slate-500 dark:text-slate-400" /> : <Sun className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
+                      <span>{t('外观主题')}</span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {isDark ? t('深色') : t('浅色')}
+                    </span>
+                  </button>
+
+                  {/* Speech Accent Row */}
+                  <button
+                    type="button"
+                    onClick={onToggleSpeechAccent}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Volume2 className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                      <span>{t('朗读发音')}</span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {speechAccent === 'en-US' ? t('美音') : t('英音')}
+                    </span>
+                  </button>
+
+                  {/* Settings Modal Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      window.dispatchEvent(new CustomEvent('wordmaster:open-settings'));
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Settings className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                      <span>{t('设置')}</span>
+                    </div>
+                  </button>
+
+                  {/* Help Dialog Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      window.dispatchEvent(new CustomEvent('wordmaster:open-help'));
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <BookOpen className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                      <span>{t('使用说明')}</span>
+                    </div>
+                  </button>
+                </div>
+
+                {/* 3. Actions: Login / Logout */}
+                <div className="p-1">
+                  {user && !user.isGuest ? (
                     <button
+                      type="button"
                       onClick={() => {
                         setIsUserMenuOpen(false);
                         onLogout();
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors cursor-pointer"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors cursor-pointer"
                     >
                       <LogOut className="w-4 h-4 shrink-0" />
                       <span>{t('退出登录')}</span>
                     </button>
-                  </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        onOpenAuthModal();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-xl transition-colors cursor-pointer"
+                    >
+                      <LogIn className="w-4 h-4 shrink-0" />
+                      <span>{t('登录 Google 账号')}</span>
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={onOpenAuthModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white gradient-brand rounded-full transition-all cursor-pointer shadow-sm hover:opacity-95"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>{t('登录')}</span>
-            </button>
-          )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Mobile Top-Right Hamburger Button */}

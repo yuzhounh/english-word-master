@@ -11,6 +11,9 @@ const STORAGE_KEY = 'ewm-lang';
 
 const DICT: Record<string, string> = {
   '界面语言': 'Language',
+  '个人中心与设置': 'Account & settings',
+  '游客模式': 'Guest mode',
+  '未登录 (使用本地存储)': 'Signed out (local storage)',
   'Switch to English': 'Switch to English',
   '切换为中文': 'Switch to Chinese',
   '功能导航': 'Navigation',
