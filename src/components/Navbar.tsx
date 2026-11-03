@@ -1,12 +1,12 @@
 import React from 'react';
-import { BookOpen, Globe, Layers, Notebook, LogIn, LogOut, Volume2, Menu, X, Moon, Sun, Settings, User } from 'lucide-react';
+import { BookOpen, Globe, Layers, Notebook, LogIn, LogOut, Volume2, Menu, X, Moon, Sun, User, SlidersHorizontal, AudioLines } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { UserProfile, SpeechAccent } from '../types';
 import { AppTab } from '../types/navigation';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useCompactLayout } from '../hooks/useCompactLayout';
 import { useBackHandler } from '../hooks/useBackHandler';
-import { StartupSettings } from './NotebookPreferences';
+import { StartupSettings, useNotebookPreferences } from './NotebookPreferences';
 import { useI18n } from '../i18n';
 
 interface NavbarProps {
@@ -40,6 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const compactLayout = useCompactLayout();
   const { lang, setLang, t } = useI18n();
+  const { rememberLast, toggleRemember } = useNotebookPreferences();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState<boolean>(false);
   const userMenuRef = React.useRef<HTMLDivElement>(null);
@@ -295,22 +296,39 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </span>
                   </button>
 
-                  {/* Settings Modal Trigger */}
+                  {/* Remember Last Book Row (保持上次使用词本) */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={rememberLast}
+                    onClick={toggleRemember}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <SlidersHorizontal className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                      <span>{t('保持上次使用词本')}</span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+                      {rememberLast ? t('开') : t('关')}
+                    </span>
+                  </button>
+
+                  {/* Speech Voice Settings Dialog Trigger (朗读声音) */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsUserMenuOpen(false);
-                      window.dispatchEvent(new CustomEvent('wordmaster:open-settings'));
+                      window.dispatchEvent(new CustomEvent('wordmaster:open-voice'));
                     }}
                     className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5">
-                      <Settings className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                      <span>{t('设置')}</span>
+                      <AudioLines className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                      <span>{t('朗读声音')}</span>
                     </div>
                   </button>
 
-                  {/* Help Dialog Trigger */}
+                  {/* Help Dialog Trigger (使用说明) */}
                   <button
                     type="button"
                     onClick={() => {

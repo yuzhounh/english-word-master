@@ -72,29 +72,30 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
   const [page, setPage] = useState<'help' | 'voice' | null>(null);
   const helpOpen = page !== null;
   const pageTitle = page === 'voice' ? t('朗读声音') : t('使用说明');
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
-  useBackHandler(() => { if (page) { setPage(null); return true; } if (settingsOpen) { setSettingsOpen(false); return true; } return false; }, 35);
+  useBackHandler(() => { if (page) { setPage(null); return true; } return false; }, 35);
   
   React.useEffect(() => {
-    const handleOpenSettings = () => { setPage(null); setSettingsOpen(true); };
-    const handleOpenHelp = () => { setPage('help'); setSettingsOpen(false); };
-    window.addEventListener('wordmaster:open-settings', handleOpenSettings);
+    const handleOpenHelp = () => setPage('help');
+    const handleOpenVoice = () => setPage('voice');
     window.addEventListener('wordmaster:open-help', handleOpenHelp);
+    window.addEventListener('wordmaster:open-voice', handleOpenVoice);
+    window.addEventListener('wordmaster:open-settings', handleOpenHelp);
     return () => {
-      window.removeEventListener('wordmaster:open-settings', handleOpenSettings);
       window.removeEventListener('wordmaster:open-help', handleOpenHelp);
+      window.removeEventListener('wordmaster:open-voice', handleOpenVoice);
+      window.removeEventListener('wordmaster:open-settings', handleOpenHelp);
     };
   }, []);
 
   React.useEffect(() => {
-    if (!helpOpen && !settingsOpen) return;
+    if (!helpOpen) return;
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     panel.current?.focus();
     return () => { document.body.style.overflow = previousOverflow; previousFocus?.focus(); };
-  }, [helpOpen, settingsOpen]);
+  }, [helpOpen]);
 
   const rows = <>
     <button type="button" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
@@ -115,11 +116,11 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
     </button>
   </>;
 
-  const closePanel = () => { if (page) setPage(null); else setSettingsOpen(false); };
+  const closePanel = () => setPage(null);
   
-  // In desktop mode, both Settings and Help are rendered as centered popup modal dialogs, not full screen!
-  const isDialogMode = desktop || !helpOpen;
-  const modal = (helpOpen || settingsOpen) && createPortal(
+  // In desktop mode, Help and Voice are rendered as centered popup modal dialogs
+  const isDialogMode = desktop;
+  const modal = helpOpen && createPortal(
     <div
       className={isDialogMode ? 'fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4' : 'm-page'}
       style={!isDialogMode ? { paddingTop: 'var(--safe-area-inset-top, env(safe-area-inset-top, 0px))', paddingBottom: 'var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))', paddingLeft: 'var(--safe-area-inset-left, env(safe-area-inset-left, 0px))', paddingRight: 'var(--safe-area-inset-right, env(safe-area-inset-right, 0px))' } : undefined}
@@ -130,7 +131,7 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        aria-label={helpOpen ? pageTitle : t('设置')}
+        aria-label={pageTitle}
         className={isDialogMode ? 'surface-card max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-2xl p-5 sm:p-6 text-primary shadow-2xl outline-none' : 'flex min-h-0 w-full flex-1 flex-col outline-none'}
         onClick={event => event.stopPropagation()}
         onKeyDown={event => {
@@ -144,7 +145,7 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
         }}
       >
         <div className={isDialogMode ? 'mb-4 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-700/80 pb-3' : 'm-page-bar'}>
-          <h2 className={isDialogMode ? 'text-lg font-bold' : 'm-title'}>{helpOpen ? pageTitle : t('设置')}</h2>
+          <h2 className={isDialogMode ? 'text-lg font-bold' : 'm-title'}>{pageTitle}</h2>
           <button
             type="button"
             aria-label={t('关闭')}
@@ -158,7 +159,7 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-2">
             <SpeechVoiceSettings standalone />
           </div>
-        ) : helpOpen ? (
+        ) : (
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
             <ol className="list-decimal space-y-3.5 pl-5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
               <li>{t('在官方词库打开词书后，点击“加入词本”，即可加入自己的词本列表；仅浏览不会自动加入。词本中的单词不会直接进入生词本，测试答错后才会加入。')}</li>
@@ -169,8 +170,6 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
               <li>{t('默认或上次使用的词本已删除时，启动打开“全量生词”。启动偏好分别保存在各设备。')}</li>
             </ol>
           </div>
-        ) : (
-          <div className="space-y-1.5 py-1">{rows}</div>
         )}
       </div>
     </div>,
