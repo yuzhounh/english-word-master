@@ -337,9 +337,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         if (en) {
           const orig = origText.get(node) as string;
           const key = orig.trim();
-          if (Object.prototype.hasOwnProperty.call(DICT, key)) node.nodeValue = orig.replace(key, DICT[key]);
+          if (Object.prototype.hasOwnProperty.call(DICT, key)) {
+            const next = orig.replace(key, DICT[key]);
+            if (node.nodeValue !== next) node.nodeValue = next;
+          }
         } else {
-          node.nodeValue = origText.get(node) as string;
+          const orig = origText.get(node) as string;
+          if (node.nodeValue !== orig) node.nodeValue = orig;
           origText.delete(node);
         }
         return;
@@ -349,7 +353,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       const key = current ? current.trim() : '';
       if (!key || !Object.prototype.hasOwnProperty.call(DICT, key)) return;
       origText.set(node, current as string);
-      node.nodeValue = (current as string).replace(key, DICT[key]);
+      const next = (current as string).replace(key, DICT[key]);
+      if (node.nodeValue !== next) node.nodeValue = next;
     };
 
     const translateAttr = (el: Element) => {
@@ -363,8 +368,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         if (!map.has(attr)) map.set(attr, el.getAttribute(attr) || '');
         const orig = map.get(attr) || '';
         const key = orig.trim();
-        if (en && Object.prototype.hasOwnProperty.call(DICT, key)) el.setAttribute(attr, DICT[key]);
-        else el.setAttribute(attr, orig);
+        const targetVal = en && Object.prototype.hasOwnProperty.call(DICT, key) ? DICT[key] : orig;
+        if (el.getAttribute(attr) !== targetVal) {
+          el.setAttribute(attr, targetVal);
+        }
       });
     };
 
@@ -386,11 +393,23 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     walk(document.body);
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        if (mutation.type === 'childList') mutation.addedNodes.forEach((node) => walk(node as Node));
-        else if (mutation.type === 'characterData') translateText(mutation.target);
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => walk(node as Node));
+        } else if (mutation.type === 'characterData') {
+          const target = mutation.target;
+          if (origText.has(target)) {
+            const orig = origText.get(target) as string;
+            const key = orig.trim();
+            const expected = en && Object.prototype.hasOwnProperty.call(DICT, key) ? orig.replace(key, DICT[key]) : orig;
+            if (target.nodeValue === expected) continue;
+          } else if (!en) {
+            continue;
+          }
+          translateText(target);
+        }
       }
     });
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [lang]);
 
