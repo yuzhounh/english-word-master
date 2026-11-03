@@ -45,16 +45,30 @@ export function SpeechVoiceSettings({ standalone = false }: { standalone?: boole
     } catch { setNotice(t('声音选择未能保存，请检查设备可用空间。')); }
   };
 
-  return <section aria-label={t('朗读声音')} className={standalone ? 'space-y-3 px-3 py-2' : 'space-y-3 border-t border-slate-200 px-3 py-4 dark:border-slate-700'}>
-    <div className="flex items-center justify-between gap-3">
-      {standalone ? <span /> : <h3 className="text-sm font-semibold">{t('朗读声音')}</h3>}
-      <button type="button" disabled={loading} onClick={() => setRevision(value => value + 1)} className="min-h-10 min-w-10 text-sm text-brand-600 disabled:opacity-50 dark:text-brand-300">{t('刷新')}</button>
+  return <section aria-label={t('朗读声音')} className={standalone ? 'space-y-3' : 'space-y-3 border-t border-slate-200 px-3 py-4 dark:border-slate-700'}>
+    {!standalone && (
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold">{t('朗读声音')}</h3>
+        <button type="button" disabled={loading} onClick={() => setRevision(value => value + 1)} className="min-h-10 min-w-10 text-sm text-brand-600 disabled:opacity-50 dark:text-brand-300 cursor-pointer">{t('刷新')}</button>
+      </div>
+    )}
+    <div className="flex items-center justify-between gap-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+      <span>
+        {engine && <>{engine} · </>}{loading ? t('正在读取可用声音…') : t('当前提供 {n} 个英语声音。', { n: voices.length })}
+        {!loading && voices.length === 1 && t('此引擎仅提供一种英语声音。')}
+        {!loading && voices.length === 0 && t('暂未列出英语声音，仍可尝试自动选择。')}
+      </span>
+      {standalone && (
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => setRevision(value => value + 1)}
+          className="shrink-0 text-xs font-semibold text-brand-600 hover:text-brand-700 disabled:opacity-50 dark:text-brand-400 cursor-pointer hover:underline py-0.5 px-1"
+        >
+          {t('刷新')}
+        </button>
+      )}
     </div>
-    <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-      {engine && <>{engine} · </>}{loading ? t('正在读取可用声音…') : t('当前提供 {n} 个英语声音。', { n: voices.length })}
-      {!loading && voices.length === 1 && t('此引擎仅提供一种英语声音。')}
-      {!loading && voices.length === 0 && t('暂未列出英语声音，仍可尝试自动选择。')}
-    </p>
     {(['en-US', 'en-GB'] as const).map(language => {
       const preferred = voices.filter(voice => [language.toLowerCase(), 'en'].includes(voice.language.toLowerCase()));
       const other = voices.filter(voice => !preferred.includes(voice));

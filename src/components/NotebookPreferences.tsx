@@ -132,7 +132,7 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
         role="dialog"
         aria-modal="true"
         aria-label={pageTitle}
-        className={isDialogMode ? 'surface-card max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-2xl p-5 sm:p-6 text-primary shadow-2xl outline-none' : 'flex min-h-0 w-full flex-1 flex-col outline-none'}
+        className={isDialogMode ? 'surface-card max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-2xl p-5 text-primary shadow-2xl outline-none' : 'flex min-h-0 w-full flex-1 flex-col outline-none'}
         onClick={event => event.stopPropagation()}
         onKeyDown={event => {
           if (event.key === 'Escape') closePanel();
@@ -144,7 +144,7 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
           else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
         }}
       >
-        <div className={isDialogMode ? 'mb-4 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-700/80 pb-3' : 'm-page-bar'}>
+        <div className={isDialogMode ? 'mb-3 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-700/80 pb-2.5' : 'm-page-bar'}>
           <h2 className={isDialogMode ? 'text-lg font-bold' : 'm-title'}>{pageTitle}</h2>
           <button
             type="button"
@@ -156,7 +156,7 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
           </button>
         </div>
         {page === 'voice' ? (
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-2">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <SpeechVoiceSettings standalone />
           </div>
         ) : (
