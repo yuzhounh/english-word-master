@@ -262,7 +262,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <span>{t('界面语言')}</span>
                     </div>
                     <span className="text-[11px] font-semibold text-brand-600 dark:text-brand-400">
-                      {lang === 'zh' ? '简体中文' : 'English'}
+                      {lang === 'zh' ? 'English' : '简体中文'}
                     </span>
                   </button>
 
@@ -273,11 +273,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5">
-                      {isDark ? <Moon className="w-4 h-4 text-slate-500 dark:text-slate-400" /> : <Sun className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
+                      {isDark ? <Sun className="w-4 h-4 text-slate-500 dark:text-slate-400" /> : <Moon className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
                       <span>{t('外观主题')}</span>
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                      {isDark ? t('深色') : t('浅色')}
+                      {isDark ? t('浅色') : t('深色')}
                     </span>
                   </button>
 
@@ -432,46 +432,55 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Drawer Footer (Unified rows for Theme, Speech, Account) */}
             <div className="px-4 py-3 border-t border-slate-200/80 dark:border-slate-800 flex flex-col gap-2 shrink-0 bg-white dark:bg-slate-900">
               {/* 外观主题 */}
-              <div className="flex items-center justify-between px-3.5 min-h-[46px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('外观主题')}</span>
-                <button
-                  type="button"
-                  onClick={onToggleTheme}
-                  className="w-9 h-9 min-w-9 min-h-9 rounded-full border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-brand-600 transition-colors cursor-pointer shadow-xs"
-                  title={isDark ? t('切换浅色模式') : t('切换深色模式')}
-                  aria-label={isDark ? t('切换浅色模式') : t('切换深色模式')}
-                >
-                  {isDark ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                className="w-full flex items-center justify-between px-3.5 min-h-[46px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                title={isDark ? t('切换浅色模式') : t('切换深色模式')}
+                aria-label={isDark ? t('切换浅色模式') : t('切换深色模式')}
+              >
+                <div className="flex items-center gap-2.5">
+                  {isDark ? <Sun className="w-5 h-5 text-slate-500 dark:text-slate-400" /> : <Moon className="w-5 h-5 text-slate-500 dark:text-slate-400" />}
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('外观主题')}</span>
+                </div>
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  {isDark ? t('浅色') : t('深色')}
+                </span>
+              </button>
 
               {/* 界面语言 */}
-              <div className="flex items-center justify-between px-3.5 min-h-[46px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('界面语言')}</span>
-                <button
-                  type="button"
-                  onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
-                  className="w-9 h-9 min-w-9 min-h-9 rounded-full border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-[15px] font-bold leading-none text-slate-800 dark:text-slate-200 hover:text-brand-600 transition-colors cursor-pointer shadow-xs select-none"
-                  title={lang === 'zh' ? 'Switch to English' : '切换为中文'}
-                  aria-label={lang === 'zh' ? 'Switch to English' : '切换为中文'}
-                >
-                  {lang === 'zh' ? '中' : 'EN'}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+                className="w-full flex items-center justify-between px-3.5 min-h-[46px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                title={lang === 'zh' ? 'Switch to English' : '切换为中文'}
+                aria-label={lang === 'zh' ? 'Switch to English' : '切换为中文'}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Globe className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('界面语言')}</span>
+                </div>
+                <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
+                  {lang === 'zh' ? 'English' : '简体中文'}
+                </span>
+              </button>
 
               {/* 朗读发音 */}
-              <div className="flex items-center justify-between px-3.5 min-h-[46px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('朗读发音')}</span>
-                <button
-                  type="button"
-                  onClick={onToggleSpeechAccent}
-                  className="w-9 h-9 min-w-9 min-h-9 rounded-full border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-[15px] font-bold leading-none text-slate-800 dark:text-slate-200 hover:text-brand-600 transition-colors cursor-pointer shadow-xs"
-                  title={speechAccent === 'en-US' ? t('当前美音，点击切换英音') : t('当前英音，点击切换美音')}
-                  aria-label={speechAccent === 'en-US' ? t('当前美音') : t('当前英音')}
-                >
-                  {speechAccent === 'en-US' ? t('美') : t('英')}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={onToggleSpeechAccent}
+                className="w-full flex items-center justify-between px-3.5 min-h-[46px] rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 box-border hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                title={speechAccent === 'en-US' ? t('当前美音，点击切换英音') : t('当前英音，点击切换美音')}
+                aria-label={speechAccent === 'en-US' ? t('当前美音') : t('当前英音')}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Volume2 className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('朗读发音')}</span>
+                </div>
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  {speechAccent === 'en-US' ? t('英音') : t('美音')}
+                </span>
+              </button>
 
               {/* 账户与同步 */}
               <div className="flex items-center justify-end gap-2 min-h-[48px] pt-2 border-t border-slate-200/80 dark:border-slate-700/80 min-w-0">

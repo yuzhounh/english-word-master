@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Award, Bookmark, Clock, FileText, Library, ListChecks, LogIn, LogOut, Moon, Plus, RefreshCw,
+  Award, Bookmark, Clock, FileText, Globe, Library, ListChecks, LogIn, LogOut, Moon, Plus, RefreshCw,
   Settings, Sun, TriangleAlert, UserRound, Volume2, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -78,7 +78,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
 }) => {
   const signedIn = !!user && !user.isGuest;
   const currentQuiz = useCurrentBookQuiz();
-  const { t } = useI18n();
+  const { t, lang, setLang } = useI18n();
   const testCurrentBook = () => {
     if (!currentQuiz) { onOpenView('quiz'); return; }
     if (currentQuiz.disabled) return;
@@ -133,7 +133,9 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
 
         <section className="m-section">
           {sync.text && <NavRow icon={RefreshCw} label={sync.text} busy={sync.busy} onClick={sync.onRetry} />}
-          <NavRow icon={isDark ? Moon : Sun} label={t('外观主题')} detail={isDark ? t('深色') : t('浅色')} onClick={onToggleTheme} />
+          <NavRow icon={isDark ? Sun : Moon} label={t('外观主题')} detail={isDark ? t('浅色') : t('深色')} onClick={onToggleTheme} />
+          <NavRow icon={Globe} label={t('界面语言')} detail={lang === 'zh' ? 'English' : '简体中文'}
+            onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} />
           <NavRow icon={Volume2} label={t('朗读发音')} detail={speechAccent === 'en-US' ? t('美音') : t('英音')} onClick={onToggleSpeechAccent} />
           {signedIn ? (
             <div className="m-account-line">

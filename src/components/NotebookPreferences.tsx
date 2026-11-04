@@ -98,12 +98,12 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
   }, [helpOpen]);
 
   const rows = <>
-    <button type="button" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
-      className={desktop ? 'flex min-h-12 w-full items-center justify-between gap-4 rounded-xl px-3 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer' : 'm-nav-row w-full'}>
+    {desktop && <button type="button" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+      className="flex min-h-12 w-full items-center justify-between gap-4 rounded-xl px-3 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
       <Globe width={22} height={22} strokeWidth={1.8} aria-hidden />
       <span className="flex-1 text-left">{t('界面语言')}</span>
-      <span className={desktop ? 'text-slate-500 dark:text-slate-400' : 'm-nav-detail'}>{lang === 'zh' ? '简体中文' : 'English'}</span>
-    </button>
+      <span className="text-slate-500 dark:text-slate-400">{lang === 'zh' ? 'English' : '简体中文'}</span>
+    </button>}
     <button type="button" role="switch" aria-checked={rememberLast} onClick={toggleRemember}
       className={desktop ? 'flex min-h-12 w-full items-center justify-between gap-4 rounded-xl px-3 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer' : 'm-nav-row w-full'}>
       <Settings width={22} height={22} strokeWidth={1.8} aria-hidden /><span className="flex-1 text-left">{t('保持上次使用词本')}</span><span>{rememberLast ? t('开') : t('关')}</span>
