@@ -133,8 +133,8 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
 
         <section className="m-section">
           {sync.text && <NavRow icon={RefreshCw} label={sync.text} busy={sync.busy} onClick={sync.onRetry} />}
-          <NavRow icon={isDark ? Sun : Moon} label={t('外观主题')} detail={isDark ? t('浅色') : t('深色')} onClick={onToggleTheme} />
-          <NavRow icon={Globe} label={t('界面语言')} detail={lang === 'zh' ? 'English' : '简体中文'}
+          <NavRow icon={isDark ? Moon : Sun} label={t('外观主题')} detail={isDark ? t('深色') : t('浅色')} onClick={onToggleTheme} />
+          <NavRow icon={Globe} label={t('界面语言')} detail={lang === 'zh' ? '简体中文' : 'English'}
             onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} />
           <NavRow icon={Volume2} label={t('朗读发音')} detail={speechAccent === 'en-US' ? t('美音') : t('英音')} onClick={onToggleSpeechAccent} />
           {signedIn ? (

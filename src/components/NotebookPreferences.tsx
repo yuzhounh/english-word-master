@@ -102,7 +102,7 @@ export function StartupSettings({ desktop = false }: { desktop?: boolean }) {
       className="flex min-h-12 w-full items-center justify-between gap-4 rounded-xl px-3 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
       <Globe width={22} height={22} strokeWidth={1.8} aria-hidden />
       <span className="flex-1 text-left">{t('界面语言')}</span>
-      <span className="text-slate-500 dark:text-slate-400">{lang === 'zh' ? 'English' : '简体中文'}</span>
+      <span className="text-slate-500 dark:text-slate-400">{lang === 'zh' ? '简体中文' : 'English'}</span>
     </button>}
     <button type="button" role="switch" aria-checked={rememberLast} onClick={toggleRemember}
       className={desktop ? 'flex min-h-12 w-full items-center justify-between gap-4 rounded-xl px-3 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer' : 'm-nav-row w-full'}>
