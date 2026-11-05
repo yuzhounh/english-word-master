@@ -127,11 +127,11 @@
   }
 
   .page-container {
-    @apply max-w-5xl mx-auto px-4;
+    @apply max-w-4xl mx-auto px-4;
   }
 
   .quiz-container {
-    @apply max-w-2xl mx-auto px-4;
+    @apply max-w-4xl mx-auto px-4;
   }
 
   .surface-card {

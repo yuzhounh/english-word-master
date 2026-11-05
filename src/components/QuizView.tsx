@@ -610,7 +610,8 @@ export const QuizView: React.FC<QuizViewProps> = ({
         </div>
         <button
           onClick={initQuiz}
-          title="{t('换一轮随机30词')}"
+          title={t('换一轮随机30词')}
+          aria-label={t('换一轮随机30词')}
           className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-muted hover:text-primary transition-colors cursor-pointer"
         >
           <RefreshCw className="w-4 h-4" />
